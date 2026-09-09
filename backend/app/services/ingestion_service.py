@@ -27,6 +27,13 @@ from app.models.ingestion import (
 from app.models.vehicle import Manufacturer, CarModel, Variant, VariantSpecification
 from app.models.pricing import VehiclePrice
 from app.models.location import Country, State, City, RtoOffice
+from app.models.finance import (
+    Bank,
+    LoanProduct,
+    InterestRate,
+    LoanEligibilityRule,
+    LoanFee,
+)
 from app.schemas.ingestion import (
     DataQualityOverviewResponse,
     DataQualityScoreBreakdown,
@@ -174,6 +181,8 @@ class IngestionService:
                 # Check for multi-source conflicts if entity identifier exists
                 if adapter.entity_type == IngestionEntityType.LOCATION:
                     entity_ident = f"{normalized.get('state_code', '')} {normalized.get('rto_code', '')} {normalized.get('city_name', '')}".strip()
+                elif adapter.entity_type == IngestionEntityType.FINANCE:
+                    entity_ident = f"{normalized.get('bank_name', '')} {normalized.get('product_name', '')}".strip()
                 else:
                     entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
 
@@ -191,6 +200,13 @@ class IngestionService:
                 mapped_data = mapper.map_to_canonical(normalized)
                 if adapter.entity_type == IngestionEntityType.LOCATION:
                     promoted = await cls._promote_location_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.FINANCE:
+                    promoted = await cls._promote_finance_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
@@ -624,6 +640,370 @@ class IngestionService:
             return "UPDATED"
 
     @classmethod
+    async def _promote_finance_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes validated bank loan products, interest rate tiers, eligibility rules, and fee structures into canonical tables."""
+        bank_name = data.get("bank_name")
+        product_name = data.get("product_name")
+
+        if not bank_name or not product_name:
+            return "UNCHANGED"
+
+        now = datetime.now(timezone.utc)
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+        is_created = False
+        is_updated = False
+
+        # 1. Resolve Bank
+        bank_slug = bank_name.lower().replace(" ", "-")
+        bank_res = await db.execute(
+            select(Bank).where(
+                (Bank.slug == bank_slug) | (Bank.name.ilike(bank_name))
+            )
+        )
+        bank = bank_res.scalars().first()
+        if not bank:
+            bank = Bank(
+                name=bank_name,
+                slug=bank_slug,
+                bank_type=data.get("bank_type", "Public"),
+                website_url=data.get("website_url"),
+                active=True,
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+                verification_status=ver_status,
+            )
+            db.add(bank)
+            await db.flush()
+            is_created = True
+        else:
+            if data.get("website_url") and not bank.website_url:
+                bank.website_url = data["website_url"]
+            bank.source_id = source_id
+            bank.source_record_id = source_record_id
+            bank.retrieved_at = now
+            bank.verification_status = ver_status
+
+        # 2. Resolve Loan Product
+        product_slug = f"{bank.slug}-{product_name.lower().replace(' ', '-')}"
+        prod_res = await db.execute(
+            select(LoanProduct).where(
+                (LoanProduct.bank_id == bank.id) &
+                ((LoanProduct.slug == product_slug) | (LoanProduct.name.ilike(product_name)))
+            )
+        )
+        loan_product = prod_res.scalars().first()
+        if not loan_product:
+            loan_product = LoanProduct(
+                bank_id=bank.id,
+                name=product_name,
+                slug=product_slug,
+                vehicle_type=data.get("vehicle_type", "CAR"),
+                vehicle_condition=data.get("vehicle_condition", "NEW"),
+                product_category=data.get("product_category", "STANDARD"),
+                min_loan_amount=data.get("min_loan_amount", Decimal("100000.00")),
+                max_loan_amount=data.get("max_loan_amount", Decimal("100000000.00")),
+                min_tenure_months=data.get("min_tenure_months", 12),
+                max_tenure_months=data.get("max_tenure_months", 84),
+                max_ltv_percent=data.get("max_ltv_percent", Decimal("90.00")),
+                processing_fee_percent=data.get("processing_fee_percent", Decimal("0.50")),
+                min_processing_fee=data.get("min_processing_fee", Decimal("1500.00")),
+                max_processing_fee=data.get("max_processing_fee", Decimal("10000.00")),
+                description=data.get("description"),
+                active=True,
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+                verification_status=ver_status,
+            )
+            db.add(loan_product)
+            await db.flush()
+            is_created = True
+        else:
+            if data.get("vehicle_type"):
+                loan_product.vehicle_type = data["vehicle_type"]
+            if data.get("vehicle_condition"):
+                loan_product.vehicle_condition = data["vehicle_condition"]
+            if data.get("product_category"):
+                loan_product.product_category = data["product_category"]
+            if data.get("min_loan_amount") is not None:
+                loan_product.min_loan_amount = data["min_loan_amount"]
+            if data.get("max_loan_amount") is not None:
+                loan_product.max_loan_amount = data["max_loan_amount"]
+            if data.get("min_tenure_months") is not None:
+                loan_product.min_tenure_months = data["min_tenure_months"]
+            if data.get("max_tenure_months") is not None:
+                loan_product.max_tenure_months = data["max_tenure_months"]
+            if data.get("max_ltv_percent") is not None:
+                loan_product.max_ltv_percent = data["max_ltv_percent"]
+            if data.get("processing_fee_percent") is not None:
+                loan_product.processing_fee_percent = data["processing_fee_percent"]
+            if data.get("min_processing_fee") is not None:
+                loan_product.min_processing_fee = data["min_processing_fee"]
+            if data.get("max_processing_fee") is not None:
+                loan_product.max_processing_fee = data["max_processing_fee"]
+            if data.get("description"):
+                loan_product.description = data["description"]
+            loan_product.source_id = source_id
+            loan_product.source_record_id = source_record_id
+            loan_product.retrieved_at = now
+            loan_product.verification_status = ver_status
+
+        # 3. Resolve & Promote Interest Rates with Temporal Effective Dating (History Preservation)
+        rates_data = data.get("rates", [])
+        for r_item in rates_data:
+            ann_rate = r_item.get("annual_interest_rate")
+            if ann_rate is None:
+                continue
+
+            r_type = r_item.get("rate_type", "FLOATING")
+            min_c = r_item.get("min_credit_score")
+            max_c = r_item.get("max_credit_score")
+            min_t = r_item.get("min_tenure_months")
+            max_t = r_item.get("max_tenure_months")
+            min_a = r_item.get("min_loan_amount")
+            max_a = r_item.get("max_loan_amount")
+            priority = r_item.get("priority", 100)
+
+            r_eff_from = r_item.get("effective_from") or data.get("effective_from")
+            if isinstance(r_eff_from, str):
+                eff_from_dt = datetime.fromisoformat(r_eff_from.replace("Z", "+00:00"))
+            elif isinstance(r_eff_from, datetime):
+                eff_from_dt = r_eff_from
+            else:
+                eff_from_dt = now
+
+            # Query existing active matching rate
+            conds = [
+                InterestRate.loan_product_id == loan_product.id,
+                InterestRate.rate_type == r_type,
+                InterestRate.active.is_(True),
+                InterestRate.effective_to.is_(None),
+            ]
+            if min_c is not None:
+                conds.append(InterestRate.min_credit_score == min_c)
+            else:
+                conds.append(InterestRate.min_credit_score.is_(None))
+
+            if max_c is not None:
+                conds.append(InterestRate.max_credit_score == max_c)
+            else:
+                conds.append(InterestRate.max_credit_score.is_(None))
+
+            if min_t is not None:
+                conds.append(InterestRate.min_tenure_months == min_t)
+            else:
+                conds.append(InterestRate.min_tenure_months.is_(None))
+
+            if max_t is not None:
+                conds.append(InterestRate.max_tenure_months == max_t)
+            else:
+                conds.append(InterestRate.max_tenure_months.is_(None))
+
+            matching_rate = (await db.execute(select(InterestRate).where(and_(*conds)))).scalars().first()
+
+            if matching_rate:
+                if Decimal(str(matching_rate.annual_interest_rate)) != Decimal(str(ann_rate)):
+                    # Historical rate changed: close previous and insert new active rate
+                    matching_rate.effective_to = eff_from_dt
+                    matching_rate.active = False
+                    new_rate = InterestRate(
+                        loan_product_id=loan_product.id,
+                        annual_interest_rate=Decimal(str(ann_rate)),
+                        rate_type=r_type,
+                        min_credit_score=min_c,
+                        max_credit_score=max_c,
+                        min_tenure_months=min_t,
+                        max_tenure_months=max_t,
+                        min_loan_amount=min_a,
+                        max_loan_amount=max_a,
+                        priority=priority,
+                        effective_from=eff_from_dt,
+                        effective_to=None,
+                        active=True,
+                        source_id=source_id,
+                        source_record_id=source_record_id,
+                        retrieved_at=now,
+                        verification_status=ver_status,
+                    )
+                    db.add(new_rate)
+                    is_updated = True
+                else:
+                    matching_rate.source_id = source_id
+                    matching_rate.source_record_id = source_record_id
+                    matching_rate.retrieved_at = now
+                    matching_rate.verification_status = ver_status
+                    matching_rate.priority = priority
+            else:
+                new_rate = InterestRate(
+                    loan_product_id=loan_product.id,
+                    annual_interest_rate=Decimal(str(ann_rate)),
+                    rate_type=r_type,
+                    min_credit_score=min_c,
+                    max_credit_score=max_c,
+                    min_tenure_months=min_t,
+                    max_tenure_months=max_t,
+                    min_loan_amount=min_a,
+                    max_loan_amount=max_a,
+                    priority=priority,
+                    effective_from=eff_from_dt,
+                    effective_to=None,
+                    active=True,
+                    source_id=source_id,
+                    source_record_id=source_record_id,
+                    retrieved_at=now,
+                    verification_status=ver_status,
+                )
+                db.add(new_rate)
+                is_created = True
+
+        # 4. Resolve & Promote Eligibility Rules
+        elig_data = data.get("eligibility_rules", [])
+        for e_item in elig_data:
+            rule_name = e_item.get("rule_name", "General Eligibility Criteria")
+            existing_rule = (
+                await db.execute(
+                    select(LoanEligibilityRule).where(
+                        LoanEligibilityRule.loan_product_id == loan_product.id,
+                        LoanEligibilityRule.rule_name == rule_name,
+                        LoanEligibilityRule.active.is_(True),
+                    )
+                )
+            ).scalars().first()
+
+            e_eff_from = e_item.get("effective_from") or data.get("effective_from")
+            if isinstance(e_eff_from, str):
+                eff_from_dt = datetime.fromisoformat(e_eff_from.replace("Z", "+00:00"))
+            elif isinstance(e_eff_from, datetime):
+                eff_from_dt = e_eff_from
+            else:
+                eff_from_dt = now
+
+            if existing_rule:
+                if e_item.get("min_monthly_income") is not None:
+                    existing_rule.min_monthly_income = e_item["min_monthly_income"]
+                if e_item.get("min_credit_score") is not None:
+                    existing_rule.min_credit_score = e_item["min_credit_score"]
+                if e_item.get("max_credit_score") is not None:
+                    existing_rule.max_credit_score = e_item["max_credit_score"]
+                if e_item.get("max_loan_amount") is not None:
+                    existing_rule.max_loan_amount = e_item["max_loan_amount"]
+                if e_item.get("max_ltv_percent") is not None:
+                    existing_rule.max_ltv_percent = e_item["max_ltv_percent"]
+                if e_item.get("max_foir_percent") is not None:
+                    existing_rule.max_foir_percent = e_item["max_foir_percent"]
+                if e_item.get("min_age_years") is not None:
+                    existing_rule.min_age_years = e_item["min_age_years"]
+                if e_item.get("max_age_years") is not None:
+                    existing_rule.max_age_years = e_item["max_age_years"]
+                if e_item.get("min_employment_months") is not None:
+                    existing_rule.min_employment_months = e_item["min_employment_months"]
+                if e_item.get("allowed_employment_types") is not None:
+                    existing_rule.allowed_employment_types = e_item["allowed_employment_types"]
+                if e_item.get("allowed_residency_types") is not None:
+                    existing_rule.allowed_residency_types = e_item["allowed_residency_types"]
+                existing_rule.source_id = source_id
+                existing_rule.source_record_id = source_record_id
+                existing_rule.retrieved_at = now
+                existing_rule.verification_status = ver_status
+            else:
+                new_rule = LoanEligibilityRule(
+                    loan_product_id=loan_product.id,
+                    rule_name=rule_name,
+                    min_monthly_income=e_item.get("min_monthly_income"),
+                    min_credit_score=e_item.get("min_credit_score"),
+                    max_credit_score=e_item.get("max_credit_score"),
+                    max_loan_amount=e_item.get("max_loan_amount"),
+                    max_ltv_percent=e_item.get("max_ltv_percent"),
+                    max_foir_percent=e_item.get("max_foir_percent", Decimal("50.00")),
+                    min_age_years=e_item.get("min_age_years", 21),
+                    max_age_years=e_item.get("max_age_years", 65),
+                    min_employment_months=e_item.get("min_employment_months", 12),
+                    allowed_employment_types=e_item.get("allowed_employment_types", "SALARIED,SELF_EMPLOYED"),
+                    allowed_residency_types=e_item.get("allowed_residency_types", "RESIDENT_INDIAN,NRI"),
+                    effective_from=eff_from_dt,
+                    effective_to=None,
+                    active=True,
+                    source_id=source_id,
+                    source_record_id=source_record_id,
+                    retrieved_at=now,
+                    verification_status=ver_status,
+                )
+                db.add(new_rule)
+
+        # 5. Resolve & Promote Loan Fees
+        fees_data = data.get("fees", [])
+        for f_item in fees_data:
+            fee_name = f_item.get("fee_name", "Standard Fee")
+            fee_type = f_item.get("fee_type", "PROCESSING_FEE")
+            existing_fee = (
+                await db.execute(
+                    select(LoanFee).where(
+                        LoanFee.loan_product_id == loan_product.id,
+                        LoanFee.fee_name == fee_name,
+                        LoanFee.active.is_(True),
+                    )
+                )
+            ).scalars().first()
+
+            f_eff_from = f_item.get("effective_from") or data.get("effective_from")
+            if isinstance(f_eff_from, str):
+                eff_from_dt = datetime.fromisoformat(f_eff_from.replace("Z", "+00:00"))
+            elif isinstance(f_eff_from, datetime):
+                eff_from_dt = f_eff_from
+            else:
+                eff_from_dt = now
+
+            if existing_fee:
+                existing_fee.fee_type = fee_type
+                if f_item.get("calculation_method"):
+                    existing_fee.calculation_method = f_item["calculation_method"]
+                if f_item.get("fixed_amount") is not None:
+                    existing_fee.fixed_amount = f_item["fixed_amount"]
+                if f_item.get("percentage") is not None:
+                    existing_fee.percentage = f_item["percentage"]
+                if f_item.get("minimum_amount") is not None:
+                    existing_fee.minimum_amount = f_item["minimum_amount"]
+                if f_item.get("maximum_amount") is not None:
+                    existing_fee.maximum_amount = f_item["maximum_amount"]
+                existing_fee.source_id = source_id
+                existing_fee.source_record_id = source_record_id
+                existing_fee.retrieved_at = now
+                existing_fee.verification_status = ver_status
+            else:
+                new_fee = LoanFee(
+                    loan_product_id=loan_product.id,
+                    fee_name=fee_name,
+                    fee_type=fee_type,
+                    calculation_method=f_item.get("calculation_method", "PERCENTAGE"),
+                    fixed_amount=f_item.get("fixed_amount"),
+                    percentage=f_item.get("percentage"),
+                    minimum_amount=f_item.get("minimum_amount"),
+                    maximum_amount=f_item.get("maximum_amount"),
+                    effective_from=eff_from_dt,
+                    effective_to=None,
+                    active=True,
+                    source_id=source_id,
+                    source_record_id=source_record_id,
+                    retrieved_at=now,
+                    verification_status=ver_status,
+                )
+                db.add(new_fee)
+
+        await db.flush()
+        if is_updated:
+            return "UPDATED"
+        if is_created:
+            return "CREATED"
+        return "UNCHANGED"
+
+    @classmethod
     async def _check_conflicts(
         cls,
         db: AsyncSession,
@@ -725,6 +1105,60 @@ class IngestionService:
                             db.add(conflict)
                             await db.flush()
 
+        # 3. Interest rate discrepancies
+        if entity_type == IngestionEntityType.FINANCE.value:
+            rates_list = normalized_payload.get("rates", [])
+            for r_entry in rates_list:
+                r_rate = r_entry.get("annual_interest_rate")
+                if r_rate:
+                    res = await db.execute(
+                        select(RawIngestionRecord, IngestionRun.data_source_id)
+                        .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                        .where(
+                            RawIngestionRecord.entity_type == entity_type,
+                            IngestionRun.data_source_id != current_source_id,
+                        )
+                        .limit(10)
+                    )
+                    other_records = res.all()
+                    for rec, other_source_id in other_records:
+                        other_payload = rec.raw_payload
+                        other_bank = other_payload.get("bank_name", "")
+                        other_product = other_payload.get("product_name", "")
+                        other_ident = f"{other_bank} {other_product}".strip()
+                        if other_ident.lower() == entity_identifier.lower():
+                            for other_r in other_payload.get("rates", []):
+                                if (
+                                    other_r.get("min_credit_score") == r_entry.get("min_credit_score")
+                                    and other_r.get("rate_type", "FLOATING") == r_entry.get("rate_type", "FLOATING")
+                                ):
+                                    other_rate_val = other_r.get("annual_interest_rate")
+                                    if other_rate_val and Decimal(str(other_rate_val)) != Decimal(str(r_rate)):
+                                        existing_conflict = (
+                                            await db.execute(
+                                                select(DataConflictRecord).where(
+                                                    DataConflictRecord.entity_identifier == entity_identifier,
+                                                    DataConflictRecord.field_name == "annual_interest_rate",
+                                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                                )
+                                            )
+                                        ).scalars().first()
+                                        if not existing_conflict:
+                                            conflict = DataConflictRecord(
+                                                dataset_name=dataset_name,
+                                                entity_type=entity_type,
+                                                entity_identifier=entity_identifier,
+                                                field_name="annual_interest_rate",
+                                                source_a_id=current_source_id,
+                                                source_a_value={"rate": str(r_rate)},
+                                                source_b_id=other_source_id,
+                                                source_b_value={"rate": str(other_rate_val)},
+                                                detected_at=datetime.now(timezone.utc),
+                                                status=ConflictStatus.UNRESOLVED.value,
+                                            )
+                                            db.add(conflict)
+                                            await db.flush()
+
     @classmethod
     async def get_freshness_report(cls, db: AsyncSession) -> List[FreshnessReportItem]:
         """Calculates freshness status for each registered dataset based on SLA rules."""
@@ -752,6 +1186,8 @@ class IngestionService:
                     )
                 )
             else:
+                if last_synced.tzinfo is None:
+                    last_synced = last_synced.replace(tzinfo=timezone.utc)
                 age_days = (now - last_synced).days
                 if age_days <= sla_days:
                     status = DataFreshnessStatus.CURRENT

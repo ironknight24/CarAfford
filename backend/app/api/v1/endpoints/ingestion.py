@@ -11,6 +11,14 @@ from app.ingestion.adapters.manufacturer_vehicle_adapter import (
     MarutiSuzukiVehicleDataSourceAdapter,
     HyundaiVehicleDataSourceAdapter,
 )
+from app.ingestion.adapters.bank_finance_adapter import (
+    SbiCarLoanAdapter,
+    HdfcCarLoanAdapter,
+    IciciCarLoanAdapter,
+    AxisCarLoanAdapter,
+    BankOfBarodaCarLoanAdapter,
+    KotakCarLoanAdapter,
+)
 from app.models.ingestion import (
     DataConflictRecord,
     DataQualityReviewItem,
@@ -43,7 +51,19 @@ async def trigger_ingestion_run(
 ):
     """Triggers an ingestion run for a supported dataset adapter."""
     dataset = request.dataset_name.lower().strip()
-    if dataset in {"tata_vehicles", "tata", "tata_motors"}:
+    if dataset in {"sbi_car_loans", "sbi"}:
+        adapter = SbiCarLoanAdapter()
+    elif dataset in {"hdfc_car_loans", "hdfc"}:
+        adapter = HdfcCarLoanAdapter()
+    elif dataset in {"icici_car_loans", "icici"}:
+        adapter = IciciCarLoanAdapter()
+    elif dataset in {"axis_car_loans", "axis"}:
+        adapter = AxisCarLoanAdapter()
+    elif dataset in {"bob_car_loans", "bob", "bank_of_baroda"}:
+        adapter = BankOfBarodaCarLoanAdapter()
+    elif dataset in {"kotak_car_loans", "kotak"}:
+        adapter = KotakCarLoanAdapter()
+    elif dataset in {"tata_vehicles", "tata", "tata_motors"}:
         adapter = TataMotorsVehicleDataSourceAdapter()
     elif dataset in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
         adapter = MarutiSuzukiVehicleDataSourceAdapter()

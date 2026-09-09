@@ -10,6 +10,14 @@ from app.ingestion.adapters.manufacturer_vehicle_adapter import (
     MarutiSuzukiVehicleDataSourceAdapter,
     HyundaiVehicleDataSourceAdapter,
 )
+from app.ingestion.adapters.bank_finance_adapter import (
+    SbiCarLoanAdapter,
+    HdfcCarLoanAdapter,
+    IciciCarLoanAdapter,
+    AxisCarLoanAdapter,
+    BankOfBarodaCarLoanAdapter,
+    KotakCarLoanAdapter,
+)
 from app.ingestion.validators.finance_validator import FinanceDataValidator
 from app.ingestion.validators.location_validator import LocationDataValidator
 from app.ingestion.validators.pricing_validator import PriceDataValidator
@@ -21,7 +29,19 @@ from app.services.ingestion_service import IngestionService
 
 async def handle_run(args):
     print(f"🚀 Running CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source in {"tata_vehicles", "tata", "tata_motors"}:
+    if args.source in {"sbi_car_loans", "sbi"}:
+        adapter = SbiCarLoanAdapter()
+    elif args.source in {"hdfc_car_loans", "hdfc"}:
+        adapter = HdfcCarLoanAdapter()
+    elif args.source in {"icici_car_loans", "icici"}:
+        adapter = IciciCarLoanAdapter()
+    elif args.source in {"axis_car_loans", "axis"}:
+        adapter = AxisCarLoanAdapter()
+    elif args.source in {"bob_car_loans", "bob", "bank_of_baroda"}:
+        adapter = BankOfBarodaCarLoanAdapter()
+    elif args.source in {"kotak_car_loans", "kotak"}:
+        adapter = KotakCarLoanAdapter()
+    elif args.source in {"tata_vehicles", "tata", "tata_motors"}:
         adapter = TataMotorsVehicleDataSourceAdapter()
     elif args.source in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
         adapter = MarutiSuzukiVehicleDataSourceAdapter()
@@ -84,11 +104,40 @@ def handle_validate(args):
     else:
         v = FinanceDataValidator()
         sample = {
-            "bank_name": "SBI",
-            "product_name": "Car Loan",
-            "annual_interest_rate": Decimal("8.75"),
-            "min_cibil_score": 700,
-            "max_cibil_score": 850,
+            "bank_name": "State Bank of India",
+            "product_name": "SBI Car Loan",
+            "vehicle_type": "CAR",
+            "vehicle_condition": "NEW",
+            "product_category": "STANDARD",
+            "min_loan_amount": Decimal("100000.00"),
+            "max_loan_amount": Decimal("100000000.00"),
+            "min_tenure_months": 12,
+            "max_tenure_months": 84,
+            "annual_interest_rate": Decimal("8.65"),
+            "rates": [
+                {
+                    "annual_interest_rate": Decimal("8.65"),
+                    "rate_type": "FLOATING",
+                    "min_credit_score": 750,
+                    "max_credit_score": 900,
+                }
+            ],
+            "eligibility_rules": [
+                {
+                    "rule_name": "Salaried Criteria",
+                    "min_monthly_income": Decimal("25000.00"),
+                    "min_age_years": 21,
+                    "max_age_years": 67,
+                }
+            ],
+            "fees": [
+                {
+                    "fee_name": "Processing Fee",
+                    "fee_type": "PROCESSING_FEE",
+                    "calculation_method": "CAPPED_PERCENTAGE",
+                    "percentage": Decimal("0.40"),
+                }
+            ],
         }
 
     is_valid, errors = v.validate(sample)
@@ -147,6 +196,12 @@ def main():
             "tata_vehicles",
             "maruti_vehicles",
             "hyundai_vehicles",
+            "sbi_car_loans",
+            "hdfc_car_loans",
+            "icici_car_loans",
+            "axis_car_loans",
+            "bob_car_loans",
+            "kotak_car_loans",
         ],
         help="Source adapter name",
     )

@@ -8,6 +8,14 @@ from app.ingestion.adapters.manufacturer_vehicle_adapter import (
     MarutiSuzukiVehicleDataSourceAdapter,
     HyundaiVehicleDataSourceAdapter,
 )
+from app.ingestion.adapters.bank_finance_adapter import (
+    SbiCarLoanAdapter,
+    HdfcCarLoanAdapter,
+    IciciCarLoanAdapter,
+    AxisCarLoanAdapter,
+    BankOfBarodaCarLoanAdapter,
+    KotakCarLoanAdapter,
+)
 from app.services.ingestion_service import IngestionService
 
 
@@ -23,6 +31,12 @@ async def main():
             "tata_vehicles",
             "maruti_vehicles",
             "hyundai_vehicles",
+            "sbi_car_loans",
+            "hdfc_car_loans",
+            "icici_car_loans",
+            "axis_car_loans",
+            "bob_car_loans",
+            "kotak_car_loans",
         ],
         help="Source adapter to execute",
     )
@@ -30,7 +44,19 @@ async def main():
     args = parser.parse_args()
 
     print(f"🚀 Initializing CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source in {"tata_vehicles", "tata", "tata_motors"}:
+    if args.source in {"sbi_car_loans", "sbi"}:
+        adapter = SbiCarLoanAdapter()
+    elif args.source in {"hdfc_car_loans", "hdfc"}:
+        adapter = HdfcCarLoanAdapter()
+    elif args.source in {"icici_car_loans", "icici"}:
+        adapter = IciciCarLoanAdapter()
+    elif args.source in {"axis_car_loans", "axis"}:
+        adapter = AxisCarLoanAdapter()
+    elif args.source in {"bob_car_loans", "bob", "bank_of_baroda"}:
+        adapter = BankOfBarodaCarLoanAdapter()
+    elif args.source in {"kotak_car_loans", "kotak"}:
+        adapter = KotakCarLoanAdapter()
+    elif args.source in {"tata_vehicles", "tata", "tata_motors"}:
         adapter = TataMotorsVehicleDataSourceAdapter()
     elif args.source in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
         adapter = MarutiSuzukiVehicleDataSourceAdapter()

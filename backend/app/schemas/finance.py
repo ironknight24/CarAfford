@@ -26,6 +26,9 @@ class BankCreate(BankBase):
 class BankRead(BankBase):
     id: int
     source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     is_active: Optional[bool] = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -61,6 +64,7 @@ class InterestRateRead(InterestRateBase):
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -97,6 +101,7 @@ class LoanEligibilityRuleRead(LoanEligibilityRuleBase):
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -128,6 +133,7 @@ class LoanFeeRead(LoanFeeBase):
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -176,6 +182,10 @@ class LoanProductRead(LoanProductBase):
     id: int
     bank_id: int
     bank: Optional[BankRead] = None
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     interest_rates: List[InterestRateRead] = []
     eligibility_rules: List[LoanEligibilityRuleRead] = []
     fees: List[LoanFeeRead] = []

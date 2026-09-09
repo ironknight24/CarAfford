@@ -48,6 +48,7 @@ class IngestionEntityType(str, Enum):
     TAX_RULE = "TAX_RULE"
     BANK_RATE = "BANK_RATE"
     LOAN_FEE = "LOAN_FEE"
+    FINANCE = "FINANCE"
     LOCATION = "LOCATION"
     TCO_ASSUMPTION = "TCO_ASSUMPTION"
 
@@ -55,6 +56,9 @@ class IngestionEntityType(str, Enum):
 # Freshness SLA Policies in Days
 DATASET_FRESHNESS_SLA_DAYS: Dict[str, int] = {
     "bank_rates": 7,          # Banking interest rates change weekly/monthly
+    "bank_car_loans": 7,      # Bank car loan rate schedules
+    "loan_fees": 30,          # Processing & documentation fees change monthly
+    "eligibility_rules": 90,  # Underwriting eligibility policies change quarterly
     "vehicle_prices": 30,     # Ex-showroom prices update monthly/quarterly
     "tax_rules": 180,         # RTO/State budgets update semiannually/annually
     "vehicle_specs": 365,     # Vehicle technical specs are stable per model year

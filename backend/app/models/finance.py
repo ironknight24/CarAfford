@@ -31,6 +31,11 @@ class Bank(Base, TimestampMixin):
     source_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=True
+    )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False, index=True)
 
     # Relationships
     loan_products: Mapped[List["LoanProduct"]] = relationship(
@@ -74,8 +79,19 @@ class LoanProduct(Base, TimestampMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
+    # Data Source Provenance
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=True
+    )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False, index=True)
+
     # Relationships
     bank: Mapped["Bank"] = relationship("Bank", back_populates="loan_products")
+    source: Mapped[Optional["DataSource"]] = relationship("DataSource")
     interest_rates: Mapped[List["InterestRate"]] = relationship(
         "InterestRate", back_populates="loan_product", cascade="all, delete-orphan", order_by="InterestRate.priority.desc()"
     )
@@ -144,6 +160,7 @@ class InterestRate(Base, TimestampMixin):
     retrieved_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=True
     )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False, index=True)
 
     # Relationships
     loan_product: Mapped["LoanProduct"] = relationship("LoanProduct", back_populates="interest_rates")
@@ -201,6 +218,7 @@ class LoanEligibilityRule(Base, TimestampMixin):
     retrieved_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=True
     )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False, index=True)
 
     # Relationships
     loan_product: Mapped["LoanProduct"] = relationship("LoanProduct", back_populates="eligibility_rules")
@@ -248,6 +266,7 @@ class LoanFee(Base, TimestampMixin):
     retrieved_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=True
     )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False, index=True)
 
     # Relationships
     loan_product: Mapped["LoanProduct"] = relationship("LoanProduct", back_populates="fees")

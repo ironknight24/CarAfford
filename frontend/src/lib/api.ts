@@ -503,5 +503,30 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(request),
     }),
+
+  // ==========================================
+  // Total Cost of Ownership (TCO) APIs
+  // ==========================================
+  getTCOAssumptions: () =>
+    fetchJson<import('@/types').TCOAssumptionsResponse>('/tco/assumptions'),
+
+  calculateTCO: (request: import('@/types').TCOCalculationRequest) =>
+    fetchJson<import('@/types').TCOCalculationResponse>('/tco/calculate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  calculateVehicleTCO: (request: import('@/types').TCOVehicleRequest) =>
+    fetchJson<import('@/types').TCOCalculationResponse>('/tco/vehicle', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  compareVehiclesTCO: (request: import('@/types').TCOComparisonRequest) =>
+    fetchJson<import('@/types').TCOComparisonResponse>('/tco/compare', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
 };
+
 

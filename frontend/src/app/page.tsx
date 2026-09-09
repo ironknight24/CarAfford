@@ -12,12 +12,14 @@ import {
 import Navbar from '@/components/Navbar';
 import AffordabilityForm from '@/components/AffordabilityForm';
 import BudgetSummaryCard from '@/components/BudgetSummaryCard';
+import TCOBreakdownCard from '@/components/TCOBreakdownCard';
 import CarRecommendationCard from '@/components/CarRecommendationCard';
-import { AffordabilityBudgetBreakdown, RecommendationResponse } from '@/types';
+import { AffordabilityBudgetBreakdown, RecommendationResponse, TCOCalculationResponse } from '@/types';
 import { api } from '@/lib/api';
 
 export default function HomePage() {
   const [affordabilityData, setAffordabilityData] = useState<AffordabilityBudgetBreakdown | null>(null);
+  const [tcoData, setTcoData] = useState<TCOCalculationResponse | null>(null);
   const [recommendationData, setRecommendationData] = useState<RecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -26,7 +28,7 @@ export default function HomePage() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const [affordRes, recRes] = await Promise.allSettled([
+      const [affordRes, tcoRes, recRes] = await Promise.allSettled([
         api.calculateAffordability({
           monthly_take_home_income: formData.monthly_take_home_income,
           existing_monthly_emi: formData.existing_monthly_emis || formData.existing_monthly_emi || 0,
@@ -38,11 +40,24 @@ export default function HomePage() {
           preferred_loan_tenure_months: formData.desired_tenure_months || formData.preferred_loan_tenure_months || 60,
           affordability_profile: formData.affordability_profile || 'BALANCED',
         }),
+        api.calculateTCO({
+          state_id: formData.state_id,
+          city_id: formData.city_id,
+          rto_id: formData.rto_id,
+          monthly_driving_distance_km: formData.monthly_distance_km || formData.monthly_driving_distance_km || 1000,
+          down_payment: formData.available_down_payment || 0,
+          credit_score: formData.cibil_score || formData.credit_score || 750,
+          preferred_loan_tenure_months: formData.desired_tenure_months || formData.preferred_loan_tenure_months || 60,
+          fuel_type: formData.fuel_type || formData.fuel_preference || 'Petrol',
+        }),
         api.getRecommendations(formData),
       ]);
 
       if (affordRes.status === 'fulfilled') {
         setAffordabilityData(affordRes.value);
+      }
+      if (tcoRes.status === 'fulfilled') {
+        setTcoData(tcoRes.value);
       }
       if (recRes.status === 'fulfilled') {
         setRecommendationData(recRes.value);
@@ -50,7 +65,7 @@ export default function HomePage() {
         throw affordRes.reason;
       }
     } catch (err: any) {
-      console.error('Failed to calculate affordability:', err);
+      console.error('Failed to calculate affordability and TCO:', err);
       setErrorMsg(err.message || 'Unable to calculate affordability. Ensure the backend is running.');
     } finally {
       setIsLoading(false);
@@ -98,6 +113,9 @@ export default function HomePage() {
                 </p>
               </div>
             )}
+
+            {/* TCO Breakdown Card */}
+            {tcoData && <TCOBreakdownCard tco={tcoData} />}
 
             {/* Indian Car Buying Financial Rules Card */}
             <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 space-y-3">

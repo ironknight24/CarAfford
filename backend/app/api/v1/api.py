@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     pricing,
     recommendations,
     tax_rules,
+    tco,
     vehicles,
 )
 
@@ -32,9 +33,11 @@ api_router.include_router(vehicles.vehicles_search_router)
 # Tax & Registration Rules Domain
 api_router.include_router(tax_rules.router)
 
-# Pricing, Finance & Recommendations
+# Pricing, Finance, Affordability & TCO
 api_router.include_router(pricing.router, prefix="/pricing", tags=["Pricing"])
 api_router.include_router(finance.router, prefix="/finance", tags=["Finance"])
 api_router.include_router(affordability.router, prefix="/affordability", tags=["Affordability"])
+api_router.include_router(tco.router, prefix="/tco", tags=["TCO"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
 api_router.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sources"])
+

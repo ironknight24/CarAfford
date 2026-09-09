@@ -937,3 +937,192 @@ export interface AffordabilityComparisonResponse {
   disclaimer: string;
 }
 
+// =============================================================================
+// TOTAL COST OF OWNERSHIP (TCO) TYPES
+// =============================================================================
+
+export interface FuelPriceAssumption {
+  fuel_type: string;
+  price_per_unit: number | string;
+  unit: string;
+  currency: string;
+  effective_from: string;
+  source: string;
+  data_status: string;
+}
+
+export interface MaintenanceAssumption {
+  fuel_type: string;
+  annual_base_cost: number | string;
+  cost_per_km: number | string;
+  service_interval_km: number;
+  service_interval_months: number;
+  source: string;
+  data_status: string;
+}
+
+export interface InsuranceAssumption {
+  year_2_factor: number | string;
+  year_3_factor: number | string;
+  year_4_factor: number | string;
+  year_5_factor: number | string;
+  source: string;
+  data_status: string;
+}
+
+export interface DepreciationAssumption {
+  year_1_depreciation_pct: number | string;
+  year_2_depreciation_pct: number | string;
+  year_3_depreciation_pct: number | string;
+  year_4_depreciation_pct: number | string;
+  year_5_depreciation_pct: number | string;
+  source: string;
+  data_status: string;
+}
+
+export interface TCOAssumptionsResponse {
+  fuel_prices: Record<string, FuelPriceAssumption>;
+  maintenance_rates: Record<string, MaintenanceAssumption>;
+  insurance_renewal: InsuranceAssumption;
+  depreciation: DepreciationAssumption;
+  data_status: string;
+  disclaimer: string;
+}
+
+export interface TCOCalculationRequest {
+  variant_id?: number;
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  monthly_driving_distance_km?: number | string;
+  annual_driving_distance_km?: number | string;
+  down_payment?: number | string;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  is_financed?: boolean;
+  fuel_type?: string;
+  mileage_kmpl?: number | string;
+  custom_fuel_price?: number | string;
+  custom_on_road_price?: number | string;
+  custom_ex_showroom_price?: number | string;
+}
+
+export interface TCOVehicleRequest extends TCOCalculationRequest {
+  variant_id: number;
+}
+
+export interface TCOInitialCostBreakdown {
+  ex_showroom_price: number | string;
+  total_on_road_price: number | string;
+  down_payment: number | string;
+  loan_principal: number | string;
+}
+
+export interface TCOFinancingBreakdown {
+  bank_id?: number | null;
+  bank_name?: string | null;
+  loan_product_name?: string | null;
+  annual_interest_rate: number | string;
+  tenure_months: number;
+  monthly_emi: number | string;
+  total_interest: number | string;
+  processing_fees: number | string;
+  total_repayment: number | string;
+}
+
+export interface TCOOperatingCostsSummary {
+  annual_fuel_cost: number | string;
+  annual_insurance_cost: number | string;
+  annual_maintenance_cost: number | string;
+  annual_total_operating_cost: number | string;
+}
+
+export interface TCOPeriodBreakdown {
+  period_years: number;
+  period_months: number;
+  label: string;
+  fuel_cost: number | string;
+  insurance_cost: number | string;
+  maintenance_cost: number | string;
+  total_operating_cost: number | string;
+  financing_interest: number | string;
+  financing_fees: number | string;
+  loan_principal_paid: number | string;
+  total_loan_repayment_paid: number | string;
+  initial_down_payment: number | string;
+  total_cash_outflow: number | string;
+  estimated_depreciation: number | string;
+  estimated_resale_value: number | string;
+  estimated_economic_cost: number | string;
+  average_monthly_cost: number | string;
+  average_monthly_operating_cost: number | string;
+  average_annual_cost: number | string;
+}
+
+export interface TCODrivingProfile {
+  annual_distance_km: number | string;
+  monthly_distance_km: number | string;
+  fuel_type: string;
+  fuel_efficiency: number | string;
+  efficiency_unit: string;
+  fuel_price_per_unit: number | string;
+  fuel_price_unit: string;
+  efficiency_source: string;
+}
+
+export interface TCOCalculationResponse {
+  vehicle?: Record<string, any> | null;
+  location: Record<string, any>;
+  driving_profile: TCODrivingProfile;
+  initial_cost: TCOInitialCostBreakdown;
+  financing?: TCOFinancingBreakdown | null;
+  operating_costs: TCOOperatingCostsSummary;
+  periods: {
+    "1_year": TCOPeriodBreakdown;
+    "3_years": TCOPeriodBreakdown;
+    "5_years": TCOPeriodBreakdown;
+  };
+  data_status: string;
+  disclaimer: string;
+}
+
+export interface TCOComparisonItem {
+  variant_id: number;
+  variant_name: string;
+  model_name: string;
+  manufacturer_name: string;
+  fuel_type: string;
+  ex_showroom_price: number | string;
+  on_road_price: number | string;
+  monthly_emi: number | string;
+  annual_fuel_cost: number | string;
+  annual_operating_cost: number | string;
+  one_year_tco: number | string;
+  three_year_tco: number | string;
+  five_year_tco: number | string;
+  five_year_monthly_average: number | string;
+  five_year_economic_cost: number | string;
+}
+
+export interface TCOComparisonRequest {
+  variant_ids: number[];
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  monthly_driving_distance_km?: number | string;
+  annual_driving_distance_km?: number | string;
+  down_payment?: number | string;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  is_financed?: boolean;
+}
+
+export interface TCOComparisonResponse {
+  driving_profile: Record<string, any>;
+  location: Record<string, any>;
+  compared_vehicles: TCOComparisonItem[];
+  data_status: string;
+  disclaimer: string;
+}
+
+

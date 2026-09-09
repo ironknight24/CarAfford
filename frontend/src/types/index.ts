@@ -288,13 +288,25 @@ export interface RecommendedVehicleItem {
   affordability_category: AffordabilityCategory;
   affordability_rationale: string;
   on_road_breakdown?: OnRoadPriceBreakdown;
+  category?: string;
+  rank?: number;
+  score?: string;
+  reasons?: string[];
+  warnings?: string[];
 }
 
 export interface RecommendationResponse {
-  user_budget_summary: AffordabilityBudgetSummary;
+  user_budget_summary: any;
+  recommendations: RecommendedVehicleItem[];
   recommended_vehicles: RecommendedVehicleItem[];
-  total_matches_count: number;
-  filter_applied_count: number;
+  stretch_options?: RecommendedVehicleItem[];
+  total_candidates_evaluated?: number;
+  total_affordable_count?: number;
+  total_stretch_count?: number;
+  total_excluded_count?: number;
+  returned_count?: number;
+  data_status?: string;
+  disclaimer?: string;
 }
 
 export interface DataSource {

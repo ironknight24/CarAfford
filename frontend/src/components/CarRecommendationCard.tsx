@@ -43,14 +43,21 @@ export default function CarRecommendationCard({ car }: CarRecommendationCardProp
               <p className="text-xs text-slate-400 font-medium line-clamp-1">{car.variant_name}</p>
             </div>
 
-            {/* Affordability Badge */}
+            {/* Category and Affordability Badges */}
             <div className="flex flex-col items-end gap-1">
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${getCategoryBadge()}`}>
-                {car.affordability_category}
-              </span>
-              <span className="text-[11px] text-slate-400 font-medium">
-                Score: <strong className="text-emerald-400">{car.affordability_score}</strong>/100
-              </span>
+              {car.category && (
+                <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 uppercase">
+                  {car.category.replace(/_/g, ' ')}
+                </span>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${getCategoryBadge()}`}>
+                  {car.affordability_category}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  Score: <strong className="text-emerald-400">{car.score || car.affordability_score}</strong>/100
+                </span>
+              </div>
             </div>
           </div>
 
@@ -78,7 +85,7 @@ export default function CarRecommendationCard({ car }: CarRecommendationCardProp
           </div>
 
           {/* Pricing Row */}
-          <div className="bg-slate-950/70 rounded-xl p-3.5 border border-slate-800/80 space-y-2 mb-4">
+          <div className="bg-slate-950/70 rounded-xl p-3.5 border border-slate-800/80 space-y-2 mb-3">
             <div className="flex justify-between items-baseline">
               <span className="text-xs text-slate-400">Est. On-Road Price</span>
               <span className="text-base font-extrabold text-white">
@@ -99,10 +106,24 @@ export default function CarRecommendationCard({ car }: CarRecommendationCardProp
             </div>
           </div>
 
-          {/* Rationale snippet */}
-          <p className="text-xs text-slate-400 italic mb-4 line-clamp-2">
-            "{car.affordability_rationale}"
-          </p>
+          {/* Why this car? Reasons */}
+          {car.reasons && car.reasons.length > 0 ? (
+            <div className="mb-3 space-y-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Why this car?</span>
+              <ul className="space-y-1">
+                {car.reasons.slice(0, 3).map((reason, idx) => (
+                  <li key={idx} className="text-xs text-slate-300 flex items-start gap-1.5 leading-relaxed">
+                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 italic mb-4 line-clamp-2">
+              "{car.affordability_rationale}"
+            </p>
+          )}
         </div>
 
         {/* Action Button */}

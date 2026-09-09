@@ -178,6 +178,27 @@ export default function HomePage() {
                 </p>
               </div>
             )}
+
+            {/* Stretch Options (if available) */}
+            {recommendationData.stretch_options && recommendationData.stretch_options.length > 0 && (
+              <div className="space-y-4 pt-6 border-t border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2">
+                      <span>⚡ Stretch Options</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Vehicles that exceed your standard balanced budget but remain within your upper stretch limit.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recommendationData.stretch_options.map((car) => (
+                    <CarRecommendationCard key={car.variant_id} car={car} />
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         )}
       </main>

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from enum import Enum
 from app.core.affordability_constants import (
@@ -130,6 +130,32 @@ class AffordabilityBudgetBreakdown(BaseModel):
     data_status: str = DATA_STATUS_DEMO
     warnings: List[str] = []
     disclaimer: str = DISCLAIMER_TEXT
+    
+    # Backward compatibility properties
+    @computed_field
+    @property
+    def max_affordable_loan(self) -> Decimal:
+        return self.maximum_affordable_loan
+
+    @computed_field
+    @property
+    def max_affordable_on_road_price(self) -> Decimal:
+        return self.maximum_affordable_on_road_price
+
+    @computed_field
+    @property
+    def recommended_on_road_budget(self) -> Decimal:
+        return self.recommended_safe_budget
+
+    @computed_field
+    @property
+    def available_car_emi_budget(self) -> Decimal:
+        return self.available_car_emi
+
+    @computed_field
+    @property
+    def max_total_emi_allowed(self) -> Decimal:
+        return self.maximum_total_emi
 
 
 class AffordabilityProfileInfo(BaseModel):

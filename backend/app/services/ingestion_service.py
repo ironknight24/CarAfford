@@ -24,7 +24,7 @@ from app.models.ingestion import (
     IngestionRun,
     RawIngestionRecord,
 )
-from app.models.vehicle import Manufacturer, CarModel, Variant
+from app.models.vehicle import Manufacturer, CarModel, Variant, VariantSpecification
 from app.models.pricing import VehiclePrice
 from app.models.location import Country, State, City, RtoOffice
 from app.schemas.ingestion import (
@@ -86,6 +86,10 @@ class IngestionService:
             name=adapter.source_name,
             slug=adapter.source_slug,
             source_type=adapter.source_type,
+            provider_type=getattr(adapter, "provider_type", "aggregator"),
+            organization=getattr(adapter, "organization", None),
+            base_url=getattr(adapter, "base_url", None),
+            trust_level=getattr(adapter, "trust_level", None),
         )
 
         # 2. Create Ingestion Run
@@ -197,6 +201,7 @@ class IngestionService:
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
+                        source_record_id=source_record_id,
                     )
 
                 if promoted == "CREATED":
@@ -237,14 +242,18 @@ class IngestionService:
         db: AsyncSession,
         data: Dict[str, Any],
         source_id: int,
+        source_record_id: Optional[str] = None,
     ) -> str:
-        """Promotes validated vehicle & price data into canonical tables with effective dating."""
+        """Promotes validated vehicle & price data into canonical tables with deterministic matching and effective dating."""
         mfg_name = data.get("manufacturer_name")
         model_name = data.get("model_name")
         variant_name = data.get("variant_name")
 
         if not mfg_name or not model_name or not variant_name:
             return "UNCHANGED"
+
+        now = datetime.now(timezone.utc)
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
 
         # 1. Resolve Manufacturer
         mfg_slug = mfg_name.lower().replace(" ", "-")
@@ -255,9 +264,23 @@ class IngestionService:
         )
         mfg = mfg_res.scalars().first()
         if not mfg:
-            mfg = Manufacturer(name=mfg_name, slug=mfg_slug, country="India", is_active=True)
+            mfg = Manufacturer(
+                name=mfg_name,
+                slug=mfg_slug,
+                country="India",
+                is_active=True,
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+                verification_status=ver_status,
+            )
             db.add(mfg)
             await db.flush()
+        else:
+            mfg.source_id = source_id
+            mfg.source_record_id = source_record_id
+            mfg.retrieved_at = now
+            mfg.verification_status = ver_status
 
         # 2. Resolve Car Model
         model_slug = f"{mfg.slug}-{model_name.lower().replace(' ', '-')}"
@@ -274,13 +297,32 @@ class IngestionService:
                 name=model_name,
                 slug=model_slug,
                 body_type=data.get("body_type", "SUV"),
-                is_active=True,
+                segment=data.get("segment", "Compact SUV"),
+                launch_year=data.get("launch_year", 2024),
+                image_url=data.get("image_url"),
+                is_active=not data.get("is_discontinued", False),
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+                verification_status=ver_status,
             )
             db.add(car_model)
             await db.flush()
+        else:
+            if data.get("body_type"):
+                car_model.body_type = data["body_type"]
+            if data.get("segment"):
+                car_model.segment = data["segment"]
+            car_model.source_id = source_id
+            car_model.source_record_id = source_record_id
+            car_model.retrieved_at = now
+            car_model.verification_status = ver_status
 
         # 3. Resolve Variant
         variant_slug = f"{car_model.slug}-{variant_name.lower().replace(' ', '-')}"
+        fuel = data.get("fuel_type", "Petrol")
+        trans = data.get("transmission", "Manual")
+        
         var_res = await db.execute(
             select(Variant).where(
                 ((Variant.model_id == car_model.id) & (Variant.name.ilike(variant_name)))
@@ -294,17 +336,91 @@ class IngestionService:
                 model_id=car_model.id,
                 name=variant_name,
                 slug=variant_slug,
-                fuel_type=data.get("fuel_type", "Petrol"),
-                transmission=data.get("transmission", "Manual"),
+                trim_level=data.get("trim_level", "Base"),
+                fuel_type=fuel,
+                transmission=trans,
+                drivetrain=data.get("drivetrain", "FWD"),
+                engine_cc=data.get("engine_cc"),
+                engine_power_bhp=data.get("engine_power_bhp"),
+                torque_nm=data.get("torque_nm"),
                 seating_capacity=data.get("seating_capacity", 5),
                 mileage_claimed=data.get("arai_mileage_kmpl"),
-                is_active=True,
+                battery_capacity_kwh=data.get("battery_capacity_kwh"),
+                range_km=data.get("range_km"),
+                active=not data.get("is_discontinued", False),
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+                verification_status=ver_status,
             )
             db.add(variant)
             await db.flush()
             is_created = True
+        else:
+            variant.trim_level = data.get("trim_level", variant.trim_level)
+            variant.fuel_type = fuel
+            variant.transmission = trans
+            if data.get("engine_cc") is not None:
+                variant.engine_cc = data["engine_cc"]
+            if data.get("engine_power_bhp") is not None:
+                variant.engine_power_bhp = data["engine_power_bhp"]
+            if data.get("torque_nm") is not None:
+                variant.torque_nm = data["torque_nm"]
+            if data.get("battery_capacity_kwh") is not None:
+                variant.battery_capacity_kwh = data["battery_capacity_kwh"]
+            if data.get("range_km") is not None:
+                variant.range_km = data["range_km"]
+            if data.get("arai_mileage_kmpl") is not None:
+                variant.mileage_claimed = data["arai_mileage_kmpl"]
+            if data.get("seating_capacity") is not None:
+                variant.seating_capacity = data["seating_capacity"]
+            variant.source_id = source_id
+            variant.source_record_id = source_record_id
+            variant.retrieved_at = now
+            variant.verification_status = ver_status
 
-        # 4. Manage Effective-Dated Ex-Showroom Price
+        # 4. Sync VariantSpecification
+        spec_res = await db.execute(
+            select(VariantSpecification).where(VariantSpecification.variant_id == variant.id)
+        )
+        spec = spec_res.scalars().first()
+        if not spec:
+            spec = VariantSpecification(
+                variant_id=variant.id,
+                engine_displacement_cc=data.get("engine_cc"),
+                battery_capacity_kwh=data.get("battery_capacity_kwh"),
+                max_power_bhp=data.get("engine_power_bhp"),
+                max_torque_nm=data.get("torque_nm"),
+                arai_mileage_kmpl=data.get("arai_mileage_kmpl") or Decimal("18.00"),
+                boot_space_l=data.get("boot_space_l"),
+                airbags_count=data.get("airbags_count", 6),
+                safety_rating_stars=data.get("safety_rating_stars"),
+                ground_clearance_mm=data.get("ground_clearance_mm"),
+                fuel_tank_capacity_l=data.get("fuel_tank_capacity_l"),
+            )
+            db.add(spec)
+            await db.flush()
+        else:
+            if data.get("engine_cc") is not None:
+                spec.engine_displacement_cc = data["engine_cc"]
+            if data.get("battery_capacity_kwh") is not None:
+                spec.battery_capacity_kwh = data["battery_capacity_kwh"]
+            if data.get("engine_power_bhp") is not None:
+                spec.max_power_bhp = data["engine_power_bhp"]
+            if data.get("torque_nm") is not None:
+                spec.max_torque_nm = data["torque_nm"]
+            if data.get("arai_mileage_kmpl") is not None:
+                spec.arai_mileage_kmpl = data["arai_mileage_kmpl"]
+            if data.get("boot_space_l") is not None:
+                spec.boot_space_l = data["boot_space_l"]
+            if data.get("airbags_count") is not None:
+                spec.airbags_count = data["airbags_count"]
+            if data.get("safety_rating_stars") is not None:
+                spec.safety_rating_stars = data["safety_rating_stars"]
+            if data.get("ground_clearance_mm") is not None:
+                spec.ground_clearance_mm = data["ground_clearance_mm"]
+
+        # 5. Manage Effective-Dated Ex-Showroom Price
         ex_price = data.get("ex_showroom_price")
         if ex_price:
             eff_from = data.get("effective_from")
@@ -313,9 +429,9 @@ class IngestionService:
             elif isinstance(eff_from, datetime):
                 eff_from_dt = eff_from
             else:
-                eff_from_dt = datetime.now(timezone.utc)
+                eff_from_dt = now
 
-            # Close existing active price if different
+            # Query currently active price (effective_to is NULL)
             active_price = (
                 await db.execute(
                     select(VehiclePrice).where(
@@ -326,28 +442,41 @@ class IngestionService:
             ).scalars().first()
 
             if active_price:
-                if active_price.ex_showroom_price != ex_price:
+                if Decimal(str(active_price.ex_showroom_price)) != Decimal(str(ex_price)):
                     # Close the previous record
                     active_price.effective_to = eff_from_dt
                     new_price = VehiclePrice(
                         variant_id=variant.id,
-                        ex_showroom_price=ex_price,
+                        ex_showroom_price=Decimal(str(ex_price)),
+                        price_type=data.get("price_type", "EX_SHOWROOM"),
                         effective_from=eff_from_dt,
                         effective_to=None,
                         source_id=source_id,
+                        source_record_id=source_record_id,
+                        retrieved_at=now,
+                        verification_status=ver_status,
                     )
                     db.add(new_price)
                     await db.flush()
                     return "UPDATED"
                 else:
+                    # Update provenance on unchanged price
+                    active_price.source_id = source_id
+                    active_price.source_record_id = source_record_id
+                    active_price.retrieved_at = now
+                    active_price.verification_status = ver_status
                     return "CREATED" if is_created else "UNCHANGED"
             else:
                 new_price = VehiclePrice(
                     variant_id=variant.id,
-                    ex_showroom_price=ex_price,
+                    ex_showroom_price=Decimal(str(ex_price)),
+                    price_type=data.get("price_type", "EX_SHOWROOM"),
                     effective_from=eff_from_dt,
                     effective_to=None,
                     source_id=source_id,
+                    source_record_id=source_record_id,
+                    retrieved_at=now,
+                    verification_status=ver_status,
                 )
                 db.add(new_price)
                 await db.flush()

@@ -49,14 +49,63 @@ class VehicleDataValidator(DataValidator):
             except Exception:
                 errors.append(f"Invalid decimal format for arai_mileage_kmpl: {mileage}")
 
-        safety = item.get("safety_rating_stars")
-        if safety is not None:
-            if not isinstance(safety, int) or safety < 0 or safety > 5:
-                errors.append(f"Invalid safety_rating_stars '{safety}'. Must be between 0 and 5")
+        # Engine & EV Battery checks
+        fuel_val = fuel or ""
+        engine_cc = item.get("engine_cc") or item.get("engine_displacement_cc")
+        if engine_cc is not None:
+            if not isinstance(engine_cc, int) or engine_cc < 500 or engine_cc > 8000:
+                errors.append(f"Invalid engine displacement '{engine_cc}'. Must be between 500cc and 8000cc")
+            if fuel_val == "Electric":
+                errors.append("Pure electric vehicles cannot have engine_cc displacement")
 
-        airbags = item.get("airbags_count")
-        if airbags is not None:
-            if not isinstance(airbags, int) or airbags < 0 or airbags > 20:
-                errors.append(f"Invalid airbags_count '{airbags}'. Must be non-negative")
+        battery_kwh = item.get("battery_capacity_kwh")
+        if battery_kwh is not None:
+            try:
+                dec_battery = Decimal(str(battery_kwh))
+                if dec_battery <= Decimal("0.0") or dec_battery > Decimal("300.0"):
+                    errors.append(f"Invalid battery_capacity_kwh '{dec_battery}'. Must be between 0.1 and 300 kWh")
+            except Exception:
+                errors.append(f"Invalid decimal format for battery_capacity_kwh: {battery_kwh}")
+
+        range_km = item.get("range_km")
+        if range_km is not None:
+            try:
+                dec_range = Decimal(str(range_km))
+                if dec_range <= Decimal("0.0") or dec_range > Decimal("1500.0"):
+                    errors.append(f"Invalid range_km '{dec_range}'. Must be between 1 and 1500 km")
+            except Exception:
+                errors.append(f"Invalid decimal format for range_km: {range_km}")
+
+        # Power & Torque
+        power_bhp = item.get("engine_power_bhp") or item.get("max_power_bhp")
+        if power_bhp is not None:
+            try:
+                dec_power = Decimal(str(power_bhp))
+                if dec_power <= Decimal("0.0") or dec_power > Decimal("2000.0"):
+                    errors.append(f"Invalid power '{dec_power}'. Must be between 1 and 2000 bhp")
+            except Exception:
+                errors.append(f"Invalid decimal format for power_bhp: {power_bhp}")
+
+        torque_nm = item.get("torque_nm") or item.get("max_torque_nm")
+        if torque_nm is not None:
+            try:
+                dec_torque = Decimal(str(torque_nm))
+                if dec_torque <= Decimal("0.0") or dec_torque > Decimal("3000.0"):
+                    errors.append(f"Invalid torque '{dec_torque}'. Must be between 1 and 3000 Nm")
+            except Exception:
+                errors.append(f"Invalid decimal format for torque_nm: {torque_nm}")
+
+        boot_space = item.get("boot_space_l")
+        if boot_space is not None:
+            if not isinstance(boot_space, int) or boot_space < 0 or boot_space > 2500:
+                errors.append(f"Invalid boot_space_l '{boot_space}'. Must be between 0 and 2500 L")
 
         return len(errors) == 0, errors
+
+    def classify_status(self, is_valid: bool, has_official_source: bool = False) -> str:
+        """Classifies verification status based on validation and source provenance."""
+        if not is_valid:
+            return "REJECTED"
+        if has_official_source:
+            return "VERIFIED"
+        return "FORMAT_VALID"

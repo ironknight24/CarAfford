@@ -35,6 +35,7 @@ class VehiclePriceRead(BaseModel):
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -49,6 +50,10 @@ class ManufacturerBase(BaseModel):
     country: str = Field(default="India", max_length=50, description="Country of origin")
     active: bool = Field(default=True, description="Whether the manufacturer is currently active")
     logo_url: Optional[str] = Field(default=None, max_length=500, description="Manufacturer logo URL")
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
 
 
 class ManufacturerCreate(ManufacturerBase):
@@ -70,6 +75,7 @@ class ManufacturerSimple(BaseModel):
     country: str
     active: bool
     logo_url: Optional[str] = None
+    verification_status: Optional[str] = "DEMO"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,6 +95,10 @@ class CarModelBase(BaseModel):
     launch_year: int = Field(default=2024, description="Launch year")
     description: Optional[str] = Field(default=None, description="Model overview")
     image_url: Optional[str] = Field(default=None, max_length=500, description="Primary model image URL")
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
 
 
 class CarModelCreate(CarModelBase):
@@ -112,6 +122,7 @@ class CarModelSimple(BaseModel):
     segment: Optional[str] = None
     active: bool
     image_url: Optional[str] = None
+    verification_status: Optional[str] = "DEMO"
     manufacturer: Optional[ManufacturerSimple] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -153,6 +164,10 @@ class VariantBase(BaseModel):
     battery_capacity_kwh: Optional[Decimal] = Field(default=None, description="Battery pack size in kWh (EV/Hybrid)")
     range_km: Optional[Decimal] = Field(default=None, description="Driving range in km (EV/Hybrid)")
     active: bool = Field(default=True, description="Whether variant is active")
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = "DEMO"
 
 
 class VariantCreate(VariantBase):

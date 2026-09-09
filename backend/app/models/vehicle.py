@@ -28,6 +28,14 @@ class Manufacturer(Base, TimestampMixin, AuditableMixin):
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
+    # Ingestion & Provenance tracking
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False)
+
     # Relationship
     models: Mapped[List["CarModel"]] = relationship(
         "CarModel", back_populates="manufacturer", cascade="all, delete-orphan", order_by="CarModel.name"
@@ -71,6 +79,14 @@ class CarModel(Base, TimestampMixin, AuditableMixin):
     launch_year: Mapped[int] = mapped_column(Integer, default=2024, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # Ingestion & Provenance tracking
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False)
 
     # Relationships
     manufacturer: Mapped["Manufacturer"] = relationship("Manufacturer", back_populates="models")
@@ -128,6 +144,14 @@ class Variant(Base, TimestampMixin, AuditableMixin):
     range_km: Mapped[Optional[Decimal]] = mapped_column(Numeric(6, 2), nullable=True)
     
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    # Ingestion & Provenance tracking
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False)
 
     # Relationships
     model: Mapped["CarModel"] = relationship("CarModel", back_populates="variants")

@@ -3,17 +3,40 @@ import asyncio
 from app.core.database import AsyncSessionLocal
 from app.ingestion.adapters.demo_adapter import DemoDataSourceAdapter
 from app.ingestion.adapters.government_location_adapter import GovernmentLocationDataSourceAdapter
+from app.ingestion.adapters.manufacturer_vehicle_adapter import (
+    TataMotorsVehicleDataSourceAdapter,
+    MarutiSuzukiVehicleDataSourceAdapter,
+    HyundaiVehicleDataSourceAdapter,
+)
 from app.services.ingestion_service import IngestionService
 
 
 async def main():
     parser = argparse.ArgumentParser(description="CarAfford Ingestion Runner")
-    parser.add_argument("--source", type=str, default="government_location", choices=["demo", "government_location"], help="Source adapter to execute")
+    parser.add_argument(
+        "--source",
+        type=str,
+        default="government_location",
+        choices=[
+            "demo",
+            "government_location",
+            "tata_vehicles",
+            "maruti_vehicles",
+            "hyundai_vehicles",
+        ],
+        help="Source adapter to execute",
+    )
     parser.add_argument("--notes", type=str, default="Manual CLI ingestion run", help="Optional notes for run")
     args = parser.parse_args()
 
     print(f"🚀 Initializing CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source == "government_location":
+    if args.source in {"tata_vehicles", "tata", "tata_motors"}:
+        adapter = TataMotorsVehicleDataSourceAdapter()
+    elif args.source in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
+        adapter = MarutiSuzukiVehicleDataSourceAdapter()
+    elif args.source in {"hyundai_vehicles", "hyundai"}:
+        adapter = HyundaiVehicleDataSourceAdapter()
+    elif args.source in {"government_location", "locations", "rto"}:
         adapter = GovernmentLocationDataSourceAdapter()
     else:
         adapter = DemoDataSourceAdapter()

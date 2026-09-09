@@ -42,6 +42,7 @@ class VehiclePrice(Base):
     retrieved_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=True
     )
+    verification_status: Mapped[str] = mapped_column(String(50), default="DEMO", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

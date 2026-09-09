@@ -5,6 +5,11 @@ from decimal import Decimal
 from app.core.database import AsyncSessionLocal
 from app.ingestion.adapters.demo_adapter import DemoDataSourceAdapter
 from app.ingestion.adapters.government_location_adapter import GovernmentLocationDataSourceAdapter
+from app.ingestion.adapters.manufacturer_vehicle_adapter import (
+    TataMotorsVehicleDataSourceAdapter,
+    MarutiSuzukiVehicleDataSourceAdapter,
+    HyundaiVehicleDataSourceAdapter,
+)
 from app.ingestion.validators.finance_validator import FinanceDataValidator
 from app.ingestion.validators.location_validator import LocationDataValidator
 from app.ingestion.validators.pricing_validator import PriceDataValidator
@@ -16,7 +21,13 @@ from app.services.ingestion_service import IngestionService
 
 async def handle_run(args):
     print(f"🚀 Running CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source == "government_location":
+    if args.source in {"tata_vehicles", "tata", "tata_motors"}:
+        adapter = TataMotorsVehicleDataSourceAdapter()
+    elif args.source in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
+        adapter = MarutiSuzukiVehicleDataSourceAdapter()
+    elif args.source in {"hyundai_vehicles", "hyundai"}:
+        adapter = HyundaiVehicleDataSourceAdapter()
+    elif args.source in {"government_location", "locations", "rto"}:
         adapter = GovernmentLocationDataSourceAdapter()
     else:
         adapter = DemoDataSourceAdapter()
@@ -126,7 +137,19 @@ def main():
 
     # run command
     run_parser = subparsers.add_parser("run", help="Run ingestion adapter")
-    run_parser.add_argument("--source", type=str, default="government_location", choices=["demo", "government_location"], help="Source adapter name")
+    run_parser.add_argument(
+        "--source",
+        type=str,
+        default="government_location",
+        choices=[
+            "demo",
+            "government_location",
+            "tata_vehicles",
+            "maruti_vehicles",
+            "hyundai_vehicles",
+        ],
+        help="Source adapter name",
+    )
     run_parser.add_argument("--notes", type=str, default="CLI manual execution", help="Run notes")
 
     # validate command

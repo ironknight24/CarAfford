@@ -51,3 +51,11 @@ class PriceDataValidator(DataValidator):
                     errors.append(f"effective_from ({eff_from}) must be strictly earlier than effective_to ({eff_to})")
 
         return len(errors) == 0, errors
+
+    def classify_status(self, is_valid: bool, has_official_source: bool = False) -> str:
+        """Classifies verification status based on validation and source provenance."""
+        if not is_valid:
+            return "REJECTED"
+        if has_official_source:
+            return "VERIFIED"
+        return "FORMAT_VALID"

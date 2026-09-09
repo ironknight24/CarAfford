@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_db
 from app.ingestion.adapters.demo_adapter import DemoDataSourceAdapter
 from app.ingestion.adapters.government_location_adapter import GovernmentLocationDataSourceAdapter
+from app.ingestion.adapters.manufacturer_vehicle_adapter import (
+    TataMotorsVehicleDataSourceAdapter,
+    MarutiSuzukiVehicleDataSourceAdapter,
+    HyundaiVehicleDataSourceAdapter,
+)
 from app.models.ingestion import (
     DataConflictRecord,
     DataQualityReviewItem,
@@ -36,8 +41,15 @@ async def trigger_ingestion_run(
     request: IngestionRunCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Triggers an ingestion run for a supported dataset adapter (e.g. demo-seed-catalogue, locations_rto_directory)."""
-    if request.dataset_name in {"locations_rto_directory", "locations", "rto_directory", "government_location"}:
+    """Triggers an ingestion run for a supported dataset adapter."""
+    dataset = request.dataset_name.lower().strip()
+    if dataset in {"tata_vehicles", "tata", "tata_motors"}:
+        adapter = TataMotorsVehicleDataSourceAdapter()
+    elif dataset in {"maruti_vehicles", "maruti", "maruti_suzuki"}:
+        adapter = MarutiSuzukiVehicleDataSourceAdapter()
+    elif dataset in {"hyundai_vehicles", "hyundai"}:
+        adapter = HyundaiVehicleDataSourceAdapter()
+    elif dataset in {"locations_rto_directory", "locations", "rto_directory", "government_location"}:
         adapter = GovernmentLocationDataSourceAdapter()
     else:
         adapter = DemoDataSourceAdapter()

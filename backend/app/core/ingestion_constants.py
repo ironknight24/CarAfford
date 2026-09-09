@@ -51,19 +51,29 @@ class IngestionEntityType(str, Enum):
     FINANCE = "FINANCE"
     LOCATION = "LOCATION"
     TCO_ASSUMPTION = "TCO_ASSUMPTION"
+    FUEL_PRICE = "FUEL_PRICE"
+    ELECTRICITY_TARIFF = "ELECTRICITY_TARIFF"
+    MAINTENANCE_COST = "MAINTENANCE_COST"
+    INSURANCE_BENCHMARK = "INSURANCE_BENCHMARK"
+    DEPRECIATION_BENCHMARK = "DEPRECIATION_BENCHMARK"
 
 
 # Freshness SLA Policies in Days
 DATASET_FRESHNESS_SLA_DAYS: Dict[str, int] = {
-    "bank_rates": 7,          # Banking interest rates change weekly/monthly
-    "bank_car_loans": 7,      # Bank car loan rate schedules
-    "loan_fees": 30,          # Processing & documentation fees change monthly
-    "eligibility_rules": 90,  # Underwriting eligibility policies change quarterly
-    "vehicle_prices": 30,     # Ex-showroom prices update monthly/quarterly
-    "tax_rules": 180,         # RTO/State budgets update semiannually/annually
-    "vehicle_specs": 365,     # Vehicle technical specs are stable per model year
-    "locations": 365,         # States/Cities/RTOs are structurally stable
-    "tco_assumptions": 30,    # Fuel and maintenance benchmarks
+    "bank_rates": 7,              # Banking interest rates change weekly/monthly
+    "bank_car_loans": 7,          # Bank car loan rate schedules
+    "loan_fees": 30,              # Processing & documentation fees change monthly
+    "eligibility_rules": 90,      # Underwriting eligibility policies change quarterly
+    "vehicle_prices": 30,         # Ex-showroom prices update monthly/quarterly
+    "tax_rules": 180,             # RTO/State budgets update semiannually/annually
+    "vehicle_specs": 365,         # Vehicle technical specs are stable per model year
+    "locations": 365,             # States/Cities/RTOs are structurally stable
+    "fuel_prices": 7,             # Fuel prices observed daily/weekly
+    "electricity_tariffs": 90,    # Electricity regulatory tariffs update quarterly/annually
+    "insurance_data": 60,         # IRDAI benchmark guidelines
+    "maintenance_costs": 365,     # Scheduled maintenance costs update annually
+    "depreciation_data": 365,     # Depreciation curves update annually
+    "tco_assumptions": 30,        # Fuel and maintenance benchmarks
 }
 
 # Trust level defaults (0 to 100)

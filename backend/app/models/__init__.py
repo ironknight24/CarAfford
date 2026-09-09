@@ -19,6 +19,13 @@ from app.models.finance import (
 )
 from app.models.insurance import InsuranceRateRule
 from app.models.tax_rule import TaxRule, TaxRuleBracket
+from app.models.tco import (
+    FuelPrice,
+    ElectricityTariff,
+    MaintenanceCostBenchmark,
+    InsuranceRenewalBenchmark,
+    DepreciationBenchmark,
+)
 from app.models.ingestion import (
     IngestionRun,
     RawIngestionRecord,
@@ -55,6 +62,11 @@ __all__ = [
     "InsuranceRateRule",
     "TaxRule",
     "TaxRuleBracket",
+    "FuelPrice",
+    "ElectricityTariff",
+    "MaintenanceCostBenchmark",
+    "InsuranceRenewalBenchmark",
+    "DepreciationBenchmark",
     "IngestionRun",
     "RawIngestionRecord",
     "DataConflictRecord",

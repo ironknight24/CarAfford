@@ -25,18 +25,36 @@ from app.ingestion.adapters.government_tax_adapter import (
     TamilNaduTaxRuleAdapter,
     TelanganaTaxRuleAdapter,
 )
+from app.ingestion.adapters.tco_data_adapter import (
+    PPACFuelPriceAdapter,
+    StateDiscomTariffAdapter,
+    IndustryMaintenanceBenchmarkAdapter,
+    IRDAIInsuranceRenewalAdapter,
+    FADADepreciationBenchmarkAdapter,
+)
 from app.ingestion.validators.finance_validator import FinanceDataValidator
 from app.ingestion.validators.location_validator import LocationDataValidator
 from app.ingestion.validators.pricing_validator import PriceDataValidator
 from app.ingestion.validators.tax_validator import TaxRuleDataValidator
 from app.ingestion.validators.vehicle_validator import VehicleDataValidator
+from app.ingestion.validators.tco_validator import TCOValidator
 from app.services.data_quality_service import DataQualityService
 from app.services.ingestion_service import IngestionService
 
 
 async def handle_run(args):
     print(f"🚀 Running CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
+    if args.source in {"fuel_prices", "ppac_fuel_prices", "fuel"}:
+        adapter = PPACFuelPriceAdapter()
+    elif args.source in {"electricity_tariffs", "electricity", "ev_tariffs"}:
+        adapter = StateDiscomTariffAdapter()
+    elif args.source in {"maintenance_costs", "maintenance", "service_costs"}:
+        adapter = IndustryMaintenanceBenchmarkAdapter()
+    elif args.source in {"insurance_data", "insurance_renewals", "insurance"}:
+        adapter = IRDAIInsuranceRenewalAdapter()
+    elif args.source in {"depreciation_data", "depreciation", "resale_curves"}:
+        adapter = FADADepreciationBenchmarkAdapter()
+    elif args.source in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
         adapter = KarnatakaTaxRuleAdapter()
     elif args.source in {"maharashtra_tax_rules", "maharashtra_taxes", "mh_tax_rules", "mh_tax"}:
         adapter = MaharashtraTaxRuleAdapter()
@@ -93,12 +111,14 @@ def handle_validate(args):
             "safety_rating_stars": 5,
             "airbags_count": 2,
         }
+        is_valid, errors = v.validate(sample)
     elif args.dataset == "prices":
         v = PriceDataValidator()
         sample = {
             "ex_showroom_price": Decimal("612900.00"),
             "effective_from": "2026-01-01T00:00:00Z",
         }
+        is_valid, errors = v.validate(sample)
     elif args.dataset == "taxes":
         v = TaxRuleDataValidator()
         sample = {
@@ -114,6 +134,20 @@ def handle_validate(args):
                 {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "calculation_method": "PERCENTAGE"},
             ],
         }
+        is_valid, errors = v.validate(sample)
+    elif args.dataset == "tco":
+        v = TCOValidator()
+        sample = {
+            "tco_category": "fuel_price",
+            "fuel_type": "PETROL",
+            "state_code": "KA",
+            "city_name": "Bengaluru",
+            "price_per_unit": Decimal("102.86"),
+            "unit": "Litre",
+            "currency": "INR",
+            "observed_date": "2026-03-01T00:00:00Z",
+        }
+        is_valid, errors = v.validate(sample)
     elif args.dataset == "locations":
         v = LocationDataValidator()
         sample = {
@@ -125,6 +159,7 @@ def handle_validate(args):
             "rto_name": "Bangalore Central (Koramangala)",
             "jurisdiction": "Koramangala, BTM Layout, HSR Layout",
         }
+        is_valid, errors = v.validate(sample)
     else:
         v = FinanceDataValidator()
         sample = {
@@ -163,8 +198,8 @@ def handle_validate(args):
                 }
             ],
         }
+        is_valid, errors = v.validate(sample)
 
-    is_valid, errors = v.validate(sample)
     if is_valid:
         print(f"✅ Validation passed for '{args.dataset}' sample!")
     else:
@@ -231,6 +266,12 @@ def main():
             "delhi_tax_rules",
             "tamilnadu_tax_rules",
             "telangana_tax_rules",
+            "fuel_prices",
+            "ppac_fuel_prices",
+            "electricity_tariffs",
+            "maintenance_costs",
+            "insurance_data",
+            "depreciation_data",
         ],
         help="Source adapter name",
     )
@@ -238,7 +279,7 @@ def main():
 
     # validate command
     val_parser = subparsers.add_parser("validate", help="Validate dataset payload")
-    val_parser.add_argument("--dataset", type=str, required=True, choices=["vehicles", "prices", "taxes", "finance", "locations"], help="Dataset to validate")
+    val_parser.add_argument("--dataset", type=str, required=True, choices=["vehicles", "prices", "taxes", "finance", "locations", "tco"], help="Dataset to validate")
 
     # conflicts command
     subparsers.add_parser("conflicts", help="Inspect cross-source data conflicts")

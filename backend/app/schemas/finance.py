@@ -216,17 +216,34 @@ class EmiCalculationRequest(BaseModel):
 
 
 class AmortizationScheduleItem(BaseModel):
-    installment_number: int
+    installment_number: int = 0
     month: int
-    opening_balance: Decimal
+    opening_balance: Decimal = Decimal("0.00")
     beginning_balance: Optional[Decimal] = None  # alias
     emi: Decimal
     principal_component: Decimal
     principal_paid: Optional[Decimal] = None  # alias
     interest_component: Decimal
     interest_paid: Optional[Decimal] = None  # alias
-    closing_balance: Decimal
+    closing_balance: Decimal = Decimal("0.00")
     ending_balance: Optional[Decimal] = None  # alias
+    remaining_principal: Optional[Decimal] = None  # alias
+
+    @model_validator(mode="after")
+    def populate_balance_aliases(self) -> "AmortizationScheduleItem":
+        if self.closing_balance == Decimal("0.00") and self.remaining_principal is not None:
+            self.closing_balance = self.remaining_principal
+        if self.remaining_principal is None:
+            self.remaining_principal = self.closing_balance
+        if self.ending_balance is None:
+            self.ending_balance = self.closing_balance
+        if self.beginning_balance is None:
+            self.beginning_balance = self.opening_balance
+        if self.principal_paid is None:
+            self.principal_paid = self.principal_component
+        if self.interest_paid is None:
+            self.interest_paid = self.interest_component
+        return self
 
 
 class EmiCalculationResponse(BaseModel):

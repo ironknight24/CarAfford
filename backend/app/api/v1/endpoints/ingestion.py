@@ -26,6 +26,13 @@ from app.ingestion.adapters.government_tax_adapter import (
     TamilNaduTaxRuleAdapter,
     TelanganaTaxRuleAdapter,
 )
+from app.ingestion.adapters.tco_data_adapter import (
+    PPACFuelPriceAdapter,
+    StateDiscomTariffAdapter,
+    IndustryMaintenanceBenchmarkAdapter,
+    IRDAIInsuranceRenewalAdapter,
+    FADADepreciationBenchmarkAdapter,
+)
 from app.models.ingestion import (
     DataConflictRecord,
     DataQualityReviewItem,
@@ -58,7 +65,17 @@ async def trigger_ingestion_run(
 ):
     """Triggers an ingestion run for a supported dataset adapter."""
     dataset = request.dataset_name.lower().strip()
-    if dataset in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
+    if dataset in {"fuel_prices", "ppac_fuel_prices", "fuel"}:
+        adapter = PPACFuelPriceAdapter()
+    elif dataset in {"electricity_tariffs", "electricity", "ev_tariffs"}:
+        adapter = StateDiscomTariffAdapter()
+    elif dataset in {"maintenance_costs", "maintenance", "service_costs"}:
+        adapter = IndustryMaintenanceBenchmarkAdapter()
+    elif dataset in {"insurance_data", "insurance_renewals", "insurance"}:
+        adapter = IRDAIInsuranceRenewalAdapter()
+    elif dataset in {"depreciation_data", "depreciation", "resale_curves"}:
+        adapter = FADADepreciationBenchmarkAdapter()
+    elif dataset in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
         adapter = KarnatakaTaxRuleAdapter()
     elif dataset in {"maharashtra_tax_rules", "maharashtra_taxes", "mh_tax_rules", "mh_tax"}:
         adapter = MaharashtraTaxRuleAdapter()

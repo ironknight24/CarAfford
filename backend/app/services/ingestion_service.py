@@ -35,12 +35,27 @@ from app.models.finance import (
     LoanFee,
 )
 from app.models.tax_rule import TaxRule, TaxRuleBracket
+from app.models.tco import (
+    FuelPrice,
+    ElectricityTariff,
+    MaintenanceCostBenchmark,
+    InsuranceRenewalBenchmark,
+    DepreciationBenchmark,
+)
 from app.schemas.ingestion import (
     DataQualityOverviewResponse,
     DataQualityScoreBreakdown,
     FreshnessReportItem,
     IngestionRunRead,
 )
+
+
+def _ensure_tz_utc(dt: Optional[datetime]) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class IngestionService:
@@ -186,6 +201,16 @@ class IngestionService:
                     entity_ident = f"{normalized.get('bank_name', '')} {normalized.get('product_name', '')}".strip()
                 elif adapter.entity_type == IngestionEntityType.TAX_RULE:
                     entity_ident = f"{normalized.get('state_code', '')} {normalized.get('tax_type', '')} {normalized.get('name', '')}".strip()
+                elif adapter.entity_type == IngestionEntityType.FUEL_PRICE or normalized.get("tco_category") == "fuel_price":
+                    entity_ident = f"{normalized.get('state_code', 'NATIONAL')} {normalized.get('city_name', 'ALL')} {normalized.get('fuel_type', '')}".strip()
+                elif adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF or normalized.get("tco_category") == "electricity_tariff":
+                    entity_ident = f"{normalized.get('state_code', '')} {normalized.get('tariff_type', '')} {normalized.get('discom_name', '')}".strip()
+                elif adapter.entity_type == IngestionEntityType.MAINTENANCE_COST or normalized.get("tco_category") == "maintenance":
+                    entity_ident = f"{normalized.get('powertrain', '')} {normalized.get('segment', 'ALL')}".strip()
+                elif adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK or normalized.get("tco_category") == "insurance_renewal":
+                    entity_ident = f"{normalized.get('fuel_type', 'ALL')} {normalized.get('segment', 'ALL')} INSURANCE".strip()
+                elif adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK or normalized.get("tco_category") == "depreciation":
+                    entity_ident = f"{normalized.get('powertrain', 'ALL')} {normalized.get('segment', 'ALL')} DEPRECIATION".strip()
                 else:
                     entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
 
@@ -201,6 +226,7 @@ class IngestionService:
 
                 # Map & Promote to Canonical if appropriate
                 mapped_data = mapper.map_to_canonical(normalized)
+                tco_cat = mapped_data.get("tco_category")
                 if adapter.entity_type == IngestionEntityType.LOCATION:
                     promoted = await cls._promote_location_to_canonical(
                         db=db,
@@ -217,6 +243,41 @@ class IngestionService:
                     )
                 elif adapter.entity_type == IngestionEntityType.TAX_RULE:
                     promoted = await cls._promote_tax_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.FUEL_PRICE or tco_cat == "fuel_price":
+                    promoted = await cls._promote_fuel_price_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF or tco_cat == "electricity_tariff":
+                    promoted = await cls._promote_electricity_tariff_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.MAINTENANCE_COST or tco_cat == "maintenance":
+                    promoted = await cls._promote_maintenance_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK or tco_cat == "insurance_renewal":
+                    promoted = await cls._promote_insurance_renewal_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK or tco_cat == "depreciation":
+                    promoted = await cls._promote_depreciation_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
@@ -1275,6 +1336,435 @@ class IngestionService:
             return "CREATED"
 
     @classmethod
+    async def _promote_fuel_price_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes fuel price observation to canonical table with location resolution and historical retention."""
+        fuel_type = data["fuel_type"].upper().strip()
+        price = data["price_per_unit"]
+        unit = data.get("unit", "Litre")
+        currency = data.get("currency", "INR")
+        obs_date = data["observed_date"]
+        eff_from = data.get("effective_from", obs_date)
+        state_code = data.get("state_code")
+        city_name = data.get("city_name")
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+        source_rec_id = source_record_id or data.get("source_record_id")
+
+        if obs_date.tzinfo is None:
+            obs_date = obs_date.replace(tzinfo=timezone.utc)
+        if eff_from.tzinfo is None:
+            eff_from = eff_from.replace(tzinfo=timezone.utc)
+
+        # Resolve state and city
+        state_id: Optional[int] = None
+        city_id: Optional[int] = None
+
+        if state_code:
+            st_res = await db.execute(select(State).where(State.code == state_code.upper()))
+            st = st_res.scalars().first()
+            if not st:
+                c_res = await db.execute(select(Country).where(Country.name == "India"))
+                c = c_res.scalars().first()
+                if not c:
+                    c = Country(name="India", iso_code="IN", iso3_code="IND", active=True)
+                    db.add(c)
+                    await db.flush()
+                st = State(name=f"State {state_code.upper()}", code=state_code.upper(), country_id=c.id, active=True)
+                db.add(st)
+                await db.flush()
+            state_id = st.id
+
+            if city_name:
+                ct_res = await db.execute(
+                    select(City).where(City.name.ilike(city_name.strip()), City.state_id == state_id)
+                )
+                ct = ct_res.scalars().first()
+                if not ct:
+                    c_slug = city_name.strip().lower().replace(" ", "-")
+                    ct = City(name=city_name.strip(), slug=c_slug, state_id=state_id, active=True)
+                    db.add(ct)
+                    await db.flush()
+                city_id = ct.id
+
+        # Check existing matching record by fuel_type, location, and observed_date
+        query = select(FuelPrice).where(
+            FuelPrice.fuel_type == fuel_type,
+            FuelPrice.state_id == state_id,
+            FuelPrice.city_id == city_id,
+            FuelPrice.observed_date == obs_date,
+        )
+        existing_res = await db.execute(query)
+        existing = existing_res.scalars().first()
+
+        if existing:
+            if existing.price_per_unit != price or existing.verification_status != ver_status:
+                existing.price_per_unit = price
+                existing.unit = unit
+                existing.currency = currency
+                existing.source_id = source_id
+                existing.source_record_id = source_rec_id
+                existing.verification_status = ver_status
+                existing.is_active = True
+                await db.flush()
+                return "UPDATED"
+            return "UNCHANGED"
+
+        # Check for previous active record to close effective_to
+        prev_active_res = await db.execute(
+            select(FuelPrice).where(
+                FuelPrice.fuel_type == fuel_type,
+                FuelPrice.state_id == state_id,
+                FuelPrice.city_id == city_id,
+                FuelPrice.is_active == True,
+            ).order_by(FuelPrice.effective_from.desc())
+        )
+        prev_active = prev_active_res.scalars().first()
+        if prev_active and _ensure_tz_utc(prev_active.effective_from) <= _ensure_tz_utc(eff_from):
+            prev_active.effective_to = eff_from
+            prev_active.is_active = False
+
+        new_record = FuelPrice(
+            fuel_type=fuel_type,
+            state_id=state_id,
+            state_code=state_code,
+            city_id=city_id,
+            city_name=city_name,
+            price_per_unit=price,
+            unit=unit,
+            currency=currency,
+            observed_date=obs_date,
+            effective_from=eff_from,
+            effective_to=None,
+            source_id=source_id,
+            source_record_id=source_rec_id,
+            verification_status=ver_status,
+            is_active=True,
+        )
+        db.add(new_record)
+        await db.flush()
+        return "CREATED"
+
+    @classmethod
+    async def _promote_electricity_tariff_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes electricity tariff to canonical table with state resolution and effective dating."""
+        tariff_type = data.get("tariff_type", "DOMESTIC_SLAB")
+        rate = data["rate_per_kwh"]
+        fixed_charge = data.get("fixed_charge_per_month")
+        eff_from = data.get("effective_from", datetime.now(timezone.utc))
+        state_code = data.get("state_code")
+        discom_name = data.get("discom_name")
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+
+        if eff_from.tzinfo is None:
+            eff_from = eff_from.replace(tzinfo=timezone.utc)
+
+        state_id: Optional[int] = None
+        if state_code:
+            st_res = await db.execute(select(State).where(State.code == state_code.upper()))
+            st = st_res.scalars().first()
+            if st:
+                state_id = st.id
+
+        existing_res = await db.execute(
+            select(ElectricityTariff).where(
+                ElectricityTariff.tariff_type == tariff_type,
+                ElectricityTariff.state_id == state_id,
+                ElectricityTariff.discom_name == discom_name,
+                ElectricityTariff.is_active == True,
+            )
+        )
+        existing = existing_res.scalars().first()
+
+        if existing:
+            if existing.rate_per_kwh != rate or existing.fixed_charge_per_month != fixed_charge:
+                existing.effective_to = eff_from
+                existing.is_active = False
+
+                new_tariff = ElectricityTariff(
+                    tariff_type=tariff_type,
+                    state_id=state_id,
+                    state_code=state_code,
+                    discom_name=discom_name,
+                    rate_per_kwh=rate,
+                    fixed_charge_per_month=fixed_charge,
+                    effective_from=eff_from,
+                    effective_to=None,
+                    source_id=source_id,
+                    verification_status=ver_status,
+                    is_active=True,
+                )
+                db.add(new_tariff)
+                await db.flush()
+                return "UPDATED"
+            else:
+                existing.source_id = source_id
+                existing.verification_status = ver_status
+                await db.flush()
+                return "UNCHANGED"
+
+        new_tariff = ElectricityTariff(
+            tariff_type=tariff_type,
+            state_id=state_id,
+            state_code=state_code,
+            discom_name=discom_name,
+            rate_per_kwh=rate,
+            fixed_charge_per_month=fixed_charge,
+            effective_from=eff_from,
+            effective_to=None,
+            source_id=source_id,
+            verification_status=ver_status,
+            is_active=True,
+        )
+        db.add(new_tariff)
+        await db.flush()
+        return "CREATED"
+
+    @classmethod
+    async def _promote_maintenance_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes maintenance cost benchmark into canonical table."""
+        powertrain = data["powertrain"].upper().strip()
+        segment = data.get("segment")
+        annual_base = data["annual_base_cost"]
+        cost_km = data["cost_per_km"]
+        interval_km = data.get("service_interval_km", 10000)
+        interval_mo = data.get("service_interval_months", 12)
+        eff_from = data.get("effective_from", datetime.now(timezone.utc))
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+
+        if eff_from.tzinfo is None:
+            eff_from = eff_from.replace(tzinfo=timezone.utc)
+
+        existing_res = await db.execute(
+            select(MaintenanceCostBenchmark).where(
+                MaintenanceCostBenchmark.powertrain == powertrain,
+                MaintenanceCostBenchmark.segment == segment,
+                MaintenanceCostBenchmark.is_active == True,
+            )
+        )
+        existing = existing_res.scalars().first()
+
+        if existing:
+            if existing.annual_base_cost != annual_base or existing.cost_per_km != cost_km:
+                existing.effective_to = eff_from
+                existing.is_active = False
+
+                new_maint = MaintenanceCostBenchmark(
+                    powertrain=powertrain,
+                    segment=segment,
+                    annual_base_cost=annual_base,
+                    cost_per_km=cost_km,
+                    service_interval_km=interval_km,
+                    service_interval_months=interval_mo,
+                    effective_from=eff_from,
+                    effective_to=None,
+                    source_id=source_id,
+                    verification_status=ver_status,
+                    is_active=True,
+                )
+                db.add(new_maint)
+                await db.flush()
+                return "UPDATED"
+            else:
+                existing.source_id = source_id
+                existing.verification_status = ver_status
+                await db.flush()
+                return "UNCHANGED"
+
+        new_maint = MaintenanceCostBenchmark(
+            powertrain=powertrain,
+            segment=segment,
+            annual_base_cost=annual_base,
+            cost_per_km=cost_km,
+            service_interval_km=interval_km,
+            service_interval_months=interval_mo,
+            effective_from=eff_from,
+            effective_to=None,
+            source_id=source_id,
+            verification_status=ver_status,
+            is_active=True,
+        )
+        db.add(new_maint)
+        await db.flush()
+        return "CREATED"
+
+    @classmethod
+    async def _promote_insurance_renewal_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes insurance renewal benchmark into canonical table."""
+        fuel_type = data.get("fuel_type")
+        segment = data.get("segment")
+        y2 = data["year_2_factor"]
+        y3 = data["year_3_factor"]
+        y4 = data["year_4_factor"]
+        y5 = data["year_5_factor"]
+        eff_from = data.get("effective_from", datetime.now(timezone.utc))
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+
+        if eff_from.tzinfo is None:
+            eff_from = eff_from.replace(tzinfo=timezone.utc)
+
+        existing_res = await db.execute(
+            select(InsuranceRenewalBenchmark).where(
+                InsuranceRenewalBenchmark.fuel_type == fuel_type,
+                InsuranceRenewalBenchmark.segment == segment,
+                InsuranceRenewalBenchmark.is_active == True,
+            )
+        )
+        existing = existing_res.scalars().first()
+
+        if existing:
+            if existing.year_2_factor != y2 or existing.year_3_factor != y3 or existing.year_4_factor != y4 or existing.year_5_factor != y5:
+                existing.effective_to = eff_from
+                existing.is_active = False
+
+                new_ins = InsuranceRenewalBenchmark(
+                    fuel_type=fuel_type,
+                    segment=segment,
+                    year_2_factor=y2,
+                    year_3_factor=y3,
+                    year_4_factor=y4,
+                    year_5_factor=y5,
+                    effective_from=eff_from,
+                    effective_to=None,
+                    source_id=source_id,
+                    verification_status=ver_status,
+                    is_active=True,
+                )
+                db.add(new_ins)
+                await db.flush()
+                return "UPDATED"
+            else:
+                existing.source_id = source_id
+                existing.verification_status = ver_status
+                await db.flush()
+                return "UNCHANGED"
+
+        new_ins = InsuranceRenewalBenchmark(
+            fuel_type=fuel_type,
+            segment=segment,
+            year_2_factor=y2,
+            year_3_factor=y3,
+            year_4_factor=y4,
+            year_5_factor=y5,
+            effective_from=eff_from,
+            effective_to=None,
+            source_id=source_id,
+            verification_status=ver_status,
+            is_active=True,
+        )
+        db.add(new_ins)
+        await db.flush()
+        return "CREATED"
+
+    @classmethod
+    async def _promote_depreciation_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes depreciation schedule benchmark into canonical table."""
+        powertrain = data.get("powertrain")
+        segment = data.get("segment")
+        y1 = data["year_1_depreciation_pct"]
+        y2 = data["year_2_depreciation_pct"]
+        y3 = data["year_3_depreciation_pct"]
+        y4 = data["year_4_depreciation_pct"]
+        y5 = data["year_5_depreciation_pct"]
+        methodology = data.get("methodology", "EMPIRICAL_MARKET_RESALE")
+        eff_from = data.get("effective_from", datetime.now(timezone.utc))
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+
+        if eff_from.tzinfo is None:
+            eff_from = eff_from.replace(tzinfo=timezone.utc)
+
+        existing_res = await db.execute(
+            select(DepreciationBenchmark).where(
+                DepreciationBenchmark.powertrain == powertrain,
+                DepreciationBenchmark.segment == segment,
+                DepreciationBenchmark.is_active == True,
+            )
+        )
+        existing = existing_res.scalars().first()
+
+        if existing:
+            if (
+                existing.year_1_depreciation_pct != y1
+                or existing.year_2_depreciation_pct != y2
+                or existing.year_3_depreciation_pct != y3
+                or existing.year_4_depreciation_pct != y4
+                or existing.year_5_depreciation_pct != y5
+            ):
+                existing.effective_to = eff_from
+                existing.is_active = False
+
+                new_dep = DepreciationBenchmark(
+                    powertrain=powertrain,
+                    segment=segment,
+                    year_1_depreciation_pct=y1,
+                    year_2_depreciation_pct=y2,
+                    year_3_depreciation_pct=y3,
+                    year_4_depreciation_pct=y4,
+                    year_5_depreciation_pct=y5,
+                    methodology=methodology,
+                    effective_from=eff_from,
+                    effective_to=None,
+                    source_id=source_id,
+                    verification_status=ver_status,
+                    is_active=True,
+                )
+                db.add(new_dep)
+                await db.flush()
+                return "UPDATED"
+            else:
+                existing.source_id = source_id
+                existing.verification_status = ver_status
+                await db.flush()
+                return "UNCHANGED"
+
+        new_dep = DepreciationBenchmark(
+            powertrain=powertrain,
+            segment=segment,
+            year_1_depreciation_pct=y1,
+            year_2_depreciation_pct=y2,
+            year_3_depreciation_pct=y3,
+            year_4_depreciation_pct=y4,
+            year_5_depreciation_pct=y5,
+            methodology=methodology,
+            effective_from=eff_from,
+            effective_to=None,
+            source_id=source_id,
+            verification_status=ver_status,
+            is_active=True,
+        )
+        db.add(new_dep)
+        await db.flush()
+        return "CREATED"
+
+    @classmethod
     async def _check_conflicts(
         cls,
         db: AsyncSession,
@@ -1510,6 +2000,108 @@ class IngestionService:
                                     )
                                     db.add(conflict)
                                     await db.flush()
+
+        # 5. Fuel price discrepancies across sources
+        if entity_type == IngestionEntityType.FUEL_PRICE.value:
+            fuel_type = normalized_payload.get("fuel_type")
+            cur_price = normalized_payload.get("price_per_unit")
+            state_code = normalized_payload.get("state_code")
+            city_name = normalized_payload.get("city_name")
+            if fuel_type and cur_price is not None:
+                res = await db.execute(
+                    select(RawIngestionRecord, IngestionRun.data_source_id)
+                    .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                    .where(
+                        RawIngestionRecord.entity_type == entity_type,
+                        IngestionRun.data_source_id != current_source_id,
+                    )
+                    .limit(10)
+                )
+                other_records = res.all()
+                for rec, other_source_id in other_records:
+                    other_payload = rec.raw_payload
+                    if (
+                        other_payload.get("fuel_type") == fuel_type
+                        and other_payload.get("state_code") == state_code
+                        and other_payload.get("city_name") == city_name
+                    ):
+                        other_price = other_payload.get("price_per_unit")
+                        if other_price is not None and Decimal(str(other_price)) != Decimal(str(cur_price)):
+                            existing_conflict = (
+                                await db.execute(
+                                    select(DataConflictRecord).where(
+                                        DataConflictRecord.entity_identifier == entity_identifier,
+                                        DataConflictRecord.field_name == "price_per_unit",
+                                        DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                    )
+                                )
+                            ).scalars().first()
+                            if not existing_conflict:
+                                conflict = DataConflictRecord(
+                                    dataset_name=dataset_name,
+                                    entity_type=entity_type,
+                                    entity_identifier=entity_identifier,
+                                    field_name="price_per_unit",
+                                    source_a_id=current_source_id,
+                                    source_a_value={"price_per_unit": str(cur_price)},
+                                    source_b_id=other_source_id,
+                                    source_b_value={"price_per_unit": str(other_price)},
+                                    detected_at=datetime.now(timezone.utc),
+                                    status=ConflictStatus.UNRESOLVED.value,
+                                )
+                                db.add(conflict)
+                                await db.flush()
+
+        # 6. Electricity tariff rate discrepancies across sources
+        if entity_type == IngestionEntityType.ELECTRICITY_TARIFF.value:
+            tariff_type = normalized_payload.get("tariff_type")
+            cur_rate = normalized_payload.get("rate_per_kwh")
+            state_code = normalized_payload.get("state_code")
+            discom = normalized_payload.get("discom_name")
+            if tariff_type and cur_rate is not None:
+                res = await db.execute(
+                    select(RawIngestionRecord, IngestionRun.data_source_id)
+                    .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                    .where(
+                        RawIngestionRecord.entity_type == entity_type,
+                        IngestionRun.data_source_id != current_source_id,
+                    )
+                    .limit(10)
+                )
+                other_records = res.all()
+                for rec, other_source_id in other_records:
+                    other_payload = rec.raw_payload
+                    if (
+                        other_payload.get("tariff_type") == tariff_type
+                        and other_payload.get("state_code") == state_code
+                        and other_payload.get("discom_name") == discom
+                    ):
+                        other_rate = other_payload.get("rate_per_kwh")
+                        if other_rate is not None and Decimal(str(other_rate)) != Decimal(str(cur_rate)):
+                            existing_conflict = (
+                                await db.execute(
+                                    select(DataConflictRecord).where(
+                                        DataConflictRecord.entity_identifier == entity_identifier,
+                                        DataConflictRecord.field_name == "rate_per_kwh",
+                                        DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                    )
+                                )
+                            ).scalars().first()
+                            if not existing_conflict:
+                                conflict = DataConflictRecord(
+                                    dataset_name=dataset_name,
+                                    entity_type=entity_type,
+                                    entity_identifier=entity_identifier,
+                                    field_name="rate_per_kwh",
+                                    source_a_id=current_source_id,
+                                    source_a_value={"rate_per_kwh": str(cur_rate)},
+                                    source_b_id=other_source_id,
+                                    source_b_value={"rate_per_kwh": str(other_rate)},
+                                    detected_at=datetime.now(timezone.utc),
+                                    status=ConflictStatus.UNRESOLVED.value,
+                                )
+                                db.add(conflict)
+                                await db.flush()
 
     @classmethod
     async def get_freshness_report(cls, db: AsyncSession) -> List[FreshnessReportItem]:

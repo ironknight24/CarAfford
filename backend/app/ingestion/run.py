@@ -23,6 +23,13 @@ from app.ingestion.adapters.government_tax_adapter import (
     TamilNaduTaxRuleAdapter,
     TelanganaTaxRuleAdapter,
 )
+from app.ingestion.adapters.tco_data_adapter import (
+    PPACFuelPriceAdapter,
+    StateDiscomTariffAdapter,
+    IndustryMaintenanceBenchmarkAdapter,
+    IRDAIInsuranceRenewalAdapter,
+    FADADepreciationBenchmarkAdapter,
+)
 from app.services.ingestion_service import IngestionService
 
 
@@ -49,6 +56,12 @@ async def main():
             "delhi_tax_rules",
             "tamilnadu_tax_rules",
             "telangana_tax_rules",
+            "fuel_prices",
+            "ppac_fuel_prices",
+            "electricity_tariffs",
+            "maintenance_costs",
+            "insurance_data",
+            "depreciation_data",
         ],
         help="Source adapter to execute",
     )
@@ -56,7 +69,17 @@ async def main():
     args = parser.parse_args()
 
     print(f"🚀 Initializing CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
+    if args.source in {"fuel_prices", "ppac_fuel_prices", "fuel"}:
+        adapter = PPACFuelPriceAdapter()
+    elif args.source in {"electricity_tariffs", "electricity", "ev_tariffs"}:
+        adapter = StateDiscomTariffAdapter()
+    elif args.source in {"maintenance_costs", "maintenance", "service_costs"}:
+        adapter = IndustryMaintenanceBenchmarkAdapter()
+    elif args.source in {"insurance_data", "insurance_renewals", "insurance"}:
+        adapter = IRDAIInsuranceRenewalAdapter()
+    elif args.source in {"depreciation_data", "depreciation", "resale_curves"}:
+        adapter = FADADepreciationBenchmarkAdapter()
+    elif args.source in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
         adapter = KarnatakaTaxRuleAdapter()
     elif args.source in {"maharashtra_tax_rules", "maharashtra_taxes", "mh_tax_rules", "mh_tax"}:
         adapter = MaharashtraTaxRuleAdapter()

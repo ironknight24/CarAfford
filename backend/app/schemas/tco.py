@@ -15,6 +15,21 @@ class FuelPriceAssumption(BaseModel):
     currency: str = "INR"
     effective_from: datetime
     source: str
+    verification_status: str = "DEMO"
+    data_status: str = "DEMO"
+    state_code: Optional[str] = None
+    city_name: Optional[str] = None
+
+
+class ElectricityTariffAssumption(BaseModel):
+    tariff_type: str
+    rate_per_kwh: Decimal
+    fixed_charge_per_month: Optional[Decimal] = None
+    discom_name: Optional[str] = None
+    currency: str = "INR"
+    effective_from: datetime
+    source: str
+    verification_status: str = "DEMO"
     data_status: str = "DEMO"
 
 
@@ -25,6 +40,7 @@ class MaintenanceAssumption(BaseModel):
     service_interval_km: int = 10000
     service_interval_months: int = 12
     source: str
+    verification_status: str = "DEMO"
     data_status: str = "DEMO"
 
 
@@ -34,6 +50,7 @@ class InsuranceAssumption(BaseModel):
     year_4_factor: Decimal
     year_5_factor: Decimal
     source: str
+    verification_status: str = "DEMO"
     data_status: str = "DEMO"
 
 
@@ -43,12 +60,15 @@ class DepreciationAssumption(BaseModel):
     year_3_depreciation_pct: Decimal
     year_4_depreciation_pct: Decimal
     year_5_depreciation_pct: Decimal
+    methodology: str = "EMPIRICAL_MARKET_RESALE"
     source: str
+    verification_status: str = "DEMO"
     data_status: str = "DEMO"
 
 
 class TCOAssumptionsResponse(BaseModel):
     fuel_prices: Dict[str, FuelPriceAssumption]
+    electricity_tariffs: Optional[Dict[str, ElectricityTariffAssumption]] = None
     maintenance_rates: Dict[str, MaintenanceAssumption]
     insurance_renewal: InsuranceAssumption
     depreciation: DepreciationAssumption
@@ -159,6 +179,8 @@ class TCOPeriodBreakdown(BaseModel):
     total_cash_outflow: Decimal
     estimated_depreciation: Decimal
     estimated_resale_value: Decimal
+    loan_outstanding_principal: Optional[Decimal] = None
+    net_equity_on_resale: Optional[Decimal] = None
     estimated_economic_cost: Decimal
 
     # Averages
@@ -176,6 +198,9 @@ class TCODrivingProfile(BaseModel):
     fuel_price_per_unit: Decimal
     fuel_price_unit: str
     efficiency_source: str = "OEM_CLAIMED"
+    fuel_price_source: Optional[str] = None
+    fuel_price_verification: Optional[str] = None
+    location_match_level: Optional[str] = None  # "CITY", "STATE", "NATIONAL_FALLBACK"
 
 
 class TCOCalculationResponse(BaseModel):

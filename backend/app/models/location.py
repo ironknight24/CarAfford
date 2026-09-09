@@ -47,6 +47,15 @@ class State(Base, TimestampMixin):
     )  # STATE, UNION_TERRITORY
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
+    # Data Source / Provenance
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=True
+    )
+
     # Relationships
     country: Mapped["Country"] = relationship("Country", back_populates="states")
     cities: Mapped[List["City"]] = relationship(
@@ -58,6 +67,7 @@ class State(Base, TimestampMixin):
     tax_slabs: Mapped[List["TaxSlab"]] = relationship(
         "TaxSlab", back_populates="state", cascade="all, delete-orphan"
     )
+    source: Mapped[Optional["DataSource"]] = relationship("DataSource")
 
     @property
     def is_ut(self) -> bool:
@@ -86,11 +96,21 @@ class City(Base, TimestampMixin):
     )  # Tier 1, Tier 2, Tier 3
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
+    # Data Source / Provenance
+    source_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("data_sources.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    source_record_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    retrieved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=True
+    )
+
     # Relationships
     state: Mapped["State"] = relationship("State", back_populates="cities")
     rtos: Mapped[List["RtoOffice"]] = relationship(
         "RtoOffice", back_populates="city", order_by="RtoOffice.code"
     )
+    source: Mapped[Optional["DataSource"]] = relationship("DataSource")
 
 
 class RtoOffice(Base, TimestampMixin):

@@ -46,6 +46,9 @@ class StateBase(BaseModel):
     code: str = Field(..., max_length=10, description="State abbreviation/code (e.g., KA, DL, MH)")
     region_type: str = Field(default="STATE", description="Administrative region type: STATE or UNION_TERRITORY")
     active: bool = Field(default=True, description="Whether state/UT is active")
+    source_id: Optional[int] = Field(default=None, description="Provenance data source identifier")
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
 
 
 class StateCreate(StateBase):
@@ -72,6 +75,9 @@ class StateRead(BaseModel):
     region_type: str
     active: bool
     is_ut: bool
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     country: Optional[CountrySimple] = None
@@ -88,6 +94,9 @@ class CityBase(BaseModel):
     slug: str = Field(..., max_length=100, description="Unique slug (e.g., bengaluru, mumbai)")
     tier: str = Field(default="Tier 1", max_length=10, description="City classification (Tier 1, Tier 2, Tier 3)")
     active: bool = Field(default=True, description="Whether city is active")
+    source_id: Optional[int] = Field(default=None, description="Provenance data source identifier")
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
 
 
 class CityCreate(CityBase):
@@ -112,6 +121,9 @@ class CityRead(BaseModel):
     slug: str
     tier: str
     active: bool
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     state: Optional[StateSimple] = None

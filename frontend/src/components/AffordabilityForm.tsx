@@ -345,6 +345,9 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
       {/* Row: Affordability Risk Profile */}
       <div>
         <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex justify-between">

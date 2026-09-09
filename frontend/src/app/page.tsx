@@ -159,7 +159,7 @@ export default function HomePage() {
                   Recommended Cars for Your Budget
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Showing {recommendationData.total_matches_count} matching variants ranked by Affordability Score, Safety Rating, and Total Cost of Ownership.
+                  Showing {recommendationData.total_affordable_count ?? recommendationData.recommended_vehicles.length} matching variants ranked by Affordability Score, Safety Rating, and Total Cost of Ownership.
                 </p>
               </div>
             </div>

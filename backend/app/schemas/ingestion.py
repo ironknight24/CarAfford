@@ -64,7 +64,7 @@ class DataSourceRead(DataSourceBase):
 # =============================================================================
 
 class IngestionRunCreate(BaseModel):
-    data_source_id: int
+    data_source_id: Optional[int] = None
     dataset_name: str = Field(..., max_length=100)
     notes: Optional[str] = None
 

@@ -4,7 +4,9 @@ from decimal import Decimal
 
 from app.core.database import AsyncSessionLocal
 from app.ingestion.adapters.demo_adapter import DemoDataSourceAdapter
+from app.ingestion.adapters.government_location_adapter import GovernmentLocationDataSourceAdapter
 from app.ingestion.validators.finance_validator import FinanceDataValidator
+from app.ingestion.validators.location_validator import LocationDataValidator
 from app.ingestion.validators.pricing_validator import PriceDataValidator
 from app.ingestion.validators.tax_validator import TaxRuleDataValidator
 from app.ingestion.validators.vehicle_validator import VehicleDataValidator
@@ -14,7 +16,11 @@ from app.services.ingestion_service import IngestionService
 
 async def handle_run(args):
     print(f"🚀 Running CarAfford Ingestion for source: {args.source.upper()}...")
-    adapter = DemoDataSourceAdapter()
+    if args.source == "government_location":
+        adapter = GovernmentLocationDataSourceAdapter()
+    else:
+        adapter = DemoDataSourceAdapter()
+
     async with AsyncSessionLocal() as session:
         run = await IngestionService.run_adapter(session, adapter, notes=args.notes)
         print(f"✅ Ingestion Run Completed!")
@@ -52,6 +58,17 @@ def handle_validate(args):
             "tax_type": "ROAD_TAX",
             "calculation_type": "PERCENTAGE",
             "base_rate_percent": Decimal("14.0"),
+        }
+    elif args.dataset == "locations":
+        v = LocationDataValidator()
+        sample = {
+            "state_code": "KA",
+            "state_name": "Karnataka",
+            "city_name": "Bengaluru",
+            "tier": "Tier 1",
+            "rto_code": "KA-01",
+            "rto_name": "Bangalore Central (Koramangala)",
+            "jurisdiction": "Koramangala, BTM Layout, HSR Layout",
         }
     else:
         v = FinanceDataValidator()
@@ -109,12 +126,12 @@ def main():
 
     # run command
     run_parser = subparsers.add_parser("run", help="Run ingestion adapter")
-    run_parser.add_argument("--source", type=str, default="demo", choices=["demo"], help="Source adapter name")
+    run_parser.add_argument("--source", type=str, default="government_location", choices=["demo", "government_location"], help="Source adapter name")
     run_parser.add_argument("--notes", type=str, default="CLI manual execution", help="Run notes")
 
     # validate command
     val_parser = subparsers.add_parser("validate", help="Validate dataset payload")
-    val_parser.add_argument("--dataset", type=str, required=True, choices=["vehicles", "prices", "taxes", "finance"], help="Dataset to validate")
+    val_parser.add_argument("--dataset", type=str, required=True, choices=["vehicles", "prices", "taxes", "finance", "locations"], help="Dataset to validate")
 
     # conflicts command
     subparsers.add_parser("conflicts", help="Inspect cross-source data conflicts")

@@ -26,7 +26,7 @@ from app.models.ingestion import (
 )
 from app.models.vehicle import Manufacturer, CarModel, Variant
 from app.models.pricing import VehiclePrice
-from app.models.location import State, City, RtoOffice
+from app.models.location import Country, State, City, RtoOffice
 from app.schemas.ingestion import (
     DataQualityOverviewResponse,
     DataQualityScoreBreakdown,
@@ -168,7 +168,11 @@ class IngestionService:
                 raw_rec.validation_status = "VALID"
 
                 # Check for multi-source conflicts if entity identifier exists
-                entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
+                if adapter.entity_type == IngestionEntityType.LOCATION:
+                    entity_ident = f"{normalized.get('state_code', '')} {normalized.get('rto_code', '')} {normalized.get('city_name', '')}".strip()
+                else:
+                    entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
+
                 if entity_ident:
                     await cls._check_conflicts(
                         db=db,
@@ -181,7 +185,20 @@ class IngestionService:
 
                 # Map & Promote to Canonical if appropriate
                 mapped_data = mapper.map_to_canonical(normalized)
-                promoted = await cls._promote_vehicle_to_canonical(db, mapped_data, ds.id)
+                if adapter.entity_type == IngestionEntityType.LOCATION:
+                    promoted = await cls._promote_location_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                else:
+                    promoted = await cls._promote_vehicle_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                    )
+
                 if promoted == "CREATED":
                     run.records_created += 1
                 elif promoted == "UPDATED":
@@ -339,6 +356,145 @@ class IngestionService:
         return "CREATED" if is_created else "UNCHANGED"
 
     @classmethod
+    async def _promote_location_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes validated location data (Country -> State -> City -> RTO) into canonical tables with deterministic matching."""
+        state_data = data.get("state", {})
+        city_data = data.get("city", {})
+        rto_data = data.get("rto", {})
+
+        state_name = state_data.get("name")
+        state_code = state_data.get("code")
+        region_type = state_data.get("region_type", "STATE")
+
+        if not state_code:
+            return "UNCHANGED"
+
+        now = datetime.now(timezone.utc)
+
+        # 1. Resolve Country (Default India, id=1)
+        country = (await db.execute(select(Country).where(Country.iso_code == "IN"))).scalars().first()
+        if not country:
+            country = Country(
+                name="India",
+                iso_code="IN",
+                iso3_code="IND",
+                active=True,
+            )
+            db.add(country)
+            await db.flush()
+        country_id = country.id
+
+        # 2. Resolve State
+        state_res = await db.execute(
+            select(State).where(
+                (State.code == state_code) | (State.name.ilike(state_name))
+            )
+        )
+        state = state_res.scalars().first()
+        state_created = False
+        if not state:
+            state = State(
+                country_id=country_id,
+                name=state_name or state_code,
+                code=state_code,
+                region_type=region_type,
+                active=True,
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+            )
+            db.add(state)
+            await db.flush()
+            state_created = True
+        else:
+            state.source_id = source_id
+            state.source_record_id = source_record_id
+            state.retrieved_at = now
+
+        # 3. Resolve City
+        city_name = city_data.get("name")
+        city_slug = city_data.get("slug")
+        city_tier = city_data.get("tier", "Tier 1")
+        city = None
+        city_created = False
+
+        if city_name:
+            city_res = await db.execute(
+                select(City).where(
+                    (City.state_id == state.id) &
+                    ((City.slug == city_slug) | (City.name.ilike(city_name)))
+                )
+            )
+            city = city_res.scalars().first()
+            if not city:
+                city = City(
+                    state_id=state.id,
+                    name=city_name,
+                    slug=city_slug or city_name.lower().replace(" ", "-"),
+                    tier=city_tier,
+                    active=True,
+                    source_id=source_id,
+                    source_record_id=source_record_id,
+                    retrieved_at=now,
+                )
+                db.add(city)
+                await db.flush()
+                city_created = True
+            else:
+                city.source_id = source_id
+                city.source_record_id = source_record_id
+                city.retrieved_at = now
+
+        # 4. Resolve RTO Office
+        rto_code = rto_data.get("code")
+        rto_name = rto_data.get("name")
+        jurisdiction = rto_data.get("jurisdiction")
+        rto_record_id = rto_data.get("source_record_id") or source_record_id
+
+        if not rto_code:
+            return "CREATED" if (state_created or city_created) else "UNCHANGED"
+
+        rto_res = await db.execute(
+            select(RtoOffice).where(
+                (RtoOffice.state_id == state.id) &
+                ((RtoOffice.code == rto_code) | (RtoOffice.source_record_id == rto_record_id))
+            )
+        )
+        rto = rto_res.scalars().first()
+        if not rto:
+            rto = RtoOffice(
+                state_id=state.id,
+                city_id=city.id if city else None,
+                code=rto_code,
+                name=rto_name or f"RTO {rto_code}",
+                jurisdiction=jurisdiction,
+                active=True,
+                source_id=source_id,
+                source_record_id=rto_record_id,
+                retrieved_at=now,
+            )
+            db.add(rto)
+            await db.flush()
+            return "CREATED"
+        else:
+            # Update existing RTO with authoritative provenance and linked city if missing
+            rto.source_id = source_id
+            rto.source_record_id = rto_record_id
+            rto.retrieved_at = now
+            if city and not rto.city_id:
+                rto.city_id = city.id
+            if jurisdiction and not rto.jurisdiction:
+                rto.jurisdiction = jurisdiction
+            await db.flush()
+            return "UPDATED"
+
+    @classmethod
     async def _check_conflicts(
         cls,
         db: AsyncSession,
@@ -349,54 +505,96 @@ class IngestionService:
         normalized_payload: Dict[str, Any],
     ) -> None:
         """Identifies discrepancies between the current payload and other active data source values."""
+        # 1. Price discrepancies
         price_val = normalized_payload.get("ex_showroom_price")
-        if not price_val:
-            return
-
-        # Query existing recent raw records for the same entity from DIFFERENT sources
-        res = await db.execute(
-            select(RawIngestionRecord, IngestionRun.data_source_id)
-            .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
-            .where(
-                RawIngestionRecord.entity_type == entity_type,
-                IngestionRun.data_source_id != current_source_id,
+        if price_val:
+            res = await db.execute(
+                select(RawIngestionRecord, IngestionRun.data_source_id)
+                .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                .where(
+                    RawIngestionRecord.entity_type == entity_type,
+                    IngestionRun.data_source_id != current_source_id,
+                )
+                .limit(10)
             )
-            .limit(10)
-        )
-        other_records = res.all()
+            other_records = res.all()
 
-        for rec, other_source_id in other_records:
-            other_payload = rec.raw_payload
-            other_ident = f"{other_payload.get('manufacturer', '')} {other_payload.get('model', '')} {other_payload.get('variant', '')}".strip()
-            if other_ident.lower() == entity_identifier.lower():
-                other_price = other_payload.get("price")
-                if other_price and Decimal(str(other_price)) != Decimal(str(price_val)):
-                    # Check if conflict already logged
-                    existing_conflict = (
-                        await db.execute(
-                            select(DataConflictRecord).where(
-                                DataConflictRecord.entity_identifier == entity_identifier,
-                                DataConflictRecord.field_name == "ex_showroom_price",
-                                DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+            for rec, other_source_id in other_records:
+                other_payload = rec.raw_payload
+                other_ident = f"{other_payload.get('manufacturer', '')} {other_payload.get('model', '')} {other_payload.get('variant', '')}".strip()
+                if other_ident.lower() == entity_identifier.lower():
+                    other_price = other_payload.get("price")
+                    if other_price and Decimal(str(other_price)) != Decimal(str(price_val)):
+                        existing_conflict = (
+                            await db.execute(
+                                select(DataConflictRecord).where(
+                                    DataConflictRecord.entity_identifier == entity_identifier,
+                                    DataConflictRecord.field_name == "ex_showroom_price",
+                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                )
                             )
-                        )
-                    ).scalars().first()
+                        ).scalars().first()
 
-                    if not existing_conflict:
-                        conflict = DataConflictRecord(
-                            dataset_name=dataset_name,
-                            entity_type=entity_type,
-                            entity_identifier=entity_identifier,
-                            field_name="ex_showroom_price",
-                            source_a_id=current_source_id,
-                            source_a_value={"price": str(price_val)},
-                            source_b_id=other_source_id,
-                            source_b_value={"price": str(other_price)},
-                            detected_at=datetime.now(timezone.utc),
-                            status=ConflictStatus.UNRESOLVED.value,
-                        )
-                        db.add(conflict)
-                        await db.flush()
+                        if not existing_conflict:
+                            conflict = DataConflictRecord(
+                                dataset_name=dataset_name,
+                                entity_type=entity_type,
+                                entity_identifier=entity_identifier,
+                                field_name="ex_showroom_price",
+                                source_a_id=current_source_id,
+                                source_a_value={"price": str(price_val)},
+                                source_b_id=other_source_id,
+                                source_b_value={"price": str(other_price)},
+                                detected_at=datetime.now(timezone.utc),
+                                status=ConflictStatus.UNRESOLVED.value,
+                            )
+                            db.add(conflict)
+                            await db.flush()
+
+        # 2. Location RTO/City discrepancies
+        rto_code = normalized_payload.get("rto_code")
+        if rto_code and entity_type == IngestionEntityType.LOCATION.value:
+            res = await db.execute(
+                select(RawIngestionRecord, IngestionRun.data_source_id)
+                .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                .where(
+                    RawIngestionRecord.entity_type == entity_type,
+                    IngestionRun.data_source_id != current_source_id,
+                )
+                .limit(10)
+            )
+            other_records = res.all()
+            for rec, other_source_id in other_records:
+                other_payload = rec.raw_payload
+                other_rto = other_payload.get("rto_code") or other_payload.get("code")
+                if other_rto and str(other_rto).strip().upper() == str(rto_code).strip().upper():
+                    other_jurisdiction = other_payload.get("jurisdiction")
+                    current_jurisdiction = normalized_payload.get("jurisdiction")
+                    if current_jurisdiction and other_jurisdiction and current_jurisdiction != other_jurisdiction:
+                        existing_conflict = (
+                            await db.execute(
+                                select(DataConflictRecord).where(
+                                    DataConflictRecord.entity_identifier == entity_identifier,
+                                    DataConflictRecord.field_name == "jurisdiction",
+                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                )
+                            )
+                        ).scalars().first()
+                        if not existing_conflict:
+                            conflict = DataConflictRecord(
+                                dataset_name=dataset_name,
+                                entity_type=entity_type,
+                                entity_identifier=entity_identifier,
+                                field_name="jurisdiction",
+                                source_a_id=current_source_id,
+                                source_a_value={"jurisdiction": current_jurisdiction},
+                                source_b_id=other_source_id,
+                                source_b_value={"jurisdiction": other_jurisdiction},
+                                detected_at=datetime.now(timezone.utc),
+                                status=ConflictStatus.UNRESOLVED.value,
+                            )
+                            db.add(conflict)
+                            await db.flush()
 
     @classmethod
     async def get_freshness_report(cls, db: AsyncSession) -> List[FreshnessReportItem]:

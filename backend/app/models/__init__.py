@@ -9,7 +9,14 @@ from app.models.vehicle import (
     VehicleMedia,
 )
 from app.models.pricing import VehiclePrice, ExShowroomPrice, PriceHistory
-from app.models.finance import Bank, LoanProduct, InterestRateSlab
+from app.models.finance import (
+    Bank,
+    InterestRate,
+    InterestRateSlab,
+    LoanEligibilityRule,
+    LoanFee,
+    LoanProduct,
+)
 from app.models.insurance import InsuranceRateRule
 from app.models.tax_rule import TaxRule, TaxRuleBracket
 
@@ -35,6 +42,9 @@ __all__ = [
     "PriceHistory",
     "Bank",
     "LoanProduct",
+    "InterestRate",
+    "LoanEligibilityRule",
+    "LoanFee",
     "InterestRateSlab",
     "InsuranceRateRule",
     "TaxRule",

@@ -7,7 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import AsyncSessionLocal
 from app.models.data_source import DataSource
-from app.models.finance import Bank, InterestRateSlab, LoanProduct
+from app.models.finance import (
+    Bank,
+    InterestRate,
+    InterestRateSlab,
+    LoanEligibilityRule,
+    LoanFee,
+    LoanProduct,
+)
 from app.models.insurance import InsuranceRateRule
 from app.models.location import City, Country, RtoOffice, State, TaxSlab
 from app.models.pricing import ExShowroomPrice, PriceHistory, VehiclePrice
@@ -1024,9 +1031,9 @@ async def _run_seed(session: AsyncSession):
     await session.flush()
 
     # =========================================================================
-    # 6. INSURANCE RULES & BANKS
+    # 6. INSURANCE RULES & BANKS & LOAN PRODUCTS (DEMO DATA)
     # =========================================================================
-    print("6/6 Seeding insurance tariff rules and bank loan products...")
+    print("6/6 Seeding insurance tariff rules and multi-bank loan financing products...")
     session.add_all([
         InsuranceRateRule(min_engine_cc=0, max_engine_cc=999, is_ev=False, third_party_3yr_tariff_inr=Decimal("5286.00"), own_damage_base_rate_percent=Decimal("2.60"), zero_dep_addon_percent=Decimal("0.60"), engine_protect_addon_inr=Decimal("1200.00"), description="Cars under 1000cc", source="IRDAI Tariff", source_url="https://irdai.gov.in", effective_date=now, last_verified_date=now),
         InsuranceRateRule(min_engine_cc=1000, max_engine_cc=1500, is_ev=False, third_party_3yr_tariff_inr=Decimal("9534.00"), own_damage_base_rate_percent=Decimal("2.80"), zero_dep_addon_percent=Decimal("0.70"), engine_protect_addon_inr=Decimal("1500.00"), description="Cars 1000cc to 1500cc", source="IRDAI Tariff", source_url="https://irdai.gov.in", effective_date=now, last_verified_date=now),
@@ -1034,27 +1041,182 @@ async def _run_seed(session: AsyncSession):
         InsuranceRateRule(min_engine_cc=None, max_engine_cc=None, is_ev=True, third_party_3yr_tariff_inr=Decimal("5543.00"), own_damage_base_rate_percent=Decimal("2.50"), zero_dep_addon_percent=Decimal("0.60"), engine_protect_addon_inr=Decimal("0.00"), description="Electric Vehicles (EV)", source="IRDAI EV Tariff", source_url="https://irdai.gov.in", effective_date=now, last_verified_date=now),
     ])
 
-    sbi = Bank(name="State Bank of India (SBI)", slug="sbi", bank_type="Public", logo_url="/logos/sbi.svg", is_active=True, source="SBI Bank", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now)
-    hdfc = Bank(name="HDFC Bank", slug="hdfc", bank_type="Private", logo_url="/logos/hdfc.svg", is_active=True, source="HDFC Bank", source_url="https://hdfcbank.com", effective_date=now, last_verified_date=now)
-    session.add_all([sbi, hdfc])
+    src_rbi = DataSource(
+        name="Reserve Bank of India & Commercial Banks Tariff Portal",
+        slug="rbi-banking-tariffs",
+        provider_type="government",
+        base_url="https://rbi.org.in",
+        is_active=True,
+    )
+    session.add(src_rbi)
     await session.flush()
 
-    sbi_prod = LoanProduct(
-        bank_id=sbi.id, name="SBI New Car Loan Scheme", slug="sbi-new-car-loan",
+    # --- 1. STATE BANK OF INDIA (SBI) ---
+    sbi = Bank(name="State Bank of India (SBI)", slug="sbi", bank_type="Public", website_url="https://sbi.co.in", logo_url="/logos/sbi.svg", active=True, source_id=src_rbi.id)
+    hdfc = Bank(name="HDFC Bank", slug="hdfc", bank_type="Private", website_url="https://hdfcbank.com", logo_url="/logos/hdfc.svg", active=True, source_id=src_rbi.id)
+    icici = Bank(name="ICICI Bank", slug="icici", bank_type="Private", website_url="https://icicibank.com", logo_url="/logos/icici.svg", active=True, source_id=src_rbi.id)
+    axis = Bank(name="Axis Bank", slug="axis", bank_type="Private", website_url="https://axisbank.com", logo_url="/logos/axis.svg", active=True, source_id=src_rbi.id)
+    pnb = Bank(name="Punjab National Bank (PNB)", slug="pnb", bank_type="Public", website_url="https://pnbindia.in", logo_url="/logos/pnb.svg", active=True, source_id=src_rbi.id)
+    kotak = Bank(name="Kotak Mahindra Bank", slug="kotak", bank_type="Private", website_url="https://kotak.com", logo_url="/logos/kotak.svg", active=True, source_id=src_rbi.id)
+
+    session.add_all([sbi, hdfc, icici, axis, pnb, kotak])
+    await session.flush()
+
+    # --- Products for SBI ---
+    sbi_reg = LoanProduct(
+        bank_id=sbi.id, name="SBI Regular Auto Loan Scheme", slug="sbi-regular-auto-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
         min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("15000000"),
         min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("90.00"),
         processing_fee_percent=Decimal("0.40"), min_processing_fee=Decimal("1500.00"), max_processing_fee=Decimal("10000.00"),
-        description="Financing up to 90% of on-road price with zero prepayment penalty.",
-        is_active=True, source="SBI Auto Loan Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now,
+        description="[DEMO] Financing up to 90% of on-road price with floating interest rate linked to EBLR.",
+        active=True,
     )
-    session.add(sbi_prod)
+    sbi_green = LoanProduct(
+        bank_id=sbi.id, name="SBI Green Car Loan (EV Special)", slug="sbi-green-car-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="EV_GREEN",
+        min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("20000000"),
+        min_tenure_months=12, max_tenure_months=96, max_ltv_percent=Decimal("90.00"),
+        processing_fee_percent=Decimal("0.20"), min_processing_fee=Decimal("1000.00"), max_processing_fee=Decimal("5000.00"),
+        description="[DEMO] 20 bps interest rate concession and reduced processing fee for Electric Vehicles.",
+        active=True,
+    )
+
+    # --- Products for HDFC ---
+    hdfc_reg = LoanProduct(
+        bank_id=hdfc.id, name="HDFC CustomFit Auto Loan", slug="hdfc-customfit-auto-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
+        min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("25000000"),
+        min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("90.00"),
+        processing_fee_percent=Decimal("0.50"), min_processing_fee=Decimal("2500.00"), max_processing_fee=Decimal("12000.00"),
+        description="[DEMO] Flexible step-up / balloon repayment options with instant digital approval.",
+        active=True,
+    )
+
+    # --- Products for ICICI ---
+    icici_reg = LoanProduct(
+        bank_id=icici.id, name="ICICI Dream Auto Loan", slug="icici-dream-auto-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
+        min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("20000000"),
+        min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("90.00"),
+        processing_fee_percent=Decimal("0.50"), min_processing_fee=Decimal("2000.00"), max_processing_fee=Decimal("10000.00"),
+        description="[DEMO] Competitive auto loan interest rates with pre-approved offers for existing account holders.",
+        active=True,
+    )
+
+    # --- Products for Axis ---
+    axis_reg = LoanProduct(
+        bank_id=axis.id, name="Axis Prime Auto Loan", slug="axis-prime-auto-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
+        min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("15000000"),
+        min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("85.00"),
+        processing_fee_percent=Decimal("0.50"), min_processing_fee=Decimal("2000.00"), max_processing_fee=Decimal("10000.00"),
+        description="[DEMO] Transparent financing with doorstep service and flexible repayment tenures.",
+        active=True,
+    )
+
+    # --- Products for PNB ---
+    pnb_reg = LoanProduct(
+        bank_id=pnb.id, name="PNB Saarthi Auto Loan Scheme", slug="pnb-saarthi-auto-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
+        min_loan_amount=Decimal("100000"), max_loan_amount=Decimal("10000000"),
+        min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("85.00"),
+        processing_fee_percent=Decimal("0.25"), min_processing_fee=Decimal("1000.00"), max_processing_fee=Decimal("5000.00"),
+        description="[DEMO] Low processing charges from premier public sector bank.",
+        active=True,
+    )
+
+    # --- Products for Kotak ---
+    kotak_reg = LoanProduct(
+        bank_id=kotak.id, name="Kotak Super Car Loan", slug="kotak-super-car-loan",
+        vehicle_type="CAR", vehicle_condition="NEW", product_category="STANDARD",
+        min_loan_amount=Decimal("150000"), max_loan_amount=Decimal("30000000"),
+        min_tenure_months=12, max_tenure_months=84, max_ltv_percent=Decimal("90.00"),
+        processing_fee_percent=Decimal("0.50"), min_processing_fee=Decimal("3000.00"), max_processing_fee=Decimal("15000.00"),
+        description="[DEMO] Premium customer financing with personalized relationship manager support.",
+        active=True,
+    )
+
+    session.add_all([sbi_reg, sbi_green, hdfc_reg, icici_reg, axis_reg, pnb_reg, kotak_reg])
     await session.flush()
 
+    # --- Interest Rates (Historical & Current) ---
+    past_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
+    past_end = datetime(2023, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+    curr_start = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+    rates_to_seed = [
+        # SBI Regular (Historical 2023: 8.90% base)
+        InterestRate(loan_product_id=sbi_reg.id, annual_interest_rate=Decimal("8.90"), rate_type="FLOATING", min_credit_score=750, max_credit_score=900, priority=100, effective_from=past_date, effective_to=past_end, active=False, source_id=src_rbi.id),
+        # SBI Regular (Active 2024 onwards)
+        InterestRate(loan_product_id=sbi_reg.id, annual_interest_rate=Decimal("8.65"), rate_type="FLOATING", min_credit_score=800, max_credit_score=900, priority=150, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=sbi_reg.id, annual_interest_rate=Decimal("8.75"), rate_type="FLOATING", min_credit_score=750, max_credit_score=799, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=sbi_reg.id, annual_interest_rate=Decimal("9.15"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=sbi_reg.id, annual_interest_rate=Decimal("10.25"), rate_type="FLOATING", min_credit_score=300, max_credit_score=699, priority=100, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # SBI Green (EV Concession)
+        InterestRate(loan_product_id=sbi_green.id, annual_interest_rate=Decimal("8.45"), rate_type="FLOATING", min_credit_score=800, max_credit_score=900, priority=150, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=sbi_green.id, annual_interest_rate=Decimal("8.55"), rate_type="FLOATING", min_credit_score=750, max_credit_score=799, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=sbi_green.id, annual_interest_rate=Decimal("8.95"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # HDFC CustomFit (Tiered + Tenure specific)
+        InterestRate(loan_product_id=hdfc_reg.id, annual_interest_rate=Decimal("8.75"), rate_type="FLOATING", min_credit_score=800, max_credit_score=900, min_tenure_months=12, max_tenure_months=60, priority=160, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=hdfc_reg.id, annual_interest_rate=Decimal("8.90"), rate_type="FLOATING", min_credit_score=800, max_credit_score=900, min_tenure_months=61, max_tenure_months=84, priority=150, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=hdfc_reg.id, annual_interest_rate=Decimal("8.95"), rate_type="FLOATING", min_credit_score=750, max_credit_score=799, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=hdfc_reg.id, annual_interest_rate=Decimal("9.45"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=hdfc_reg.id, annual_interest_rate=Decimal("10.50"), rate_type="FLOATING", min_credit_score=300, max_credit_score=699, priority=100, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # ICICI Dream Auto Loan
+        InterestRate(loan_product_id=icici_reg.id, annual_interest_rate=Decimal("8.80"), rate_type="FLOATING", min_credit_score=800, max_credit_score=900, priority=150, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=icici_reg.id, annual_interest_rate=Decimal("8.95"), rate_type="FLOATING", min_credit_score=750, max_credit_score=799, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=icici_reg.id, annual_interest_rate=Decimal("9.50"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=icici_reg.id, annual_interest_rate=Decimal("10.75"), rate_type="FLOATING", min_credit_score=300, max_credit_score=699, priority=100, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # Axis Prime
+        InterestRate(loan_product_id=axis_reg.id, annual_interest_rate=Decimal("8.90"), rate_type="FLOATING", min_credit_score=750, max_credit_score=900, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=axis_reg.id, annual_interest_rate=Decimal("9.60"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # PNB Saarthi
+        InterestRate(loan_product_id=pnb_reg.id, annual_interest_rate=Decimal("8.70"), rate_type="FLOATING", min_credit_score=750, max_credit_score=900, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=pnb_reg.id, annual_interest_rate=Decimal("9.20"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+
+        # Kotak Super Car
+        InterestRate(loan_product_id=kotak_reg.id, annual_interest_rate=Decimal("9.00"), rate_type="FLOATING", min_credit_score=750, max_credit_score=900, priority=140, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+        InterestRate(loan_product_id=kotak_reg.id, annual_interest_rate=Decimal("9.75"), rate_type="FLOATING", min_credit_score=700, max_credit_score=749, priority=130, effective_from=curr_start, effective_to=None, active=True, source_id=src_rbi.id),
+    ]
+    session.add_all(rates_to_seed)
+
+    # --- Loan Eligibility Rules ---
+    elig_rules_to_seed = [
+        LoanEligibilityRule(loan_product_id=sbi_reg.id, rule_name="SBI Standard Income & Credit Eligibility", min_monthly_income=Decimal("25000.00"), min_credit_score=650, max_ltv_percent=Decimal("90.00"), min_age_years=21, max_age_years=70, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=sbi_green.id, rule_name="SBI Green EV Eligibility", min_monthly_income=Decimal("30000.00"), min_credit_score=700, max_ltv_percent=Decimal("90.00"), min_age_years=21, max_age_years=70, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=hdfc_reg.id, rule_name="HDFC Auto Underwriting Rule", min_monthly_income=Decimal("35000.00"), min_credit_score=700, max_ltv_percent=Decimal("90.00"), min_age_years=21, max_age_years=65, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=icici_reg.id, rule_name="ICICI Prime Auto Eligibility", min_monthly_income=Decimal("30000.00"), min_credit_score=650, max_ltv_percent=Decimal("90.00"), min_age_years=21, max_age_years=65, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=axis_reg.id, rule_name="Axis Auto Rule", min_monthly_income=Decimal("25000.00"), min_credit_score=650, max_ltv_percent=Decimal("85.00"), min_age_years=21, max_age_years=65, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=pnb_reg.id, rule_name="PNB Public Sector Rule", min_monthly_income=Decimal("20000.00"), min_credit_score=650, max_ltv_percent=Decimal("85.00"), min_age_years=18, max_age_years=70, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanEligibilityRule(loan_product_id=kotak_reg.id, rule_name="Kotak Prime Eligibility", min_monthly_income=Decimal("40000.00"), min_credit_score=700, max_ltv_percent=Decimal("90.00"), min_age_years=21, max_age_years=65, allowed_employment_types="SALARIED,SELF_EMPLOYED", effective_from=curr_start, active=True, source_id=src_rbi.id),
+    ]
+    session.add_all(elig_rules_to_seed)
+
+    # --- Loan Fees ---
+    fees_to_seed = [
+        LoanFee(loan_product_id=sbi_reg.id, fee_name="Processing Fee", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.40"), minimum_amount=Decimal("1500.00"), maximum_amount=Decimal("10000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=sbi_green.id, fee_name="Concessional EV Processing Fee", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.20"), minimum_amount=Decimal("1000.00"), maximum_amount=Decimal("5000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=hdfc_reg.id, fee_name="HDFC Processing Charge", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.50"), minimum_amount=Decimal("2500.00"), maximum_amount=Decimal("12000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=hdfc_reg.id, fee_name="Documentation & Stamp Duty", fee_type="DOCUMENTATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("650.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=icici_reg.id, fee_name="Processing Fee", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.50"), minimum_amount=Decimal("2000.00"), maximum_amount=Decimal("10000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=axis_reg.id, fee_name="Processing Fee", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.50"), minimum_amount=Decimal("2000.00"), maximum_amount=Decimal("10000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=pnb_reg.id, fee_name="Flat Processing Charge", fee_type="PROCESSING_FEE", calculation_method="FIXED", fixed_amount=Decimal("1000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+        LoanFee(loan_product_id=kotak_reg.id, fee_name="Processing Fee", fee_type="PROCESSING_FEE", calculation_method="CAPPED_PERCENTAGE", percentage=Decimal("0.50"), minimum_amount=Decimal("3000.00"), maximum_amount=Decimal("15000.00"), effective_from=curr_start, active=True, source_id=src_rbi.id),
+    ]
+    session.add_all(fees_to_seed)
+
+    # Legacy slabs mirror for backward compatibility with affordability engine
     session.add_all([
-        InterestRateSlab(loan_product_id=sbi_prod.id, min_cibil_score=800, max_cibil_score=900, min_interest_rate=Decimal("8.65"), max_interest_rate=Decimal("8.80"), default_interest_rate=Decimal("8.65"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
-        InterestRateSlab(loan_product_id=sbi_prod.id, min_cibil_score=750, max_cibil_score=799, min_interest_rate=Decimal("8.75"), max_interest_rate=Decimal("8.95"), default_interest_rate=Decimal("8.75"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
-        InterestRateSlab(loan_product_id=sbi_prod.id, min_cibil_score=700, max_cibil_score=749, min_interest_rate=Decimal("9.15"), max_interest_rate=Decimal("9.45"), default_interest_rate=Decimal("9.25"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
-        InterestRateSlab(loan_product_id=sbi_prod.id, min_cibil_score=300, max_cibil_score=699, min_interest_rate=Decimal("10.25"), max_interest_rate=Decimal("11.50"), default_interest_rate=Decimal("10.50"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
+        InterestRateSlab(loan_product_id=sbi_reg.id, min_cibil_score=800, max_cibil_score=900, min_interest_rate=Decimal("8.65"), max_interest_rate=Decimal("8.80"), default_interest_rate=Decimal("8.65"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
+        InterestRateSlab(loan_product_id=sbi_reg.id, min_cibil_score=750, max_cibil_score=799, min_interest_rate=Decimal("8.75"), max_interest_rate=Decimal("8.95"), default_interest_rate=Decimal("8.75"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
+        InterestRateSlab(loan_product_id=sbi_reg.id, min_cibil_score=700, max_cibil_score=749, min_interest_rate=Decimal("9.15"), max_interest_rate=Decimal("9.45"), default_interest_rate=Decimal("9.25"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
+        InterestRateSlab(loan_product_id=sbi_reg.id, min_cibil_score=300, max_cibil_score=699, min_interest_rate=Decimal("10.25"), max_interest_rate=Decimal("11.50"), default_interest_rate=Decimal("10.50"), is_fixed=False, source="SBI Portal", source_url="https://sbi.co.in", effective_date=now, last_verified_date=now),
     ])
 
     await session.commit()

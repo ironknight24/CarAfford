@@ -489,3 +489,290 @@ export interface OnRoadPriceResponse {
   data_quality: DataQualityInfo;
 }
 
+// =============================================================================
+// BANK & CAR LOAN FINANCING DOMAIN TYPES
+// =============================================================================
+
+export interface Bank {
+  id: number;
+  name: string;
+  slug: string;
+  bank_type: string;
+  website_url?: string;
+  logo_url?: string;
+  active: boolean;
+  is_active?: boolean;
+  source_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InterestRate {
+  id: number;
+  loan_product_id: number;
+  annual_interest_rate: string | number;
+  rate_type: 'FIXED' | 'FLOATING' | 'VARIABLE' | string;
+  min_credit_score?: number;
+  max_credit_score?: number;
+  min_tenure_months?: number;
+  max_tenure_months?: number;
+  min_loan_amount?: string | number;
+  max_loan_amount?: string | number;
+  employment_type?: string;
+  priority: number;
+  effective_from: string;
+  effective_to?: string;
+  active: boolean;
+  source_id?: number;
+  source_record_id?: string;
+  retrieved_at?: string;
+}
+
+export interface LoanEligibilityRule {
+  id: number;
+  loan_product_id: number;
+  rule_name: string;
+  min_monthly_income?: string | number;
+  min_credit_score?: number;
+  max_credit_score?: number;
+  max_loan_amount?: string | number;
+  max_ltv_percent?: string | number;
+  max_foir_percent?: string | number;
+  min_age_years?: number;
+  max_age_years?: number;
+  min_employment_months?: number;
+  allowed_employment_types?: string;
+  allowed_residency_types?: string;
+  effective_from: string;
+  effective_to?: string;
+  active: boolean;
+}
+
+export interface LoanFee {
+  id: number;
+  loan_product_id: number;
+  fee_name: string;
+  fee_type: string;
+  calculation_method: string;
+  fixed_amount?: string | number;
+  percentage?: string | number;
+  minimum_amount?: string | number;
+  maximum_amount?: string | number;
+  effective_from: string;
+  effective_to?: string;
+  active: boolean;
+}
+
+export interface LoanProduct {
+  id: number;
+  bank_id: number;
+  name: string;
+  slug: string;
+  vehicle_type: string;
+  vehicle_condition: string;
+  product_category: string;
+  min_loan_amount: string | number;
+  max_loan_amount: string | number;
+  min_tenure_months: number;
+  max_tenure_months: number;
+  max_ltv_percent: string | number;
+  processing_fee_percent: string | number;
+  min_processing_fee: string | number;
+  max_processing_fee: string | number;
+  description?: string;
+  active: boolean;
+  bank?: Bank;
+  interest_rates?: InterestRate[];
+  eligibility_rules?: LoanEligibilityRule[];
+  fees?: LoanFee[];
+}
+
+export interface FeeBreakdownItem {
+  fee_name: string;
+  fee_type: string;
+  calculation_method: string;
+  rate_or_amount?: string | number;
+  calculated_amount: string | number;
+}
+
+export interface LoanOfferItem {
+  bank_id: number;
+  bank_name: string;
+  bank_slug: string;
+  bank_type: string;
+  logo_url?: string;
+  loan_product_id: number;
+  product_name: string;
+  product_slug: string;
+  product_category: string;
+  annual_interest_rate: string | number;
+  rate_type: string;
+  tenure_months: number;
+  principal_loan_amount: string | number;
+  monthly_emi: string | number;
+  total_interest: string | number;
+  total_repayment: string | number;
+  ltv_percent: string | number;
+  processing_fee: string | number;
+  total_fees: string | number;
+  fees_breakdown: FeeBreakdownItem[];
+  estimated_eligibility: boolean;
+  eligibility_status: 'ESTIMATED_ELIGIBLE' | 'MARGINAL' | 'ESTIMATED_INELIGIBLE' | string;
+  eligibility_reasons: string[];
+  rate_effective_from: string;
+  rate_effective_to?: string;
+  rate_source_name?: string;
+  is_recommended: boolean;
+  data_status: string;
+  disclaimer: string;
+}
+
+export interface AmortizationScheduleItem {
+  installment_number: number;
+  month: number;
+  opening_balance: string | number;
+  beginning_balance?: string | number;
+  emi: string | number;
+  principal_component: string | number;
+  principal_paid?: string | number;
+  interest_component: string | number;
+  interest_paid?: string | number;
+  closing_balance: string | number;
+  ending_balance?: string | number;
+}
+
+export interface FinanceCalculationRequest {
+  vehicle_variant_id?: number;
+  state_id?: number;
+  city_id?: number;
+  rto_id?: number;
+  on_road_price?: string | number;
+  loan_amount?: string | number;
+  down_payment?: string | number;
+  loan_tenure_months?: number;
+  tenure_months?: number;
+  credit_score?: number;
+  monthly_income?: string | number;
+  employment_type?: string;
+  applicant_age?: number;
+  bank_id?: number;
+  loan_product_id?: number;
+  calculation_date?: string;
+  include_amortization?: boolean;
+}
+
+export interface FinanceCalculationResponse {
+  variant_id?: number;
+  variant_name?: string;
+  model_name?: string;
+  manufacturer_name?: string;
+  on_road_price: string | number;
+  down_payment: string | number;
+  loan_amount: string | number;
+  tenure_months: number;
+  credit_score_used: number;
+  calculation_date: string;
+  selected_offer: LoanOfferItem;
+  amortization_schedule?: AmortizationScheduleItem[];
+  bank_name?: string;
+  applied_interest_rate?: string | number;
+  eligibility?: {
+    is_eligible: boolean;
+    status: string;
+    reasons: string[];
+  };
+  data_quality: {
+    is_estimated: boolean;
+    data_status: string;
+    disclaimer: string;
+  };
+}
+
+export interface BankComparisonRequest {
+  vehicle_variant_id?: number;
+  state_id?: number;
+  city_id?: number;
+  rto_id?: number;
+  on_road_price?: string | number;
+  loan_amount?: string | number;
+  down_payment?: string | number;
+  loan_tenure_months?: number;
+  tenure_months?: number;
+  credit_score?: number;
+  monthly_income?: string | number;
+  employment_type?: string;
+  applicant_age?: number;
+  calculation_date?: string;
+}
+
+export interface BankComparisonResponse {
+  variant_id?: number;
+  variant_name?: string;
+  model_name?: string;
+  manufacturer_name?: string;
+  on_road_price: string | number;
+  down_payment: string | number;
+  loan_amount: string | number;
+  tenure_months: number;
+  credit_score_used: number;
+  calculation_date: string;
+  offers: LoanOfferItem[];
+  total_offers_count: number;
+  eligible_offers_count: number;
+  data_quality: {
+    is_estimated: boolean;
+    data_status: string;
+    disclaimer: string;
+  };
+}
+
+export interface EmiCalculationRequest {
+  principal_amount?: string | number;
+  loan_amount?: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+}
+
+export interface EmiCalculationResponse {
+  principal_amount: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+  monthly_emi: string | number;
+  total_interest_payable: string | number;
+  total_amount_payable: string | number;
+  total_payment?: string | number;
+  amortization_schedule?: AmortizationScheduleItem[];
+}
+
+export interface MaxLoanCalculationRequest {
+  maximum_emi?: string | number;
+  desired_monthly_emi?: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+}
+
+export interface MaxLoanCalculationResponse {
+  maximum_emi: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+  maximum_principal: string | number;
+  maximum_loan_amount?: string | number;
+}
+
+export interface AmortizationScheduleRequest {
+  principal?: string | number;
+  loan_amount?: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+}
+
+export interface AmortizationScheduleResponse {
+  principal: string | number;
+  annual_interest_rate: string | number;
+  tenure_months: number;
+  monthly_emi: string | number;
+  total_interest: string | number;
+  total_repayment: string | number;
+  schedule: AmortizationScheduleItem[];
+}
+

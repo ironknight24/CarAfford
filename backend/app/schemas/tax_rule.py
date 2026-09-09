@@ -89,6 +89,10 @@ class TaxRuleBase(BaseModel):
     source_id: Optional[int] = Field(None, description="Provenance DataSource ID")
     source_record_id: Optional[str] = Field(None, max_length=255)
     retrieved_at: Optional[datetime] = None
+    verification_status: str = Field(
+        default="DEMO",
+        description="DEMO, UNVERIFIED, PENDING_REVIEW, VERIFIED, EXPIRED, REJECTED",
+    )
 
     @model_validator(mode="after")
     def validate_rule(self) -> "TaxRuleBase":
@@ -139,6 +143,7 @@ class TaxRuleUpdate(BaseModel):
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: Optional[str] = None
     brackets: Optional[List[TaxRuleBracketCreate]] = None
 
 
@@ -209,6 +214,7 @@ class ResolvedTaxRuleItem(BaseModel):
     source_url: Optional[str] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
+    verification_status: str = Field(default="DEMO")
 
 
 class TaxRuleResolveResponse(BaseModel):

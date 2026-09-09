@@ -270,6 +270,7 @@ class TaxRuleResolverService:
                     source_url=best_rule.source.base_url if best_rule.source else None,
                     source_record_id=best_rule.source_record_id,
                     retrieved_at=best_rule.retrieved_at,
+                    verification_status=best_rule.verification_status,
                 )
             )
 

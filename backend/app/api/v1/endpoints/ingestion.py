@@ -19,6 +19,13 @@ from app.ingestion.adapters.bank_finance_adapter import (
     BankOfBarodaCarLoanAdapter,
     KotakCarLoanAdapter,
 )
+from app.ingestion.adapters.government_tax_adapter import (
+    KarnatakaTaxRuleAdapter,
+    MaharashtraTaxRuleAdapter,
+    DelhiTaxRuleAdapter,
+    TamilNaduTaxRuleAdapter,
+    TelanganaTaxRuleAdapter,
+)
 from app.models.ingestion import (
     DataConflictRecord,
     DataQualityReviewItem,
@@ -51,7 +58,17 @@ async def trigger_ingestion_run(
 ):
     """Triggers an ingestion run for a supported dataset adapter."""
     dataset = request.dataset_name.lower().strip()
-    if dataset in {"sbi_car_loans", "sbi"}:
+    if dataset in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
+        adapter = KarnatakaTaxRuleAdapter()
+    elif dataset in {"maharashtra_tax_rules", "maharashtra_taxes", "mh_tax_rules", "mh_tax"}:
+        adapter = MaharashtraTaxRuleAdapter()
+    elif dataset in {"delhi_tax_rules", "delhi_taxes", "dl_tax_rules", "dl_tax"}:
+        adapter = DelhiTaxRuleAdapter()
+    elif dataset in {"tamilnadu_tax_rules", "tamilnadu_taxes", "tn_tax_rules", "tn_tax"}:
+        adapter = TamilNaduTaxRuleAdapter()
+    elif dataset in {"telangana_tax_rules", "telangana_taxes", "ts_tax_rules", "ts_tax", "tg_tax"}:
+        adapter = TelanganaTaxRuleAdapter()
+    elif dataset in {"sbi_car_loans", "sbi"}:
         adapter = SbiCarLoanAdapter()
     elif dataset in {"hdfc_car_loans", "hdfc"}:
         adapter = HdfcCarLoanAdapter()

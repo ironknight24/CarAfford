@@ -34,6 +34,7 @@ from app.models.finance import (
     LoanEligibilityRule,
     LoanFee,
 )
+from app.models.tax_rule import TaxRule, TaxRuleBracket
 from app.schemas.ingestion import (
     DataQualityOverviewResponse,
     DataQualityScoreBreakdown,
@@ -183,6 +184,8 @@ class IngestionService:
                     entity_ident = f"{normalized.get('state_code', '')} {normalized.get('rto_code', '')} {normalized.get('city_name', '')}".strip()
                 elif adapter.entity_type == IngestionEntityType.FINANCE:
                     entity_ident = f"{normalized.get('bank_name', '')} {normalized.get('product_name', '')}".strip()
+                elif adapter.entity_type == IngestionEntityType.TAX_RULE:
+                    entity_ident = f"{normalized.get('state_code', '')} {normalized.get('tax_type', '')} {normalized.get('name', '')}".strip()
                 else:
                     entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
 
@@ -207,6 +210,13 @@ class IngestionService:
                     )
                 elif adapter.entity_type == IngestionEntityType.FINANCE:
                     promoted = await cls._promote_finance_to_canonical(
+                        db=db,
+                        data=mapped_data,
+                        source_id=ds.id,
+                        source_record_id=source_record_id,
+                    )
+                elif adapter.entity_type == IngestionEntityType.TAX_RULE:
+                    promoted = await cls._promote_tax_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
@@ -1004,6 +1014,267 @@ class IngestionService:
         return "UNCHANGED"
 
     @classmethod
+    async def _promote_tax_to_canonical(
+        cls,
+        db: AsyncSession,
+        data: Dict[str, Any],
+        source_id: int,
+        source_record_id: Optional[str] = None,
+    ) -> str:
+        """Promotes validated statutory motor vehicle tax rules and bracket structures into canonical tables."""
+        state_code = data.get("state_code")
+        state_name = data.get("state_name")
+        state_id = data.get("state_id")
+
+        now = datetime.now(timezone.utc)
+        ver_status = data.get("verification_status", VerificationStatus.VERIFIED.value)
+
+        # 1. Resolve State
+        state = None
+        if state_id:
+            state = await db.get(State, state_id)
+        elif state_code:
+            state_res = await db.execute(
+                select(State).where(
+                    (State.code == state_code) | (State.name.ilike(state_name or state_code))
+                )
+            )
+            state = state_res.scalars().first()
+
+        if not state and state_code:
+            country = (await db.execute(select(Country).where(Country.iso_code == "IN"))).scalars().first()
+            if not country:
+                country = Country(name="India", iso_code="IN", iso3_code="IND", active=True)
+                db.add(country)
+                await db.flush()
+
+            state = State(
+                country_id=country.id,
+                name=state_name or state_code,
+                code=state_code,
+                region_type="STATE",
+                active=True,
+                source_id=source_id,
+                source_record_id=source_record_id,
+                retrieved_at=now,
+            )
+            db.add(state)
+            await db.flush()
+
+        if not state:
+            return "UNCHANGED"
+
+        # 2. Resolve City / RTO if specified
+        city = None
+        city_slug = data.get("city_slug")
+        city_name = data.get("city_name")
+        city_id = data.get("city_id")
+        if city_id:
+            city = await db.get(City, city_id)
+        elif city_slug or city_name:
+            city_res = await db.execute(
+                select(City).where(
+                    (City.state_id == state.id) &
+                    ((City.slug == city_slug) | (City.name.ilike(city_name or "")))
+                )
+            )
+            city = city_res.scalars().first()
+
+        rto = None
+        rto_code = data.get("rto_code")
+        rto_id = data.get("rto_id")
+        if rto_id:
+            rto = await db.get(RtoOffice, rto_id)
+        elif rto_code:
+            rto_res = await db.execute(
+                select(RtoOffice).where(
+                    (RtoOffice.state_id == state.id) & (RtoOffice.code == rto_code)
+                )
+            )
+            rto = rto_res.scalars().first()
+
+        # 3. Extract Tax Rule Attributes
+        rule_name = data.get("name", "Statutory Motor Vehicle Rule")
+        description = data.get("description")
+        rule_category = data.get("rule_category", "TAX")
+        tax_type = data.get("tax_type", "ROAD_TAX")
+        calc_method = data.get("calculation_method", "PERCENTAGE")
+        vehicle_type = data.get("vehicle_type", "CAR")
+        fuel_type = data.get("fuel_type")
+        is_ev = data.get("is_ev")
+        usage_type = data.get("usage_type", "PRIVATE")
+        min_price = data.get("min_price")
+        max_price = data.get("max_price")
+        min_engine_cc = data.get("min_engine_cc")
+        max_engine_cc = data.get("max_engine_cc")
+        rate = data.get("rate")
+        fixed_amount = data.get("fixed_amount", Decimal("0.00"))
+        base_amount_type = data.get("base_amount_type", "EX_SHOWROOM")
+        formula_definition = data.get("formula_definition")
+        priority = data.get("priority", 100)
+        rec_id = data.get("source_record_id") or source_record_id
+
+        eff_from = data.get("effective_from")
+        if isinstance(eff_from, str):
+            eff_from_dt = datetime.fromisoformat(eff_from.replace("Z", "+00:00"))
+        elif isinstance(eff_from, datetime):
+            eff_from_dt = eff_from
+        else:
+            eff_from_dt = now
+
+        eff_to = data.get("effective_to")
+        eff_to_dt = None
+        if isinstance(eff_to, str):
+            eff_to_dt = datetime.fromisoformat(eff_to.replace("Z", "+00:00"))
+        elif isinstance(eff_to, datetime):
+            eff_to_dt = eff_to
+
+        # 4. Check for existing active matching rule
+        conds = [
+            TaxRule.state_id == state.id,
+            TaxRule.tax_type == tax_type,
+            TaxRule.active.is_(True),
+            TaxRule.effective_to.is_(None),
+        ]
+        if city:
+            conds.append(TaxRule.city_id == city.id)
+        else:
+            conds.append(TaxRule.city_id.is_(None))
+
+        if rto:
+            conds.append(TaxRule.rto_id == rto.id)
+        else:
+            conds.append(TaxRule.rto_id.is_(None))
+
+        if rec_id:
+            conds.append((TaxRule.source_record_id == rec_id) | (TaxRule.name == rule_name))
+        else:
+            conds.append(TaxRule.name == rule_name)
+
+        existing_rule = (await db.execute(select(TaxRule).where(and_(*conds)))).scalars().first()
+
+        if existing_rule:
+            # Check if rates or brackets changed
+            is_changed = False
+            if rate is not None and existing_rule.rate is not None:
+                if Decimal(str(existing_rule.rate)) != Decimal(str(rate)):
+                    is_changed = True
+            elif (rate is None) != (existing_rule.rate is None):
+                is_changed = True
+
+            if fixed_amount is not None and existing_rule.fixed_amount is not None:
+                if Decimal(str(existing_rule.fixed_amount)) != Decimal(str(fixed_amount)):
+                    is_changed = True
+
+            if is_changed:
+                # Temporal effective dating: close previous rule and create new active rule
+                existing_rule.effective_to = eff_from_dt
+                existing_rule.active = False
+                new_rule = TaxRule(
+                    name=rule_name,
+                    description=description,
+                    state_id=state.id,
+                    city_id=city.id if city else None,
+                    rto_id=rto.id if rto else None,
+                    rule_category=rule_category,
+                    tax_type=tax_type,
+                    calculation_method=calc_method,
+                    vehicle_type=vehicle_type,
+                    fuel_type=fuel_type,
+                    is_ev=is_ev,
+                    usage_type=usage_type,
+                    min_price=min_price,
+                    max_price=max_price,
+                    min_engine_cc=min_engine_cc,
+                    max_engine_cc=max_engine_cc,
+                    rate=rate,
+                    fixed_amount=fixed_amount,
+                    base_amount_type=base_amount_type,
+                    formula_definition=formula_definition,
+                    priority=priority,
+                    effective_from=eff_from_dt,
+                    effective_to=None,
+                    active=True,
+                    source_id=source_id,
+                    source_record_id=rec_id,
+                    retrieved_at=now,
+                    verification_status=ver_status,
+                )
+                if calc_method == "BRACKETED" and "brackets" in data:
+                    for b in data["brackets"]:
+                        new_rule.brackets.append(
+                            TaxRuleBracket(
+                                bracket_order=b.get("bracket_order", 1),
+                                minimum_value=b.get("minimum_value", Decimal("0.00")),
+                                maximum_value=b.get("maximum_value"),
+                                rate=b.get("rate"),
+                                fixed_amount=b.get("fixed_amount", Decimal("0.00")),
+                                calculation_method=b.get("calculation_method", "PERCENTAGE"),
+                            )
+                        )
+                db.add(new_rule)
+                await db.flush()
+                return "UPDATED"
+            else:
+                # Update provenance on existing rule
+                existing_rule.source_id = source_id
+                existing_rule.source_record_id = rec_id
+                existing_rule.retrieved_at = now
+                existing_rule.verification_status = ver_status
+                existing_rule.priority = priority
+                if description:
+                    existing_rule.description = description
+                await db.flush()
+                return "UNCHANGED"
+        else:
+            # Create new rule
+            new_rule = TaxRule(
+                name=rule_name,
+                description=description,
+                state_id=state.id,
+                city_id=city.id if city else None,
+                rto_id=rto.id if rto else None,
+                rule_category=rule_category,
+                tax_type=tax_type,
+                calculation_method=calc_method,
+                vehicle_type=vehicle_type,
+                fuel_type=fuel_type,
+                is_ev=is_ev,
+                usage_type=usage_type,
+                min_price=min_price,
+                max_price=max_price,
+                min_engine_cc=min_engine_cc,
+                max_engine_cc=max_engine_cc,
+                rate=rate,
+                fixed_amount=fixed_amount,
+                base_amount_type=base_amount_type,
+                formula_definition=formula_definition,
+                priority=priority,
+                effective_from=eff_from_dt,
+                effective_to=eff_to_dt,
+                active=True,
+                source_id=source_id,
+                source_record_id=rec_id,
+                retrieved_at=now,
+                verification_status=ver_status,
+            )
+            if calc_method == "BRACKETED" and "brackets" in data:
+                for b in data["brackets"]:
+                    new_rule.brackets.append(
+                        TaxRuleBracket(
+                            bracket_order=b.get("bracket_order", 1),
+                            minimum_value=b.get("minimum_value", Decimal("0.00")),
+                            maximum_value=b.get("maximum_value"),
+                            rate=b.get("rate"),
+                            fixed_amount=b.get("fixed_amount", Decimal("0.00")),
+                            calculation_method=b.get("calculation_method", "PERCENTAGE"),
+                        )
+                    )
+            db.add(new_rule)
+            await db.flush()
+            return "CREATED"
+
+    @classmethod
     async def _check_conflicts(
         cls,
         db: AsyncSession,
@@ -1158,6 +1429,87 @@ class IngestionService:
                                             )
                                             db.add(conflict)
                                             await db.flush()
+
+        # 4. Tax rule rate and fixed amount discrepancies
+        if entity_type == IngestionEntityType.TAX_RULE.value:
+            tax_type = normalized_payload.get("tax_type")
+            state_code = normalized_payload.get("state_code")
+            rule_rate = normalized_payload.get("rate")
+            rule_fixed = normalized_payload.get("fixed_amount")
+            rule_name = normalized_payload.get("name")
+            if tax_type and state_code:
+                res = await db.execute(
+                    select(RawIngestionRecord, IngestionRun.data_source_id)
+                    .join(IngestionRun, RawIngestionRecord.ingestion_run_id == IngestionRun.id)
+                    .where(
+                        RawIngestionRecord.entity_type == entity_type,
+                        IngestionRun.data_source_id != current_source_id,
+                    )
+                    .limit(10)
+                )
+                other_records = res.all()
+                for rec, other_source_id in other_records:
+                    other_payload = rec.raw_payload
+                    if (
+                        other_payload.get("state_code") == state_code
+                        and other_payload.get("tax_type") == tax_type
+                        and other_payload.get("name") == rule_name
+                    ):
+                        other_rate = other_payload.get("rate")
+                        if other_rate is not None and rule_rate is not None:
+                            if Decimal(str(other_rate)) != Decimal(str(rule_rate)):
+                                existing_conflict = (
+                                    await db.execute(
+                                        select(DataConflictRecord).where(
+                                            DataConflictRecord.entity_identifier == entity_identifier,
+                                            DataConflictRecord.field_name == "rate",
+                                            DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                        )
+                                    )
+                                ).scalars().first()
+                                if not existing_conflict:
+                                    conflict = DataConflictRecord(
+                                        dataset_name=dataset_name,
+                                        entity_type=entity_type,
+                                        entity_identifier=entity_identifier,
+                                        field_name="rate",
+                                        source_a_id=current_source_id,
+                                        source_a_value={"rate": str(rule_rate)},
+                                        source_b_id=other_source_id,
+                                        source_b_value={"rate": str(other_rate)},
+                                        detected_at=datetime.now(timezone.utc),
+                                        status=ConflictStatus.UNRESOLVED.value,
+                                    )
+                                    db.add(conflict)
+                                    await db.flush()
+
+                        other_fixed = other_payload.get("fixed_amount")
+                        if other_fixed is not None and rule_fixed is not None:
+                            if Decimal(str(other_fixed)) != Decimal(str(rule_fixed)):
+                                existing_conflict = (
+                                    await db.execute(
+                                        select(DataConflictRecord).where(
+                                            DataConflictRecord.entity_identifier == entity_identifier,
+                                            DataConflictRecord.field_name == "fixed_amount",
+                                            DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                        )
+                                    )
+                                ).scalars().first()
+                                if not existing_conflict:
+                                    conflict = DataConflictRecord(
+                                        dataset_name=dataset_name,
+                                        entity_type=entity_type,
+                                        entity_identifier=entity_identifier,
+                                        field_name="fixed_amount",
+                                        source_a_id=current_source_id,
+                                        source_a_value={"fixed_amount": str(rule_fixed)},
+                                        source_b_id=other_source_id,
+                                        source_b_value={"fixed_amount": str(other_fixed)},
+                                        detected_at=datetime.now(timezone.utc),
+                                        status=ConflictStatus.UNRESOLVED.value,
+                                    )
+                                    db.add(conflict)
+                                    await db.flush()
 
     @classmethod
     async def get_freshness_report(cls, db: AsyncSession) -> List[FreshnessReportItem]:

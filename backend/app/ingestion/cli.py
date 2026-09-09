@@ -18,6 +18,13 @@ from app.ingestion.adapters.bank_finance_adapter import (
     BankOfBarodaCarLoanAdapter,
     KotakCarLoanAdapter,
 )
+from app.ingestion.adapters.government_tax_adapter import (
+    KarnatakaTaxRuleAdapter,
+    MaharashtraTaxRuleAdapter,
+    DelhiTaxRuleAdapter,
+    TamilNaduTaxRuleAdapter,
+    TelanganaTaxRuleAdapter,
+)
 from app.ingestion.validators.finance_validator import FinanceDataValidator
 from app.ingestion.validators.location_validator import LocationDataValidator
 from app.ingestion.validators.pricing_validator import PriceDataValidator
@@ -29,7 +36,17 @@ from app.services.ingestion_service import IngestionService
 
 async def handle_run(args):
     print(f"🚀 Running CarAfford Ingestion for source: {args.source.upper()}...")
-    if args.source in {"sbi_car_loans", "sbi"}:
+    if args.source in {"karnataka_tax_rules", "karnataka_taxes", "ka_tax_rules", "ka_tax"}:
+        adapter = KarnatakaTaxRuleAdapter()
+    elif args.source in {"maharashtra_tax_rules", "maharashtra_taxes", "mh_tax_rules", "mh_tax"}:
+        adapter = MaharashtraTaxRuleAdapter()
+    elif args.source in {"delhi_tax_rules", "delhi_taxes", "dl_tax_rules", "dl_tax"}:
+        adapter = DelhiTaxRuleAdapter()
+    elif args.source in {"tamilnadu_tax_rules", "tamilnadu_taxes", "tn_tax_rules", "tn_tax"}:
+        adapter = TamilNaduTaxRuleAdapter()
+    elif args.source in {"telangana_tax_rules", "telangana_taxes", "ts_tax_rules", "ts_tax", "tg_tax"}:
+        adapter = TelanganaTaxRuleAdapter()
+    elif args.source in {"sbi_car_loans", "sbi"}:
         adapter = SbiCarLoanAdapter()
     elif args.source in {"hdfc_car_loans", "hdfc"}:
         adapter = HdfcCarLoanAdapter()
@@ -85,10 +102,17 @@ def handle_validate(args):
     elif args.dataset == "taxes":
         v = TaxRuleDataValidator()
         sample = {
+            "name": "Karnataka Motor Vehicle Tax",
             "state_code": "KA",
+            "state_name": "Karnataka",
+            "rule_category": "TAX",
             "tax_type": "ROAD_TAX",
-            "calculation_type": "PERCENTAGE",
-            "base_rate_percent": Decimal("14.0"),
+            "calculation_method": "BRACKETED",
+            "effective_from": "2024-01-01T00:00:00Z",
+            "brackets": [
+                {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "13.0000", "calculation_method": "PERCENTAGE"},
+                {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "calculation_method": "PERCENTAGE"},
+            ],
         }
     elif args.dataset == "locations":
         v = LocationDataValidator()
@@ -202,6 +226,11 @@ def main():
             "axis_car_loans",
             "bob_car_loans",
             "kotak_car_loans",
+            "karnataka_tax_rules",
+            "maharashtra_tax_rules",
+            "delhi_tax_rules",
+            "tamilnadu_tax_rules",
+            "telangana_tax_rules",
         ],
         help="Source adapter name",
     )

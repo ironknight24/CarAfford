@@ -126,6 +126,9 @@ class TaxRule(Base, TimestampMixin):
     retrieved_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=True
     )
+    verification_status: Mapped[str] = mapped_column(
+        String(50), default="DEMO", nullable=False, index=True
+    )
 
     # Relationships
     state: Mapped["State"] = relationship("State", backref="tax_rules")

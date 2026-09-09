@@ -35,7 +35,8 @@ export default function ExplorePage() {
           setStates(stList);
           setSelectedState(stList[0].id);
         }
-        setVariants(vList || []);
+        const vItems = Array.isArray(vList) ? vList : (vList?.items || []);
+        setVariants(vItems);
       } catch (err) {
         console.error('Failed to load explore catalog:', err);
       } finally {

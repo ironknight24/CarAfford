@@ -1,7 +1,34 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.common import AuditSchemaMixin
+
+
+class VehiclePriceCreate(BaseModel):
+    variant_id: int
+    ex_showroom_price: Decimal = Field(..., gt=0, description="Ex-showroom price in INR")
+    price_type: str = Field(default="EX_SHOWROOM", description="Price type (EX_SHOWROOM, INTRODUCTORY, PROMOTIONAL, OTHER)")
+    effective_from: datetime = Field(..., description="Timestamp from which price is effective")
+    effective_to: Optional[datetime] = Field(default=None, description="Timestamp until price is effective (NULL for active)")
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+
+
+class VehiclePriceRead(BaseModel):
+    id: int
+    variant_id: int
+    ex_showroom_price: Decimal
+    price_type: str
+    effective_from: datetime
+    effective_to: Optional[datetime] = None
+    source_id: Optional[int] = None
+    source_record_id: Optional[str] = None
+    retrieved_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExShowroomPriceRead(AuditSchemaMixin):

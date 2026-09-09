@@ -1,4 +1,4 @@
-from app.models.base import Base, TimestampMixin, AuditableMixin
+from app.models.base import Base, TimestampMixin, AuditableMixin, utc_now
 from app.models.data_source import DataSource
 from app.models.location import State, City, RtoOffice, TaxSlab
 from app.models.vehicle import (
@@ -6,8 +6,9 @@ from app.models.vehicle import (
     CarModel,
     Variant,
     VariantSpecification,
+    VehicleMedia,
 )
-from app.models.pricing import ExShowroomPrice, PriceHistory
+from app.models.pricing import VehiclePrice, ExShowroomPrice, PriceHistory
 from app.models.finance import Bank, LoanProduct, InterestRateSlab
 from app.models.insurance import InsuranceRateRule
 
@@ -15,6 +16,7 @@ __all__ = [
     "Base",
     "TimestampMixin",
     "AuditableMixin",
+    "utc_now",
     "DataSource",
     "State",
     "City",
@@ -24,6 +26,8 @@ __all__ = [
     "CarModel",
     "Variant",
     "VariantSpecification",
+    "VehicleMedia",
+    "VehiclePrice",
     "ExShowroomPrice",
     "PriceHistory",
     "Bank",

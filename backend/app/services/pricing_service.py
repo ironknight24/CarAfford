@@ -38,16 +38,23 @@ class PricingService:
             city = await self.location_repo.get_city_by_id(request.city_id)
             city_name = city.name if city else None
 
-        # 1. Fetch ex-showroom price
-        ex_price_record = await self.pricing_repo.get_ex_showroom_price(
-            variant_id=variant.id,
-            state_id=state.id,
-            city_id=request.city_id,
-        )
-        if not ex_price_record:
-            raise ResourceNotFoundException(f"No active ex-showroom price found for variant {variant.name}.")
+        # 1. Fetch currently effective ex-showroom price
+        ex_showroom_price: Optional[Decimal] = None
+        current_vehicle_price = await self.vehicle_repo.get_current_price(variant.id)
+        if current_vehicle_price:
+            ex_showroom_price = current_vehicle_price.ex_showroom_price
+        else:
+            # Fallback to pricing repo
+            ex_price_record = await self.pricing_repo.get_ex_showroom_price(
+                variant_id=variant.id,
+                state_id=state.id,
+                city_id=request.city_id,
+            )
+            if ex_price_record:
+                ex_showroom_price = ex_price_record.price_inr
 
-        ex_showroom_price = ex_price_record.price_inr
+        if ex_showroom_price is None:
+            raise ResourceNotFoundException(f"No active ex-showroom price found for variant {variant.name}.")
 
         # 2. Fetch tax slab and calculate RTO taxes
         tax_slab = await self.location_repo.get_tax_slab_for_vehicle(
@@ -66,7 +73,7 @@ class PricingService:
         )
 
         # 3. Calculate Insurance
-        engine_cc = variant.specification.engine_displacement_cc if variant.specification else 1199
+        engine_cc = variant.engine_cc or (variant.specification.engine_displacement_cc if variant.specification else 1199)
         is_ev = "ELECTRIC" in variant.fuel_type.upper() or "EV" in variant.fuel_type.upper()
         ins_res = InsuranceService.estimate_insurance(
             ex_showroom_price=ex_showroom_price,

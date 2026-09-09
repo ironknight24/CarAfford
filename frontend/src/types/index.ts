@@ -13,13 +13,69 @@ export interface City {
   tier: string;
 }
 
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export interface Manufacturer {
   id: number;
   name: string;
   slug: string;
-  country_of_origin: string;
+  country: string;
+  country_of_origin?: string;
+  active: boolean;
+  is_active?: boolean;
   logo_url?: string;
-  is_active: boolean;
+  models_count?: number;
+  models?: CarModel[];
+}
+
+export interface CarModel {
+  id: number;
+  manufacturer_id: number;
+  name: string;
+  slug: string;
+  body_type: string;
+  segment?: string;
+  active: boolean;
+  is_active?: boolean;
+  launch_date?: string;
+  discontinued_date?: string;
+  launch_year?: number;
+  description?: string;
+  image_url?: string;
+  manufacturer?: Manufacturer;
+  variants_count?: number;
+  variants?: Variant[];
+}
+
+export interface VehiclePrice {
+  id: number;
+  variant_id: number;
+  ex_showroom_price: string;
+  price_type: 'EX_SHOWROOM' | 'INTRODUCTORY' | 'PROMOTIONAL' | 'OTHER' | string;
+  effective_from: string;
+  effective_to?: string;
+  source_id?: number;
+  source_record_id?: string;
+  retrieved_at?: string;
+  created_at: string;
+}
+
+export interface VehicleMedia {
+  id: number;
+  variant_id?: number;
+  model_id?: number;
+  media_type: string;
+  url: string;
+  alt_text?: string;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
 }
 
 export interface VariantSpecification {
@@ -45,17 +101,52 @@ export interface Variant {
   trim_level: string;
   fuel_type: string;
   transmission: string;
+  drivetrain?: string;
+  engine_cc?: number;
+  engine_power_bhp?: string;
+  torque_nm?: string;
   seating_capacity: number;
-  is_active: boolean;
-  model?: {
-    id: number;
-    name: string;
-    slug: string;
-    body_type: string;
-    image_url?: string;
-    manufacturer?: Manufacturer;
-  };
+  mileage_claimed?: string;
+  battery_capacity_kwh?: string;
+  range_km?: string;
+  active: boolean;
+  is_active?: boolean;
+  model?: CarModel;
   specification?: VariantSpecification;
+  current_price?: VehiclePrice;
+  price_history?: VehiclePrice[];
+  media?: VehicleMedia[];
+}
+
+export interface VehicleSearchResultItem {
+  variant_id: number;
+  variant_name: string;
+  variant_slug: string;
+  trim_level: string;
+  model_id: number;
+  model_name: string;
+  model_slug: string;
+  body_type: string;
+  segment?: string;
+  manufacturer_id: number;
+  manufacturer_name: string;
+  manufacturer_slug: string;
+  country: string;
+  fuel_type: string;
+  transmission: string;
+  drivetrain?: string;
+  seating_capacity: number;
+  engine_cc?: number;
+  engine_power_bhp?: string;
+  torque_nm?: string;
+  mileage_claimed?: string;
+  battery_capacity_kwh?: string;
+  range_km?: string;
+  active: boolean;
+  current_ex_showroom_price?: string;
+  price_type?: string;
+  price_effective_from?: string;
+  image_url?: string;
 }
 
 export interface OnRoadPriceBreakdown {

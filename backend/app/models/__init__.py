@@ -19,6 +19,12 @@ from app.models.finance import (
 )
 from app.models.insurance import InsuranceRateRule
 from app.models.tax_rule import TaxRule, TaxRuleBracket
+from app.models.ingestion import (
+    IngestionRun,
+    RawIngestionRecord,
+    DataConflictRecord,
+    DataQualityReviewItem,
+)
 
 __all__ = [
     "Base",
@@ -49,4 +55,8 @@ __all__ = [
     "InsuranceRateRule",
     "TaxRule",
     "TaxRuleBracket",
+    "IngestionRun",
+    "RawIngestionRecord",
+    "DataConflictRecord",
+    "DataQualityReviewItem",
 ]

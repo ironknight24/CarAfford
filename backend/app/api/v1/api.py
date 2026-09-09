@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
     data_sources,
     finance,
     health,
+    ingestion,
     locations,
     pricing,
     recommendations,
@@ -39,5 +40,8 @@ api_router.include_router(finance.router, prefix="/finance", tags=["Finance"])
 api_router.include_router(affordability.router, prefix="/affordability", tags=["Affordability"])
 api_router.include_router(tco.router, prefix="/tco", tags=["TCO"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
+
+# Data Ingestion, Provenance & Quality Governance
 api_router.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sources"])
+api_router.include_router(ingestion.router, prefix="/ingestion", tags=["Data Ingestion & Quality"])
 

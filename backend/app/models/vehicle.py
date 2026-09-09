@@ -163,6 +163,10 @@ class Variant(Base, TimestampMixin, AuditableMixin):
             return self.specification.arai_mileage_kmpl
         return Decimal("18.00")
 
+    @arai_mileage_kmpl.setter
+    def arai_mileage_kmpl(self, value: Optional[Decimal]) -> None:
+        self.mileage_claimed = value
+
 
 class VariantSpecification(Base, TimestampMixin, AuditableMixin):
     """Detailed technical specifications for a vehicle variant (backward compatibility & extra specs)."""

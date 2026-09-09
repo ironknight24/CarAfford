@@ -185,7 +185,7 @@ class VariantSpecification(Base, TimestampMixin, AuditableMixin):
     variant: Mapped["Variant"] = relationship("Variant", back_populates="specification")
 
 
-class VehicleMedia(Base, TimestampMixin):
+class VehicleMedia(Base):
     """Vehicle images, brochures, and media references."""
     __tablename__ = "vehicle_media"
     __table_args__ = (
@@ -203,6 +203,9 @@ class VehicleMedia(Base, TimestampMixin):
     alt_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
 
     variant: Mapped[Optional["Variant"]] = relationship("Variant", back_populates="media", foreign_keys=[variant_id])
     model: Mapped[Optional["CarModel"]] = relationship("CarModel", back_populates="media", foreign_keys=[model_id])

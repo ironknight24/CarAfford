@@ -23,7 +23,7 @@ interface AffordabilityFormProps {
 
 export default function AffordabilityForm({ onCalculate, isLoading }: AffordabilityFormProps) {
   const [states, setStates] = useState<State[]>([]);
-  const [selectedState, setSelectedState] = useState<number>(1);
+  const [selectedState, setSelectedState] = useState<number | ''>('');
   const [cities, setCities] = useState<City[]>([]);
   const [selectedCity, setSelectedCity] = useState<number | ''>('');
   const [rtos, setRtos] = useState<RtoOffice[]>([]);
@@ -47,7 +47,6 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
         const res = await api.getStates();
         if (res && res.length > 0) {
           setStates(res);
-          setSelectedState(res[0].id);
         }
       } catch (e) {
         console.error('Failed to load states:', e);
@@ -59,58 +58,70 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
   // When selectedState changes, load cities and RTOs
   useEffect(() => {
     async function loadCitiesAndRtos() {
-      if (!selectedState) return;
-      try {
-        const cityList = await api.getCitiesByState(selectedState);
-        setCities(cityList || []);
-        if (cityList && cityList.length > 0) {
-          setSelectedCity(cityList[0].id);
-        } else {
-          setSelectedCity('');
-        }
-      } catch (e) {
-        console.error('Failed to load cities for state:', e);
+      if (!selectedState) {
         setCities([]);
         setSelectedCity('');
+        setRtos([]);
+        setSelectedRto('');
+        return;
+      }
+      try {
+        setSelectedCity('');
+        setSelectedRto('');
+        const [cityList, rtoList] = await Promise.all([
+          api.getCitiesByState(Number(selectedState)).catch(() => []),
+          api.getRtosByState(Number(selectedState)).catch(() => []),
+        ]);
+        setCities(cityList || []);
+        setRtos(rtoList || []);
+      } catch (e) {
+        console.error('Failed to load location data for state:', e);
+        setCities([]);
+        setSelectedCity('');
+        setRtos([]);
+        setSelectedRto('');
       }
     }
     loadCitiesAndRtos();
   }, [selectedState]);
 
-  // When selectedCity changes, load RTOs
+  // When selectedCity changes, reload city-specific RTOs or fallback to state RTOs
   useEffect(() => {
-    async function loadRtos() {
+    async function loadCityRtos() {
+      if (!selectedState) return;
       if (!selectedCity) {
-        if (selectedState) {
-          const rtoList = await api.getRtosByState(selectedState).catch(() => []);
+        try {
+          const rtoList = await api.getRtosByState(Number(selectedState)).catch(() => []);
           setRtos(rtoList || []);
+          setSelectedRto('');
+        } catch (e) {
+          console.error('Failed to reload state RTOs:', e);
         }
         return;
       }
       try {
         const rtoList = await api.getRtosByCity(Number(selectedCity));
         setRtos(rtoList || []);
-        if (rtoList && rtoList.length > 0) {
-          setSelectedRto(rtoList[0].id);
-        } else {
-          setSelectedRto('');
-        }
+        setSelectedRto('');
       } catch (e) {
         console.error('Failed to load RTOs for city:', e);
         setRtos([]);
         setSelectedRto('');
       }
     }
-    loadRtos();
-  }, [selectedCity, selectedState]);
+    if (selectedState) {
+      loadCityRtos();
+    }
+  }, [selectedCity]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!selectedState) return;
     onCalculate({
       monthly_take_home_income: monthlyIncome,
       existing_monthly_emis: existingEmis,
       available_down_payment: downPayment,
-      state_id: selectedState,
+      state_id: Number(selectedState),
       city_id: selectedCity ? Number(selectedCity) : undefined,
       rto_id: selectedRto ? Number(selectedRto) : undefined,
       desired_tenure_months: tenureYears * 12,
@@ -122,7 +133,7 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
     });
   };
 
-  // Trigger initial calculation once state is loaded
+  // Trigger calculation when a valid state is selected
   useEffect(() => {
     if (selectedState) {
       handleSubmit();
@@ -211,9 +222,11 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
           <div className="relative">
             <select
               value={selectedState}
-              onChange={(e) => setSelectedState(Number(e.target.value))}
+              onChange={(e) => setSelectedState(e.target.value ? Number(e.target.value) : '')}
               className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+              required
             >
+              <option value="">Select Registration State</option>
               {states.map((st) => (
                 <option key={st.id} value={st.id}>
                   {st.name} ({st.code})
@@ -229,15 +242,18 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
         <div>
           <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex justify-between">
             <span>City / Region</span>
-            <span className="text-slate-500 text-[11px]">{cities.length} Cities Available</span>
+            <span className="text-slate-500 text-[11px]">
+              {!selectedState ? 'Select state first' : `${cities.length} Cities Available`}
+            </span>
           </label>
           <div className="relative">
             <select
               value={selectedCity}
+              disabled={!selectedState}
               onChange={(e) => setSelectedCity(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">All Cities in State</option>
+              <option value="">{!selectedState ? 'Select state first' : 'All Cities in State'}</option>
               {cities.map((ct) => (
                 <option key={ct.id} value={ct.id}>
                   {ct.name} ({ct.tier})
@@ -250,15 +266,18 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
         <div>
           <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex justify-between">
             <span>RTO Office Jurisdiction (Optional)</span>
-            <span className="text-slate-500 text-[11px]">{rtos.length} RTOs</span>
+            <span className="text-slate-500 text-[11px]">
+              {!selectedState ? 'Select state first' : `${rtos.length} RTOs`}
+            </span>
           </label>
           <div className="relative">
             <select
               value={selectedRto}
+              disabled={!selectedState}
               onChange={(e) => setSelectedRto(e.target.value ? Number(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer"
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">Default State RTO Jurisdiction</option>
+              <option value="">{!selectedState ? 'Select state first' : 'Default State RTO Jurisdiction'}</option>
               {rtos.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.code} - {r.name}

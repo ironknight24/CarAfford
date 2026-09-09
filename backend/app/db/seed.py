@@ -458,14 +458,19 @@ async def _run_seed(session: AsyncSession):
     # =========================================================================
     print("5/6 Seeding Indian countries, states, cities, and RTO offices...")
     # Country: India
-    country_india = Country(
-        name="India",
-        iso_code="IN",
-        iso3_code="IND",
-        active=True,
+    res_country = await session.execute(
+        select(Country).filter((Country.iso_code == "IN") | (Country.name == "India"))
     )
-    session.add(country_india)
-    await session.flush()
+    country_india = res_country.scalars().first()
+    if not country_india:
+        country_india = Country(
+            name="India",
+            iso_code="IN",
+            iso3_code="IND",
+            active=True,
+        )
+        session.add(country_india)
+        await session.flush()
 
     # 28 States + 8 Union Territories
     states_data = [

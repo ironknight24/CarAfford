@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import AuditableMixin, Base, TimestampMixin, utc_now
 
 
-class Bank(Base, TimestampMixin, AuditableMixin):
+class Bank(Base, TimestampMixin):
     """Indian commercial banks and NBFCs offering auto loans (e.g. SBI, HDFC, ICICI, Axis, PNB, Kotak)."""
     __tablename__ = "banks"
 
@@ -48,7 +48,7 @@ class Bank(Base, TimestampMixin, AuditableMixin):
         self.active = value
 
 
-class LoanProduct(Base, TimestampMixin, AuditableMixin):
+class LoanProduct(Base, TimestampMixin):
     """Specific auto-loan scheme offered by a bank (e.g. SBI Car Loan, SBI Green Car Loan, HDFC CustomFit)."""
     __tablename__ = "loan_products"
 
@@ -99,7 +99,7 @@ class LoanProduct(Base, TimestampMixin, AuditableMixin):
         self.active = value
 
 
-class InterestRate(Base, TimestampMixin, AuditableMixin):
+class InterestRate(Base, TimestampMixin):
     """Historical and currently effective interest rate schedule for loan products."""
     __tablename__ = "interest_rates"
     __table_args__ = (
@@ -159,7 +159,7 @@ class InterestRate(Base, TimestampMixin, AuditableMixin):
         self.active = value
 
 
-class LoanEligibilityRule(Base, TimestampMixin, AuditableMixin):
+class LoanEligibilityRule(Base, TimestampMixin):
     """Underwriting and pre-qualification criteria for a loan product."""
     __tablename__ = "loan_eligibility_rules"
     __table_args__ = (
@@ -207,7 +207,7 @@ class LoanEligibilityRule(Base, TimestampMixin, AuditableMixin):
     source: Mapped[Optional["DataSource"]] = relationship("DataSource")
 
 
-class LoanFee(Base, TimestampMixin, AuditableMixin):
+class LoanFee(Base, TimestampMixin):
     """Specific fees and charges associated with auto loan processing."""
     __tablename__ = "loan_fees"
     __table_args__ = (

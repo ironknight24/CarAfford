@@ -129,3 +129,57 @@ async def test_location_domain_api_flow(db_session: AsyncSession, async_client: 
 
     # 12. 422 Error handling for empty search query
     assert (await async_client.get("/api/v1/locations/search?q=")).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_location_selector_cascade_contract(db_session: AsyncSession, async_client: AsyncClient):
+    """Verifies that the API supports the frontend State -> City -> RTO selection cascade
+
+    without assuming any hardcoded state ID:
+    - Initial state list fetches all states with dynamic IDs.
+    - Selecting a real state ID returns its cities and RTOs.
+    - Selecting a real city ID returns city-specific RTOs.
+    - Invalid or non-existent IDs return 404.
+    """
+    await seed_database(db_session)
+
+    # 1. Frontend initial load: /locations/states or /states
+    states_resp = await async_client.get("/api/v1/locations/states")
+    assert states_resp.status_code == 200
+    states = states_resp.json()["data"]
+    assert len(states) == 36
+
+    # Verify no assumption of state ID 1: dynamic state resolution
+    mh_state = next((s for s in states if s["code"] == "MH"), None)
+    assert mh_state is not None
+    real_state_id = mh_state["id"]
+
+    # 2. State selected -> fetch cities
+    cities_resp = await async_client.get(f"/api/v1/states/{real_state_id}/cities")
+    assert cities_resp.status_code == 200
+    cities = cities_resp.json()["data"]
+    assert len(cities) >= 2  # Mumbai, Pune, Nagpur
+    mumbai = next((c for c in cities if c["slug"] == "mumbai"), None)
+    assert mumbai is not None
+    real_city_id = mumbai["id"]
+
+    # 3. State selected -> fetch state-level RTOs
+    state_rtos_resp = await async_client.get(f"/api/v1/states/{real_state_id}/rtos")
+    assert state_rtos_resp.status_code == 200
+    state_rtos = state_rtos_resp.json()["data"]
+    assert len(state_rtos) >= 5  # MH-01, MH-02, MH-03, MH-47, MH-12, MH-14
+
+    # 4. City selected -> fetch city-specific RTOs
+    city_rtos_resp = await async_client.get(f"/api/v1/cities/{real_city_id}/rtos")
+    assert city_rtos_resp.status_code == 200
+    city_rtos = city_rtos_resp.json()["data"]
+    assert len(city_rtos) == 4  # Mumbai RTOs: MH-01, MH-02, MH-03, MH-47
+    mumbai_codes = {r["code"] for r in city_rtos}
+    assert "MH-01" in mumbai_codes
+    assert "MH-12" not in mumbai_codes  # Pune Central should not be in Mumbai
+
+    # 5. Non-existent state ID returns 404 (e.g. state ID 999999)
+    bad_cities = await async_client.get("/api/v1/states/999999/cities")
+    assert bad_cities.status_code == 404
+    bad_rtos = await async_client.get("/api/v1/states/999999/rtos")
+    assert bad_rtos.status_code == 404

@@ -9,7 +9,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.data_source import DataSource
 from app.models.finance import Bank, InterestRateSlab, LoanProduct
 from app.models.insurance import InsuranceRateRule
-from app.models.location import City, State, TaxSlab
+from app.models.location import City, Country, RtoOffice, State, TaxSlab
 from app.models.pricing import ExShowroomPrice, PriceHistory, VehiclePrice
 from app.models.vehicle import (
     CarModel,
@@ -446,40 +446,186 @@ async def _run_seed(session: AsyncSession):
     await session.flush()
 
     # =========================================================================
-    # 5. STATES, CITIES & RTO TAX SLABS
+    # 5. COUNTRIES, STATES, CITIES & RTO OFFICES
     # =========================================================================
-    print("5/6 Seeding Indian states, cities, and RTO tax slabs...")
+    print("5/6 Seeding Indian countries, states, cities, and RTO offices...")
+    # Country: India
+    country_india = Country(
+        name="India",
+        iso_code="IN",
+        iso3_code="IND",
+        active=True,
+    )
+    session.add(country_india)
+    await session.flush()
+
+    # 28 States + 8 Union Territories
     states_data = [
-        ("Delhi", "DL", True),
-        ("Maharashtra", "MH", False),
-        ("Karnataka", "KA", False),
-        ("Tamil Nadu", "TN", False),
-        ("Telangana", "TS", False),
-        ("Uttar Pradesh", "UP", False),
-        ("Haryana", "HR", False),
-        ("Gujarat", "GJ", False),
+        # Major focus states
+        ("Karnataka", "KA", "STATE"),
+        ("Delhi", "DL", "UNION_TERRITORY"),
+        ("Maharashtra", "MH", "STATE"),
+        ("Tamil Nadu", "TN", "STATE"),
+        ("Telangana", "TS", "STATE"),
+        ("Kerala", "KL", "STATE"),
+        ("Gujarat", "GJ", "STATE"),
+        ("Haryana", "HR", "STATE"),
+        ("Uttar Pradesh", "UP", "STATE"),
+        ("West Bengal", "WB", "STATE"),
+        ("Rajasthan", "RJ", "STATE"),
+        ("Punjab", "PB", "STATE"),
+        ("Andhra Pradesh", "AP", "STATE"),
+        ("Madhya Pradesh", "MP", "STATE"),
+        ("Bihar", "BR", "STATE"),
+        ("Odisha", "OD", "STATE"),
+        ("Assam", "AS", "STATE"),
+        ("Jharkhand", "JH", "STATE"),
+        ("Chhattisgarh", "CG", "STATE"),
+        ("Uttarakhand", "UK", "STATE"),
+        ("Himachal Pradesh", "HP", "STATE"),
+        ("Goa", "GA", "STATE"),
+        ("Tripura", "TR", "STATE"),
+        ("Manipur", "MN", "STATE"),
+        ("Meghalaya", "ML", "STATE"),
+        ("Nagaland", "NL", "STATE"),
+        ("Mizoram", "MZ", "STATE"),
+        ("Arunachal Pradesh", "AR", "STATE"),
+        ("Sikkim", "SK", "STATE"),
+        # Other Union Territories
+        ("Chandigarh", "CH", "UNION_TERRITORY"),
+        ("Jammu and Kashmir", "JK", "UNION_TERRITORY"),
+        ("Ladakh", "LA", "UNION_TERRITORY"),
+        ("Puducherry", "PY", "UNION_TERRITORY"),
+        ("Andaman and Nicobar Islands", "AN", "UNION_TERRITORY"),
+        ("Dadra and Nagar Haveli and Daman and Diu", "DN", "UNION_TERRITORY"),
+        ("Lakshadweep", "LD", "UNION_TERRITORY"),
     ]
     state_objs = {}
-    for name, code, is_ut in states_data:
-        st = State(name=name, code=code, is_ut=is_ut)
+    for name, code, reg_type in states_data:
+        st = State(
+            country_id=country_india.id,
+            name=name,
+            code=code,
+            region_type=reg_type,
+            active=True,
+        )
         session.add(st)
         await session.flush()
         state_objs[code] = st
 
+    # Major Cities
     cities_data = [
+        # Karnataka
+        ("Bengaluru", "bengaluru", "KA", "Tier 1"),
+        ("Mysuru", "mysuru", "KA", "Tier 2"),
+        ("Mangaluru", "mangaluru", "KA", "Tier 2"),
+        # Delhi
         ("New Delhi", "new-delhi", "DL", "Tier 1"),
+        # Maharashtra
         ("Mumbai", "mumbai", "MH", "Tier 1"),
         ("Pune", "pune", "MH", "Tier 1"),
-        ("Bengaluru", "bengaluru", "KA", "Tier 1"),
+        ("Nagpur", "nagpur", "MH", "Tier 2"),
+        # Tamil Nadu
         ("Chennai", "chennai", "TN", "Tier 1"),
+        ("Coimbatore", "coimbatore", "TN", "Tier 2"),
+        ("Madurai", "madurai", "TN", "Tier 2"),
+        # Telangana
         ("Hyderabad", "hyderabad", "TS", "Tier 1"),
-        ("Noida", "noida", "UP", "Tier 1"),
-        ("Gurugram", "gurugram", "HR", "Tier 1"),
+        # Kerala
+        ("Kochi", "kochi", "KL", "Tier 2"),
+        ("Thiruvananthapuram", "thiruvananthapuram", "KL", "Tier 2"),
+        # Gujarat
         ("Ahmedabad", "ahmedabad", "GJ", "Tier 1"),
+        ("Surat", "surat", "GJ", "Tier 2"),
+        ("Vadodara", "vadodara", "GJ", "Tier 2"),
+        # Haryana
+        ("Gurugram", "gurugram", "HR", "Tier 1"),
+        ("Faridabad", "faridabad", "HR", "Tier 2"),
+        # Uttar Pradesh
+        ("Lucknow", "lucknow", "UP", "Tier 2"),
+        ("Noida", "noida", "UP", "Tier 1"),
+        ("Kanpur", "kanpur", "UP", "Tier 2"),
+        # West Bengal
+        ("Kolkata", "kolkata", "WB", "Tier 1"),
+        # Rajasthan
+        ("Jaipur", "jaipur", "RJ", "Tier 2"),
     ]
+    city_objs = {}
     for name, slug, st_code, tier in cities_data:
-        ct = City(name=name, slug=slug, state_id=state_objs[st_code].id, tier=tier)
+        ct = City(
+            name=name,
+            slug=slug,
+            state_id=state_objs[st_code].id,
+            tier=tier,
+            active=True,
+        )
         session.add(ct)
+        await session.flush()
+        city_objs[slug] = ct
+
+    # Representative RTO Offices
+    rtos_data = [
+        # Karnataka (Bengaluru multiple RTOs demonstration)
+        ("KA-01", "RTO Koramangala (Bengaluru South)", "Koramangala, HSR Layout, BTM Layout", "KA", "bengaluru"),
+        ("KA-02", "RTO Rajajinagar (Bengaluru West)", "Rajajinagar, Malleshwaram, Vijayanagar", "KA", "bengaluru"),
+        ("KA-03", "RTO Indiranagar (Bengaluru East)", "Indiranagar, Whitefield, HAL, Marathahalli", "KA", "bengaluru"),
+        ("KA-04", "RTO Yeshwanthpur (Bengaluru North)", "Yeshwanthpur, Hebbal, Yelahanka", "KA", "bengaluru"),
+        ("KA-05", "RTO Jayanagar (Bengaluru Central)", "Jayanagar, Basavanagudi, JP Nagar", "KA", "bengaluru"),
+        ("KA-51", "RTO Electronic City", "Electronic City, Bommasandra, Anekal", "KA", "bengaluru"),
+        ("KA-53", "RTO KR Puram", "KR Puram, Mahadevapura, Hoodi", "KA", "bengaluru"),
+        ("KA-09", "RTO Mysuru West", "Mysuru Urban and Suburbs", "KA", "mysuru"),
+        # Delhi
+        ("DL-01", "RTO Mall Road (North Delhi)", "Civil Lines, Timarpur, GTB Nagar", "DL", "new-delhi"),
+        ("DL-02", "RTO Tilak Marg (New Delhi)", "Connaught Place, India Gate, Chanakyapuri", "DL", "new-delhi"),
+        ("DL-03", "RTO Sheikh Sarai (South Delhi)", "Hauz Khas, Saket, Greater Kailash", "DL", "new-delhi"),
+        ("DL-04", "RTO Janakpuri (West Delhi)", "Janakpuri, Rajouri Garden, Dwarka", "DL", "new-delhi"),
+        # Maharashtra (Mumbai multiple RTOs + Pune)
+        ("MH-01", "RTO Tardeo (Mumbai South)", "Colaba, Nariman Point, Tardeo, Worli", "MH", "mumbai"),
+        ("MH-02", "RTO Andheri (Mumbai West)", "Bandra, Andheri, Juhu, Goregaon", "MH", "mumbai"),
+        ("MH-03", "RTO Wadala (Mumbai East)", "Chembur, Ghatkopar, Kurla, Mulund", "MH", "mumbai"),
+        ("MH-47", "RTO Borivali (Mumbai North)", "Malad, Kandivali, Borivali, Dahisar", "MH", "mumbai"),
+        ("MH-12", "RTO Pune Central", "Shivajinagar, Kothrud, Pune Cantonment", "MH", "pune"),
+        ("MH-14", "RTO Pimpri-Chinchwad", "Pimpri, Chinchwad, Hinjawadi IT Park", "MH", "pune"),
+        # Tamil Nadu (Chennai multiple RTOs + Coimbatore)
+        ("TN-01", "RTO Chennai Central", "Ayanavaram, Purasawalkam, Kilpauk", "TN", "chennai"),
+        ("TN-02", "RTO Chennai North", "Anna Nagar, Ambattur, Villivakkam", "TN", "chennai"),
+        ("TN-07", "RTO Chennai South", "Thiruvanmiyur, Adyar, Velachery, OMR", "TN", "chennai"),
+        ("TN-37", "RTO Coimbatore South", "Coimbatore South & Peelamedu", "TN", "coimbatore"),
+        # Telangana
+        ("TS-07", "RTO Hyderabad Central", "Khairatabad, Banjara Hills, Jubilee Hills", "TS", "hyderabad"),
+        ("TS-08", "RTO Hyderabad East", "Uppal, LB Nagar, Dilsukhnagar", "TS", "hyderabad"),
+        ("TS-09", "RTO Hyderabad West", "Madhapur, Gachibowli, Hitec City", "TS", "hyderabad"),
+        # Kerala
+        ("KL-01", "RTO Thiruvananthapuram", "Thiruvananthapuram City", "KL", "thiruvananthapuram"),
+        ("KL-07", "RTO Ernakulam (Kochi)", "Kochi, Kakkanad, Marine Drive", "KL", "kochi"),
+        # Gujarat
+        ("GJ-01", "RTO Ahmedabad West (Subhash Bridge)", "Vastrapur, Navrangpura, Satellite", "GJ", "ahmedabad"),
+        ("GJ-27", "RTO Ahmedabad East (Vastral)", "Maninagar, Vastral, Naroda", "GJ", "ahmedabad"),
+        ("GJ-05", "RTO Surat", "Surat City & Diamond Bourse", "GJ", "surat"),
+        # Haryana
+        ("HR-26", "RTO Gurugram North", "Cyber City, DLF Phase 1-5, Golf Course Rd", "HR", "gurugram"),
+        ("HR-98", "RTO Gurugram South (Badshahpur)", "Sohna Road, Badshahpur, Golf Course Ext", "HR", "gurugram"),
+        ("HR-51", "RTO Faridabad", "Faridabad Urban & NIT", "HR", "faridabad"),
+        # Uttar Pradesh
+        ("UP-16", "RTO Noida (Gautam Buddha Nagar)", "Noida, Greater Noida, Expressway", "UP", "noida"),
+        ("UP-32", "RTO Lucknow (Transport Nagar)", "Lucknow City, Gomti Nagar, Alambagh", "UP", "lucknow"),
+        # West Bengal
+        ("WB-01", "RTO Kolkata North (Beltala)", "North Kolkata & Salt Lake", "WB", "kolkata"),
+        ("WB-02", "RTO Kolkata South (Kasba)", "Kasba, Jadavpur, Ballygunge", "WB", "kolkata"),
+    ]
+    for code, name, juris, st_code, city_slug in rtos_data:
+        rto_obj = RtoOffice(
+            code=code,
+            name=name,
+            jurisdiction=juris,
+            state_id=state_objs[st_code].id,
+            city_id=city_objs[city_slug].id if city_slug in city_objs else None,
+            active=True,
+            source_id=src_parivahan.id,
+            source_record_id=f"PARIVAHAN-RTO-{code}",
+            retrieved_at=now,
+        )
+        session.add(rto_obj)
 
     session.add_all([
         # Delhi

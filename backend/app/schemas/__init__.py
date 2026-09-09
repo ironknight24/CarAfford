@@ -1,6 +1,30 @@
 from app.schemas.common import BaseResponse, PaginatedResponse, AuditSchemaMixin
 from app.schemas.data_source import DataSourceRead, DataSourceCreate
-from app.schemas.location import StateRead, CityRead, RtoOfficeRead, TaxSlabRead
+from app.schemas.location import (
+    CountryBase,
+    CountryCreate,
+    CountryRead,
+    CountryDetailRead,
+    CountrySimple,
+    StateBase,
+    StateCreate,
+    StateRead,
+    StateDetailRead,
+    StateSimple,
+    CityBase,
+    CityCreate,
+    CityRead,
+    CityDetailRead,
+    CitySimple,
+    RtoOfficeBase,
+    RtoOfficeCreate,
+    RtoOfficeRead,
+    RtoOfficeDetailRead,
+    RtoOfficeSimple,
+    RTORead,
+    LocationSearchItem,
+    TaxSlabRead,
+)
 from app.schemas.vehicle import (
     ManufacturerBase,
     ManufacturerCreate,

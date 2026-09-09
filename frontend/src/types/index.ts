@@ -1,16 +1,75 @@
-export interface State {
+export interface Country {
   id: number;
   name: string;
+  iso_code: string;
+  iso3_code: string;
+  active: boolean;
+  states_count?: number;
+  states?: State[];
+}
+
+export interface State {
+  id: number;
+  country_id: number;
+  name: string;
   code: string;
+  region_type: string;
+  active: boolean;
   is_ut: boolean;
+  country?: Country;
+  cities_count?: number;
+  rtos_count?: number;
+  cities?: City[];
+  rtos?: RtoOffice[];
 }
 
 export interface City {
   id: number;
+  state_id: number;
   name: string;
   slug: string;
-  state_id: number;
   tier: string;
+  active: boolean;
+  state?: State;
+  rtos?: RtoOffice[];
+}
+
+export interface RtoOffice {
+  id: number;
+  state_id: number;
+  city_id?: number;
+  code: string;
+  name: string;
+  jurisdiction?: string;
+  active: boolean;
+  source_id?: number;
+  source_record_id?: string;
+  retrieved_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  state?: State;
+  city?: City;
+}
+
+export type RTO = RtoOffice;
+
+export interface LocationSearchItem {
+  country_id: number;
+  country_name: string;
+  country_iso: string;
+  state_id: number;
+  state_name: string;
+  state_code: string;
+  region_type: string;
+  city_id?: number;
+  city_name?: string;
+  city_slug?: string;
+  rto_id?: number;
+  rto_code?: string;
+  rto_name?: string;
+  rto_jurisdiction?: string;
+  match_type: 'rto' | 'city' | 'state' | 'country' | string;
+  active: boolean;
 }
 
 export interface PaginatedResult<T> {

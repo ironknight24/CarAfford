@@ -1,6 +1,6 @@
 from app.models.base import Base, TimestampMixin, AuditableMixin, utc_now
 from app.models.data_source import DataSource
-from app.models.location import State, City, RtoOffice, TaxSlab
+from app.models.location import Country, State, City, RtoOffice, RTO, TaxSlab
 from app.models.vehicle import (
     Manufacturer,
     CarModel,
@@ -18,9 +18,11 @@ __all__ = [
     "AuditableMixin",
     "utc_now",
     "DataSource",
+    "Country",
     "State",
     "City",
     "RtoOffice",
+    "RTO",
     "TaxSlab",
     "Manufacturer",
     "CarModel",

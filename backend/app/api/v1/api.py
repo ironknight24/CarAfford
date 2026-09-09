@@ -12,9 +12,15 @@ from app.api.v1.endpoints import (
 
 api_router = APIRouter()
 
-# Core Health and Locations
+# Core Health
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
-api_router.include_router(locations.router, prefix="/locations", tags=["Locations"])
+
+# Locations Hierarchy & Search
+api_router.include_router(locations.countries_router)
+api_router.include_router(locations.states_router)
+api_router.include_router(locations.cities_router)
+api_router.include_router(locations.rtos_router)
+api_router.include_router(locations.locations_router)
 
 # Vehicle Catalogue & Search
 api_router.include_router(vehicles.manufacturers_router)

@@ -11,6 +11,7 @@ from app.models.vehicle import (
 from app.models.pricing import VehiclePrice, ExShowroomPrice, PriceHistory
 from app.models.finance import Bank, LoanProduct, InterestRateSlab
 from app.models.insurance import InsuranceRateRule
+from app.models.tax_rule import TaxRule, TaxRuleBracket
 
 __all__ = [
     "Base",
@@ -36,4 +37,6 @@ __all__ = [
     "LoanProduct",
     "InterestRateSlab",
     "InsuranceRateRule",
+    "TaxRule",
+    "TaxRuleBracket",
 ]

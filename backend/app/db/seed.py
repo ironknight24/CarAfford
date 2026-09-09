@@ -11,6 +11,7 @@ from app.models.finance import Bank, InterestRateSlab, LoanProduct
 from app.models.insurance import InsuranceRateRule
 from app.models.location import City, Country, RtoOffice, State, TaxSlab
 from app.models.pricing import ExShowroomPrice, PriceHistory, VehiclePrice
+from app.models.tax_rule import TaxRule, TaxRuleBracket
 from app.models.vehicle import (
     CarModel,
     Manufacturer,
@@ -613,6 +614,7 @@ async def _run_seed(session: AsyncSession):
         ("WB-01", "RTO Kolkata North (Beltala)", "North Kolkata & Salt Lake", "WB", "kolkata"),
         ("WB-02", "RTO Kolkata South (Kasba)", "Kasba, Jadavpur, Ballygunge", "WB", "kolkata"),
     ]
+    rto_objs = {}
     for code, name, juris, st_code, city_slug in rtos_data:
         rto_obj = RtoOffice(
             code=code,
@@ -626,7 +628,11 @@ async def _run_seed(session: AsyncSession):
             retrieved_at=now,
         )
         session.add(rto_obj)
+        rto_objs[code] = rto_obj
 
+    await session.flush()
+
+    # Legacy TaxSlabs for backward compatibility
     session.add_all([
         # Delhi
         TaxSlab(state_id=state_objs["DL"].id, fuel_type="Petrol", min_ex_showroom=Decimal("0"), max_ex_showroom=Decimal("600000"), tax_percent=Decimal("4.00"), cess_percent=Decimal("0.00"), source="Parivahan DL RTO", source_url="https://transport.delhi.gov.in", effective_date=now, last_verified_date=now),
@@ -654,6 +660,366 @@ async def _run_seed(session: AsyncSession):
         TaxSlab(state_id=state_objs["KA"].id, fuel_type="Diesel", min_ex_showroom=Decimal("1000000"), max_ex_showroom=None, tax_percent=Decimal("18.00"), cess_percent=Decimal("11.00"), source="Karnataka Transport Dept", source_url="https://transport.karnataka.gov.in", effective_date=now, last_verified_date=now),
         TaxSlab(state_id=state_objs["KA"].id, fuel_type="Electric", min_ex_showroom=Decimal("0"), max_ex_showroom=None, tax_percent=Decimal("0.00"), cess_percent=Decimal("0.00"), source="Karnataka EV Policy", source_url="https://transport.karnataka.gov.in", effective_date=now, last_verified_date=now),
         TaxSlab(state_id=state_objs["KA"].id, fuel_type="Hybrid", min_ex_showroom=Decimal("0"), max_ex_showroom=None, tax_percent=Decimal("14.00"), cess_percent=Decimal("11.00"), source="Karnataka Transport Dept", source_url="https://transport.karnataka.gov.in", effective_date=now, last_verified_date=now),
+    ])
+    await session.flush()
+
+    # =========================================================================
+    # 5.2 STATUTORY TAX & REGISTRATION RULES DOMAIN (DEMO / SEED DATA — NOT AUTHORITATIVE)
+    # =========================================================================
+    print("5.2/6 Seeding flexible Tax & Registration Rules for 10 Indian States & Jurisdictions...")
+
+    # --- 1. KARNATAKA (KA) ---
+    ka_st = state_objs["KA"]
+    ka_road_tax = TaxRule(
+        name="Karnataka Motor Vehicle Lifetime Tax (Private ICE)",
+        description="[SEED DATA — NOT AUTHORITATIVE] KMVT tiered lifetime tax for private four-wheelers.",
+        state_id=ka_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        vehicle_type="CAR",
+        is_ev=False,
+        usage_type="PRIVATE",
+        base_amount_type="EX_SHOWROOM",
+        priority=100,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        effective_to=None,
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-KA-MVT-2024",
+        retrieved_at=now,
+    )
+    ka_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("13.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("14.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=Decimal("2000000"), rate=Decimal("17.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=4, minimum_value=Decimal("2000000"), maximum_value=None, rate=Decimal("18.00"), calculation_method="PERCENTAGE"),
+    ]
+
+    ka_cess = TaxRule(
+        name="Karnataka Transport Infrastructure & Road Safety Cess",
+        description="[SEED DATA — NOT AUTHORITATIVE] 11% Infrastructure cess calculated on base Road Tax amount.",
+        state_id=ka_st.id,
+        rule_category="CESS",
+        tax_type="CESS",
+        calculation_method="PERCENTAGE",
+        rate=Decimal("11.00"),
+        base_amount_type="ROAD_TAX",
+        priority=100,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-KA-CESS-2024",
+        retrieved_at=now,
+    )
+
+    ka_ev_tax = TaxRule(
+        name="Karnataka Electric Vehicle Tax Exemption",
+        description="[SEED DATA — NOT AUTHORITATIVE] 100% road tax exemption for Electric Vehicles in Karnataka.",
+        state_id=ka_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="FIXED",
+        is_ev=True,
+        fixed_amount=Decimal("0.00"),
+        rate=Decimal("0.00"),
+        priority=150,
+        effective_from=datetime(2021, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-KA-EV-EXEMPT",
+        retrieved_at=now,
+    )
+
+    ka_reg_fee = TaxRule(name="Karnataka Motor Vehicle Registration Fee", state_id=ka_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KA-REG-600", retrieved_at=now)
+    ka_smart_card = TaxRule(name="Karnataka Smart Card RC Fee", state_id=ka_st.id, rule_category="FEE", tax_type="SMART_CARD_FEE", calculation_method="FIXED", fixed_amount=Decimal("200.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KA-RC-200", retrieved_at=now)
+    ka_hsrp = TaxRule(name="Karnataka High Security Registration Plate (HSRP) Fee", state_id=ka_st.id, rule_category="FEE", tax_type="HSRP_FEE", calculation_method="FIXED", fixed_amount=Decimal("450.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KA-HSRP-450", retrieved_at=now)
+    ka_hypo = TaxRule(name="Karnataka Hypothecation Endorsement Fee", state_id=ka_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KA-HYPO-1500", retrieved_at=now)
+    ka_fastag = TaxRule(name="Karnataka Fastag Issuance Fee", state_id=ka_st.id, rule_category="FEE", tax_type="FASTAG_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KA-FASTAG-600", retrieved_at=now)
+
+    # RTO-specific rule demo: Electronic City (KA-51) IT Corridor Surcharge
+    ka_ecity_rto = rto_objs.get("KA-51")
+    ka_ecity_surcharge = TaxRule(
+        name="Electronic City RTO Local Environmental Surcharge",
+        description="[SEED DATA — NOT AUTHORITATIVE] Demonstration RTO-specific environmental surcharge.",
+        state_id=ka_st.id,
+        rto_id=ka_ecity_rto.id if ka_ecity_rto else None,
+        rule_category="FEE",
+        tax_type="SURCHARGE",
+        calculation_method="FIXED",
+        fixed_amount=Decimal("500.00"),
+        priority=200,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-KA51-SURCHARGE",
+        retrieved_at=now,
+    )
+
+    # Historical rule demo: Pre-2024 Karnataka Tax Rule
+    ka_historical_road_tax = TaxRule(
+        name="Karnataka Historical Road Tax (2020-2023)",
+        description="[SEED DATA — NOT AUTHORITATIVE] Historical tax rule for temporal resolution verification.",
+        state_id=ka_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        vehicle_type="CAR",
+        is_ev=False,
+        priority=100,
+        effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc),
+        effective_to=datetime(2023, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-KA-HISTORICAL-2020-2023",
+        retrieved_at=now,
+    )
+    ka_historical_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("12.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("13.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("16.00"), calculation_method="PERCENTAGE"),
+    ]
+
+    # --- 2. DELHI (DL) ---
+    dl_st = state_objs["DL"]
+    dl_petrol_tax = TaxRule(
+        name="Delhi Road Tax - Petrol Vehicles",
+        description="[SEED DATA — NOT AUTHORITATIVE] Delhi tiered road tax for petrol passenger cars.",
+        state_id=dl_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        fuel_type="Petrol",
+        is_ev=False,
+        priority=110,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-DL-PETROL-2024",
+        retrieved_at=now,
+    )
+    dl_petrol_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("600000"), rate=Decimal("4.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("600000"), maximum_value=Decimal("1000000"), rate=Decimal("7.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("10.00"), calculation_method="PERCENTAGE"),
+    ]
+
+    dl_diesel_tax = TaxRule(
+        name="Delhi Road Tax - Diesel Vehicles",
+        description="[SEED DATA — NOT AUTHORITATIVE] Delhi tiered road tax for diesel passenger cars.",
+        state_id=dl_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        fuel_type="Diesel",
+        is_ev=False,
+        priority=110,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-DL-DIESEL-2024",
+        retrieved_at=now,
+    )
+    dl_diesel_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("1000000"), rate=Decimal("8.75"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("12.50"), calculation_method="PERCENTAGE"),
+    ]
+
+    dl_ev_tax = TaxRule(name="Delhi EV Policy 2020 Road Tax Waiver", state_id=dl_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="FIXED", is_ev=True, fixed_amount=Decimal("0.00"), rate=Decimal("0.00"), priority=150, effective_from=datetime(2020, 8, 7, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-EV-2020", retrieved_at=now)
+    dl_cng_tax = TaxRule(name="Delhi CNG Vehicle Road Tax", state_id=dl_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="PERCENTAGE", fuel_type="CNG", rate=Decimal("4.00"), priority=110, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-CNG-2024", retrieved_at=now)
+    dl_reg_fee = TaxRule(name="Delhi Registration Fee", state_id=dl_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-REG", retrieved_at=now)
+    dl_smart_card = TaxRule(name="Delhi Smart Card RC Fee", state_id=dl_st.id, rule_category="FEE", tax_type="SMART_CARD_FEE", calculation_method="FIXED", fixed_amount=Decimal("200.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-RC", retrieved_at=now)
+    dl_hypo = TaxRule(name="Delhi Hypothecation Fee", state_id=dl_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-HYPO", retrieved_at=now)
+    dl_fastag = TaxRule(name="Delhi Fastag Tag Charge", state_id=dl_st.id, rule_category="FEE", tax_type="FASTAG_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-DL-FASTAG", retrieved_at=now)
+
+    # --- 3. MAHARASHTRA (MH) ---
+    mh_st = state_objs["MH"]
+    mh_petrol_tax = TaxRule(
+        name="Maharashtra Motor Vehicle Tax - Petrol",
+        description="[SEED DATA — NOT AUTHORITATIVE] Maharashtra tiered motor vehicle tax for petrol cars.",
+        state_id=mh_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        fuel_type="Petrol",
+        is_ev=False,
+        priority=110,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-MH-PETROL-2024",
+        retrieved_at=now,
+    )
+    mh_petrol_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("1000000"), rate=Decimal("11.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("1000000"), maximum_value=Decimal("2000000"), rate=Decimal("12.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("2000000"), maximum_value=None, rate=Decimal("13.00"), calculation_method="PERCENTAGE"),
+    ]
+
+    mh_diesel_tax = TaxRule(
+        name="Maharashtra Motor Vehicle Tax - Diesel",
+        description="[SEED DATA — NOT AUTHORITATIVE] Maharashtra tiered motor vehicle tax for diesel cars.",
+        state_id=mh_st.id,
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="BRACKETED",
+        fuel_type="Diesel",
+        is_ev=False,
+        priority=110,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-MH-DIESEL-2024",
+        retrieved_at=now,
+    )
+    mh_diesel_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("1000000"), rate=Decimal("13.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("15.00"), calculation_method="PERCENTAGE"),
+    ]
+
+    mh_ev_tax = TaxRule(name="Maharashtra EV Tax Exemption", state_id=mh_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="FIXED", is_ev=True, fixed_amount=Decimal("0.00"), rate=Decimal("0.00"), priority=150, effective_from=datetime(2021, 7, 23, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-MH-EV-2021", retrieved_at=now)
+    mh_reg_fee = TaxRule(name="Maharashtra Vehicle Registration Charge", state_id=mh_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-MH-REG", retrieved_at=now)
+    mh_hypo = TaxRule(name="Maharashtra Hypothecation Endorsement Fee", state_id=mh_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-MH-HYPO", retrieved_at=now)
+    mh_fastag = TaxRule(name="Maharashtra Fastag Tag Fee", state_id=mh_st.id, rule_category="FEE", tax_type="FASTAG_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-MH-FASTAG", retrieved_at=now)
+
+    # City-specific rule demo: Mumbai Municipal Corporation Cess
+    mumbai_ct = city_objs.get("mumbai")
+    mh_mumbai_cess = TaxRule(
+        name="Mumbai Municipal Corporation Infrastructure Cess",
+        description="[SEED DATA — NOT AUTHORITATIVE] Demonstration city-level municipal surcharge for Mumbai.",
+        state_id=mh_st.id,
+        city_id=mumbai_ct.id if mumbai_ct else None,
+        rule_category="CESS",
+        tax_type="SURCHARGE",
+        calculation_method="PERCENTAGE",
+        rate=Decimal("1.00"),
+        base_amount_type="EX_SHOWROOM",
+        priority=180,
+        effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="DEMO-MUMBAI-CESS",
+        retrieved_at=now,
+    )
+
+    # --- 4. TAMIL NADU (TN) ---
+    tn_st = state_objs["TN"]
+    tn_road_tax = TaxRule(name="Tamil Nadu Motor Vehicles Tax", state_id=tn_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TN-TAX", retrieved_at=now)
+    tn_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("1000000"), rate=Decimal("12.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("15.00"), calculation_method="PERCENTAGE"),
+    ]
+    tn_ev = TaxRule(name="Tamil Nadu EV Road Tax Exemption", state_id=tn_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="FIXED", is_ev=True, fixed_amount=Decimal("0.00"), rate=Decimal("0.00"), priority=150, effective_from=datetime(2022, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TN-EV", retrieved_at=now)
+    tn_reg = TaxRule(name="Tamil Nadu Registration Fee", state_id=tn_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TN-REG", retrieved_at=now)
+    tn_hypo = TaxRule(name="Tamil Nadu Hypothecation Fee", state_id=tn_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TN-HYPO", retrieved_at=now)
+    tn_fastag = TaxRule(name="Tamil Nadu Fastag Tag Fee", state_id=tn_st.id, rule_category="FEE", tax_type="FASTAG_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TN-FASTAG", retrieved_at=now)
+
+    # --- 5. TELANGANA (TS) ---
+    ts_st = state_objs["TS"]
+    ts_road_tax = TaxRule(name="Telangana Motor Vehicle Life Tax", state_id=ts_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TS-TAX", retrieved_at=now)
+    ts_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("12.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("14.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("17.00"), calculation_method="PERCENTAGE"),
+    ]
+    ts_ev = TaxRule(name="Telangana EV Tax Exemption", state_id=ts_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="FIXED", is_ev=True, fixed_amount=Decimal("0.00"), rate=Decimal("0.00"), priority=150, effective_from=datetime(2023, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TS-EV", retrieved_at=now)
+    ts_reg = TaxRule(name="Telangana Registration Fee", state_id=ts_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TS-REG", retrieved_at=now)
+    ts_hypo = TaxRule(name="Telangana Hypothecation Fee", state_id=ts_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-TS-HYPO", retrieved_at=now)
+
+    # --- 6. KERALA (KL) ---
+    kl_st = state_objs["KL"]
+    kl_road_tax = TaxRule(name="Kerala Motor Vehicle One-Time Tax", state_id=kl_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KL-TAX", retrieved_at=now)
+    kl_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("9.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("11.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=Decimal("1500000"), rate=Decimal("13.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=4, minimum_value=Decimal("1500000"), maximum_value=None, rate=Decimal("15.00"), calculation_method="PERCENTAGE"),
+    ]
+    kl_cess = TaxRule(name="Kerala Social Security Cess on Road Tax", state_id=kl_st.id, rule_category="CESS", tax_type="CESS", calculation_method="PERCENTAGE", rate=Decimal("1.00"), base_amount_type="ROAD_TAX", priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KL-CESS", retrieved_at=now)
+    kl_reg = TaxRule(name="Kerala Registration Fee", state_id=kl_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KL-REG", retrieved_at=now)
+    kl_hypo = TaxRule(name="Kerala Hypothecation Fee", state_id=kl_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-KL-HYPO", retrieved_at=now)
+
+    # --- 7. GUJARAT (GJ) ---
+    gj_st = state_objs["GJ"]
+    gj_road_tax = TaxRule(name="Gujarat Motor Vehicle Tax", state_id=gj_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="PERCENTAGE", rate=Decimal("6.00"), priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-GJ-TAX", retrieved_at=now)
+    gj_reg = TaxRule(name="Gujarat Registration Fee", state_id=gj_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-GJ-REG", retrieved_at=now)
+    gj_hypo = TaxRule(name="Gujarat Hypothecation Fee", state_id=gj_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-GJ-HYPO", retrieved_at=now)
+
+    # --- 8. HARYANA (HR) ---
+    hr_st = state_objs["HR"]
+    hr_road_tax = TaxRule(name="Haryana Motor Vehicle Tax", state_id=hr_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-HR-TAX", retrieved_at=now)
+    hr_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("600000"), rate=Decimal("5.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("600000"), maximum_value=Decimal("2000000"), rate=Decimal("8.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("2000000"), maximum_value=None, rate=Decimal("10.00"), calculation_method="PERCENTAGE"),
+    ]
+    hr_ev = TaxRule(name="Haryana EV Concessional Road Tax", state_id=hr_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="PERCENTAGE", is_ev=True, rate=Decimal("4.00"), priority=150, effective_from=datetime(2022, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-HR-EV", retrieved_at=now)
+    hr_reg = TaxRule(name="Haryana Registration Fee", state_id=hr_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-HR-REG", retrieved_at=now)
+    hr_hypo = TaxRule(name="Haryana Hypothecation Fee", state_id=hr_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-HR-HYPO", retrieved_at=now)
+
+    # --- 9. UTTAR PRADESH (UP) ---
+    up_st = state_objs["UP"]
+    up_road_tax = TaxRule(name="Uttar Pradesh Motor Vehicle Tax", state_id=up_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-UP-TAX", retrieved_at=now)
+    up_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("1000000"), rate=Decimal("8.00"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("1000000"), maximum_value=None, rate=Decimal("10.00"), calculation_method="PERCENTAGE"),
+    ]
+    up_ev = TaxRule(name="Uttar Pradesh EV 100% Tax Waiver", state_id=up_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="FIXED", is_ev=True, fixed_amount=Decimal("0.00"), rate=Decimal("0.00"), priority=150, effective_from=datetime(2022, 10, 14, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-UP-EV", retrieved_at=now)
+    up_reg = TaxRule(name="Uttar Pradesh Registration Fee", state_id=up_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-UP-REG", retrieved_at=now)
+    up_hypo = TaxRule(name="Uttar Pradesh Hypothecation Fee", state_id=up_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-UP-HYPO", retrieved_at=now)
+
+    # --- 10. WEST BENGAL (WB) ---
+    wb_st = state_objs["WB"]
+    wb_road_tax = TaxRule(name="West Bengal Lifetime Road Tax", state_id=wb_st.id, rule_category="TAX", tax_type="ROAD_TAX", calculation_method="BRACKETED", is_ev=False, priority=100, effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-WB-TAX", retrieved_at=now)
+    wb_road_tax.brackets = [
+        TaxRuleBracket(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("900000"), rate=Decimal("5.50"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=2, minimum_value=Decimal("900000"), maximum_value=Decimal("1500000"), rate=Decimal("7.50"), calculation_method="PERCENTAGE"),
+        TaxRuleBracket(bracket_order=3, minimum_value=Decimal("1500000"), maximum_value=None, rate=Decimal("10.00"), calculation_method="PERCENTAGE"),
+    ]
+    wb_reg = TaxRule(name="West Bengal Registration Fee", state_id=wb_st.id, rule_category="REGISTRATION", tax_type="REGISTRATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("600.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-WB-REG", retrieved_at=now)
+    wb_hypo = TaxRule(name="West Bengal Hypothecation Fee", state_id=wb_st.id, rule_category="FEE", tax_type="HYPOTHECATION_FEE", calculation_method="FIXED", fixed_amount=Decimal("1500.00"), priority=100, effective_from=datetime(2020, 1, 1, tzinfo=timezone.utc), active=True, source_id=src_parivahan.id, source_record_id="DEMO-WB-HYPO", retrieved_at=now)
+
+    # --- 11. NATIONAL BHARAT (BH) SERIES FORMULA RULE ---
+    bh_rule = TaxRule(
+        name="MoRTH Bharat (BH) Series Road Tax Formula",
+        description="[SEED DATA — NOT AUTHORITATIVE] MoRTH Gazette 2-year tax cycle formula: (ExShowroom * BaseRate * 1.25 * 2) / 15.",
+        state_id=dl_st.id,  # Associated with Central/Delhi reference
+        rule_category="TAX",
+        tax_type="ROAD_TAX",
+        calculation_method="FORMULA",
+        formula_definition={
+            "type": "BH_SERIES",
+            "slabs": [
+                {"max_price": 1000000, "rate": 8.0},
+                {"max_price": 2000000, "rate": 10.0},
+                {"max_price": None, "rate": 12.0},
+            ],
+            "diesel_surcharge": 2.0,
+            "ev_discount": 2.0,
+            "payment_tenure_years": 2,
+            "lifecycle_years": 15,
+            "factor": 1.25,
+        },
+        priority=250,
+        effective_from=datetime(2021, 9, 15, tzinfo=timezone.utc),
+        active=True,
+        source_id=src_parivahan.id,
+        source_record_id="MORTH-GSR-594E-BH",
+        retrieved_at=now,
+    )
+
+    session.add_all([
+        ka_road_tax, ka_cess, ka_ev_tax, ka_reg_fee, ka_smart_card, ka_hsrp, ka_hypo, ka_fastag, ka_ecity_surcharge, ka_historical_road_tax,
+        dl_petrol_tax, dl_diesel_tax, dl_ev_tax, dl_cng_tax, dl_reg_fee, dl_smart_card, dl_hypo, dl_fastag,
+        mh_petrol_tax, mh_diesel_tax, mh_ev_tax, mh_reg_fee, mh_hypo, mh_fastag, mh_mumbai_cess,
+        tn_road_tax, tn_ev, tn_reg, tn_hypo, tn_fastag,
+        ts_road_tax, ts_ev, ts_reg, ts_hypo,
+        kl_road_tax, kl_cess, kl_reg, kl_hypo,
+        gj_road_tax, gj_reg, gj_hypo,
+        hr_road_tax, hr_ev, hr_reg, hr_hypo,
+        up_road_tax, up_ev, up_reg, up_hypo,
+        wb_road_tax, wb_reg, wb_hypo,
+        bh_rule,
     ])
     await session.flush()
 

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     locations,
     pricing,
     recommendations,
+    tax_rules,
     vehicles,
 )
 
@@ -27,6 +28,9 @@ api_router.include_router(vehicles.manufacturers_router)
 api_router.include_router(vehicles.models_router)
 api_router.include_router(vehicles.variants_router)
 api_router.include_router(vehicles.vehicles_search_router)
+
+# Tax & Registration Rules Domain
+api_router.include_router(tax_rules.router)
 
 # Pricing, Finance & Recommendations
 api_router.include_router(pricing.router, prefix="/pricing", tags=["Pricing"])

@@ -307,3 +307,106 @@ export interface DataSource {
   is_active: boolean;
   last_synced_at?: string;
 }
+
+export interface TaxRuleBracket {
+  id?: number;
+  tax_rule_id?: number;
+  bracket_order: number;
+  minimum_value: string | number;
+  maximum_value?: string | number | null;
+  rate?: string | number | null;
+  fixed_amount?: string | number | null;
+  calculation_method: string;
+}
+
+export interface TaxRule {
+  id: number;
+  name: string;
+  description?: string;
+  state_id: number;
+  city_id?: number;
+  rto_id?: number;
+  rule_category: string;
+  tax_type: string;
+  calculation_method: string;
+  vehicle_type: string;
+  fuel_type?: string;
+  is_ev?: boolean;
+  usage_type: string;
+  min_price?: string;
+  max_price?: string;
+  min_engine_cc?: number;
+  max_engine_cc?: number;
+  rate?: string;
+  fixed_amount?: string;
+  base_amount_type: string;
+  formula_definition?: Record<string, any>;
+  priority: number;
+  effective_from: string;
+  effective_to?: string;
+  active: boolean;
+  source_id?: number;
+  source_record_id?: string;
+  retrieved_at?: string;
+  created_at: string;
+  updated_at: string;
+  brackets?: TaxRuleBracket[];
+  state?: State;
+  city?: City;
+  rto?: RtoOffice;
+  source?: DataSource;
+}
+
+export interface ResolvedTaxRuleItem {
+  rule_id: number;
+  name: string;
+  description?: string;
+  rule_category: string;
+  tax_type: string;
+  calculation_method: string;
+  rate?: string;
+  fixed_amount?: string;
+  base_amount_type: string;
+  brackets: TaxRuleBracket[];
+  formula_definition?: Record<string, any>;
+  priority: number;
+  precedence_tier: number;
+  precedence_label: string;
+  effective_from: string;
+  effective_to?: string;
+  source_name?: string;
+  source_url?: string;
+  source_record_id?: string;
+  retrieved_at?: string;
+}
+
+export interface TaxRuleResolveResponse {
+  location: {
+    state_id: number;
+    state_name: string;
+    state_code: string;
+    city_id?: number;
+    city_name?: string;
+    rto_id?: number;
+    rto_code?: string;
+    rto_name?: string;
+  };
+  vehicle: {
+    variant_id?: number;
+    variant_name?: string;
+    model_name?: string;
+    manufacturer_name?: string;
+    fuel_type: string;
+    engine_cc?: number;
+    ex_showroom_price: string;
+    is_ev: boolean;
+    vehicle_type: string;
+    usage_type: string;
+  };
+  calculation_date: string;
+  is_bh_series: boolean;
+  is_financed: boolean;
+  rules: ResolvedTaxRuleItem[];
+  rules_count: number;
+}
+

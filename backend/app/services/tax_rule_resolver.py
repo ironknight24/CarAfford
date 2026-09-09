@@ -89,7 +89,8 @@ class TaxRuleResolverService:
         v_is_ev = is_ev if is_ev is not None else False
 
         if variant_id is not None:
-            variant = await VehicleRepository.get_variant_by_id(db, variant_id)
+            vehicle_repo = VehicleRepository(db)
+            variant = await vehicle_repo.get_variant_by_id(variant_id)
             if not variant:
                 raise ValueError(f"Vehicle variant with ID={variant_id} not found.")
             v_name = variant.name
@@ -107,9 +108,7 @@ class TaxRuleResolverService:
 
             # Get active price for calculation date
             if ex_showroom_price is None:
-                active_price = await PricingRepository.get_active_price(
-                    db, variant.id, target_date=calc_date
-                )
+                active_price = await vehicle_repo.get_current_price(variant.id, as_of_date=calc_date)
                 if active_price:
                     v_price = active_price.ex_showroom_price
 

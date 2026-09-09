@@ -332,6 +332,7 @@ class VehicleRepository:
         target_date = as_of_date or datetime.now(timezone.utc)
         stmt = (
             select(VehiclePrice)
+            .options(selectinload(VehiclePrice.source))
             .where(
                 VehiclePrice.variant_id == variant_id,
                 VehiclePrice.price_type == price_type,
@@ -354,6 +355,7 @@ class VehicleRepository:
         """Returns all historical and future price records for a variant ordered chronologically."""
         stmt = (
             select(VehiclePrice)
+            .options(selectinload(VehiclePrice.source))
             .where(VehiclePrice.variant_id == variant_id)
         )
         if price_type:

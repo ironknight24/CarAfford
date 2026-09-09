@@ -410,3 +410,82 @@ export interface TaxRuleResolveResponse {
   rules_count: number;
 }
 
+export interface OnRoadPriceCalculationRequest {
+  variant_id: number;
+  state_id: number;
+  city_id?: number;
+  rto_id?: number;
+  calculation_date?: string;
+  insurance_option?: 'DEFAULT_ESTIMATE' | 'USER_PROVIDED' | 'ZERO_DEP' | 'THIRD_PARTY_ONLY' | string;
+  insurance_amount?: number | string;
+  is_bh_series?: boolean;
+  is_financed?: boolean;
+}
+
+export interface PriceBreakdownItem {
+  component: string;
+  tax_rule_id?: number;
+  rule_name: string;
+  calculation_method: string;
+  base_amount?: string | number;
+  rate?: string | number;
+  fixed_amount?: string | number;
+  calculated_amount: string | number;
+  source?: string;
+  source_url?: string;
+  effective_from?: string;
+  effective_to?: string;
+  explanation?: string;
+  is_estimated: boolean;
+  status: string;
+}
+
+export interface OnRoadPriceTotals {
+  ex_showroom_price: string | number;
+  total_statutory_taxes: string | number;
+  total_registration_and_fees: string | number;
+  total_insurance: string | number;
+  total_other_charges: string | number;
+  on_road_price: string | number;
+}
+
+export interface DataQualityInfo {
+  is_estimated: boolean;
+  has_demo_rules: boolean;
+  data_status: 'AUTHORITATIVE' | 'DEMO' | 'PROVISIONAL' | string;
+  sources: string[];
+  disclaimer: string;
+}
+
+export interface OnRoadPriceResponse {
+  vehicle: {
+    variant_id: number;
+    variant_name: string;
+    model_name?: string;
+    manufacturer_name?: string;
+    fuel_type: string;
+    engine_cc?: number;
+    ex_showroom_price: string | number;
+    is_ev: boolean;
+    vehicle_type: string;
+    usage_type: string;
+  };
+  location: {
+    state_id: number;
+    state_name: string;
+    state_code: string;
+    city_id?: number;
+    city_name?: string;
+    rto_id?: number;
+    rto_code?: string;
+    rto_name?: string;
+  };
+  calculation_date: string;
+  is_bh_series: boolean;
+  is_financed: boolean;
+  insurance_option: string;
+  breakdown: PriceBreakdownItem[];
+  totals: OnRoadPriceTotals;
+  data_quality: DataQualityInfo;
+}
+

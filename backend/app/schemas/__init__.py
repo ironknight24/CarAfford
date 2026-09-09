@@ -49,10 +49,16 @@ from app.schemas.vehicle import (
 )
 from app.schemas.pricing import (
     VehiclePriceCreate,
+    VehiclePriceRead,
     ExShowroomPriceRead,
     PriceHistoryRead,
     OnRoadPriceRequest,
     OnRoadPriceBreakdown,
+    OnRoadPriceCalculationRequest,
+    PriceBreakdownItem,
+    OnRoadPriceTotals,
+    DataQualityInfo,
+    OnRoadPriceResponse,
 )
 from app.schemas.finance import (
     BankRead,
@@ -145,6 +151,11 @@ __all__ = [
     "PriceHistoryRead",
     "OnRoadPriceRequest",
     "OnRoadPriceBreakdown",
+    "OnRoadPriceCalculationRequest",
+    "PriceBreakdownItem",
+    "OnRoadPriceTotals",
+    "DataQualityInfo",
+    "OnRoadPriceResponse",
     "BankRead",
     "LoanProductRead",
     "InterestRateSlabRead",

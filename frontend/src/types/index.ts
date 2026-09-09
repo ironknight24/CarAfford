@@ -776,3 +776,164 @@ export interface AmortizationScheduleResponse {
   schedule: AmortizationScheduleItem[];
 }
 
+// ==========================================
+// Affordability Engine Domain Types
+// ==========================================
+
+export type AffordabilityProfile = 'CONSERVATIVE' | 'BALANCED' | 'STRETCH';
+
+export type AffordabilityStatus =
+  | 'COMFORTABLE'
+  | 'AFFORDABLE'
+  | 'STRETCH'
+  | 'NOT_AFFORDABLE'
+  | 'NO_FINANCING_OPTION';
+
+export type LimitingFactor =
+  | 'EMI_CAP'
+  | 'LTV_CAP'
+  | 'LOAN_MAXIMUM'
+  | 'ELIGIBILITY'
+  | 'DOWN_PAYMENT'
+  | 'NO_ELIGIBLE_LOAN';
+
+export interface AffordabilityProfileInfo {
+  code: AffordabilityProfile;
+  name: string;
+  max_foir_ratio: string | number;
+  max_foir_percent: string | number;
+  safe_budget_multiplier: string | number;
+  stretch_budget_multiplier: string | number;
+  description: string;
+}
+
+export interface AffordabilityFinancingAssumption {
+  bank_id?: number;
+  bank_name?: string;
+  loan_product_id?: number;
+  loan_product_name?: string;
+  interest_rate: string | number;
+  tenure_months: number;
+  product_max_ltv_percent: string | number;
+  product_max_loan_amount?: string | number;
+  estimated_processing_fee: string | number;
+}
+
+export interface AffordabilityCalculateRequest {
+  monthly_take_home_income: number | string;
+  existing_monthly_emi?: number | string;
+  available_down_payment?: number | string;
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  affordability_profile?: AffordabilityProfile;
+  employment_type?: string;
+  monthly_driving_distance?: number;
+  fuel_preference?: string | null;
+  body_type?: string | null;
+  transmission?: string | null;
+}
+
+export interface AffordabilityBudgetBreakdown {
+  affordability_profile: AffordabilityProfile;
+  monthly_take_home_income: string | number;
+  existing_monthly_emi: string | number;
+  maximum_total_emi: string | number;
+  available_car_emi: string | number;
+  available_down_payment: string | number;
+  maximum_affordable_loan: string | number;
+  maximum_affordable_on_road_price: string | number;
+  recommended_safe_budget: string | number;
+  stretch_budget: string | number;
+  limiting_factor: LimitingFactor;
+  limiting_factor_reason: string;
+  applicable_financing_assumptions: AffordabilityFinancingAssumption;
+  data_status: string;
+  warnings: string[];
+  disclaimer: string;
+}
+
+export interface VehicleAffordabilityRequest {
+  variant_id: number;
+  monthly_take_home_income: number | string;
+  existing_monthly_emi?: number | string;
+  available_down_payment?: number | string;
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  affordability_profile?: AffordabilityProfile;
+  down_payment_override?: number | string | null;
+}
+
+export interface VehicleAffordabilityResponse {
+  variant_id: number;
+  variant_name: string;
+  model_name: string;
+  manufacturer_name: string;
+  fuel_type: string;
+  transmission: string;
+  ex_showroom_price: string | number;
+  on_road_price: string | number;
+  down_payment: string | number;
+  required_loan: string | number;
+  estimated_emi: string | number;
+  available_car_emi: string | number;
+  emi_headroom: string | number;
+  affordable: boolean;
+  affordability_status: AffordabilityStatus;
+  affordability_rationale: string;
+  limiting_factor?: LimitingFactor | null;
+  selected_loan_offer?: LoanOfferItem | null;
+  all_eligible_loan_offers?: LoanOfferItem[];
+  data_status: string;
+  disclaimer: string;
+}
+
+export interface MultiVehicleAffordabilityRequest {
+  variant_ids: number[];
+  monthly_take_home_income: number | string;
+  existing_monthly_emi?: number | string;
+  available_down_payment?: number | string;
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  affordability_profile?: AffordabilityProfile;
+}
+
+export interface MultiVehicleAffordabilityResponse {
+  results: VehicleAffordabilityResponse[];
+  total_evaluated: number;
+  affordable_count: number;
+  stretch_count: number;
+  unaffordable_count: number;
+  data_status: string;
+  disclaimer: string;
+}
+
+export interface AffordabilityComparisonRequest {
+  variant_ids: number[];
+  monthly_take_home_income: number | string;
+  existing_monthly_emi?: number | string;
+  available_down_payment?: number | string;
+  state_id: number;
+  city_id?: number | null;
+  rto_id?: number | null;
+  credit_score?: number;
+  preferred_loan_tenure_months?: number;
+  affordability_profile?: AffordabilityProfile;
+}
+
+export interface AffordabilityComparisonResponse {
+  user_budget_summary: AffordabilityBudgetBreakdown;
+  vehicles: VehicleAffordabilityResponse[];
+  comparison_notes: string[];
+  data_status: string;
+  disclaimer: string;
+}
+

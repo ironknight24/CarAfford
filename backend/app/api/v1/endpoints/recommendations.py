@@ -19,4 +19,6 @@ async def get_recommendations(
         recommendations = await engine.get_car_recommendations(request)
         return BaseResponse(data=recommendations)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))

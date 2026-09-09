@@ -35,6 +35,7 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
   const [tenureYears, setTenureYears] = useState<number>(5);
   const [cibilScore, setCibilScore] = useState<number>(750);
   const [commuteKm, setCommuteKm] = useState<number>(1000);
+  const [affordabilityProfile, setAffordabilityProfile] = useState<'CONSERVATIVE' | 'BALANCED' | 'STRETCH'>('BALANCED');
 
   // Preference filters
   const [selectedFuel, setSelectedFuel] = useState<string>('ALL');
@@ -120,25 +121,30 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
     onCalculate({
       monthly_take_home_income: monthlyIncome,
       existing_monthly_emis: existingEmis,
+      existing_monthly_emi: existingEmis,
       available_down_payment: downPayment,
       state_id: Number(selectedState),
       city_id: selectedCity ? Number(selectedCity) : undefined,
       rto_id: selectedRto ? Number(selectedRto) : undefined,
       desired_tenure_months: tenureYears * 12,
+      preferred_loan_tenure_months: tenureYears * 12,
       cibil_score: cibilScore,
+      credit_score: cibilScore,
+      affordability_profile: affordabilityProfile,
       monthly_commute_km: commuteKm,
+      monthly_driving_distance: commuteKm,
       preferred_fuel_types: selectedFuel !== 'ALL' ? [selectedFuel] : undefined,
       preferred_body_types: selectedBody !== 'ALL' ? [selectedBody] : undefined,
       preferred_transmission: selectedTransmission !== 'ALL' ? [selectedTransmission] : undefined,
     });
   };
 
-  // Trigger calculation when a valid state is selected
+  // Trigger calculation when valid inputs or profile change
   useEffect(() => {
     if (selectedState) {
       handleSubmit();
     }
-  }, [selectedState]);
+  }, [selectedState, selectedCity, selectedRto, affordabilityProfile]);
 
   return (
     <form
@@ -339,6 +345,37 @@ export default function AffordabilityForm({ onCalculate, isLoading }: Affordabil
               </button>
             ))}
           </div>
+      {/* Row: Affordability Risk Profile */}
+      <div>
+        <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex justify-between">
+          <span>Affordability Risk Profile (Max Debt Threshold)</span>
+          <span className="text-emerald-400 font-bold">
+            {affordabilityProfile === 'CONSERVATIVE' ? 'Conservative (30% FOIR)' : affordabilityProfile === 'BALANCED' ? 'Balanced (35% FOIR)' : 'Stretch (40% FOIR)'}
+          </span>
+        </label>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {[
+            { id: 'CONSERVATIVE', label: 'Conservative', pct: '30%', desc: 'Maximizes savings, low debt' },
+            { id: 'BALANCED', label: 'Balanced', pct: '35%', desc: 'Standard retail benchmark' },
+            { id: 'STRETCH', label: 'Stretch', pct: '40%', desc: 'Higher borrowing headroom' },
+          ].map((prof) => (
+            <button
+              type="button"
+              key={prof.id}
+              onClick={() => setAffordabilityProfile(prof.id as any)}
+              className={`p-2.5 rounded-xl border text-left transition-all ${
+                affordabilityProfile === prof.id
+                  ? 'bg-emerald-500/10 border-emerald-500 text-white shadow-md shadow-emerald-500/10'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">{prof.label}</span>
+                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">{prof.pct}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1 line-clamp-1">{prof.desc}</p>
+            </button>
+          ))}
         </div>
       </div>
 

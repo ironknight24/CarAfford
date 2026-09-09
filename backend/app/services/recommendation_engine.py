@@ -46,12 +46,8 @@ class RecommendationEngine:
             cibil_score=cibil,
         )
 
-        # 2. Query candidate vehicles with optional filters
-        filter_params = VehicleFilterParams(
-            min_seating=request.min_seating,
-            min_safety_rating=request.min_safety_rating,
-        )
-        all_variants = await self.vehicle_repo.filter_variants(filter_params)
+        # 2. Query candidate vehicles
+        all_variants, _ = await self.vehicle_repo.get_variants(page=1, page_size=100, active=True)
 
         recommended_items: List[RecommendedVehicleItem] = []
 
@@ -99,8 +95,8 @@ class RecommendationEngine:
 
             # Technical spec fallbacks
             spec = variant.specification
-            mileage = spec.arai_mileage_kmpl if spec else Decimal("18.00")
-            safety = spec.safety_rating_stars if spec else None
+            mileage = spec.arai_mileage_kmpl if (spec and spec.arai_mileage_kmpl) else (variant.mileage_claimed or Decimal("18.00"))
+            safety = spec.safety_rating_stars if spec else 5
             airbags = spec.airbags_count if spec else 6
 
             # TCO calculation

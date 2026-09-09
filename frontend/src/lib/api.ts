@@ -473,5 +473,35 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(request),
     }),
+
+  // ==========================================
+  // Affordability Engine APIs
+  // ==========================================
+  getAffordabilityProfiles: () =>
+    fetchJson<import('@/types').AffordabilityProfileInfo[]>('/affordability/profiles'),
+
+  calculateAffordability: (request: import('@/types').AffordabilityCalculateRequest) =>
+    fetchJson<import('@/types').AffordabilityBudgetBreakdown>('/affordability/calculate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  evaluateVehicleAffordability: (request: import('@/types').VehicleAffordabilityRequest) =>
+    fetchJson<import('@/types').VehicleAffordabilityResponse>('/affordability/vehicle', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  evaluateMultipleVehiclesAffordability: (request: import('@/types').MultiVehicleAffordabilityRequest) =>
+    fetchJson<import('@/types').MultiVehicleAffordabilityResponse>('/affordability/vehicles', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  compareVehiclesAffordability: (request: import('@/types').AffordabilityComparisonRequest) =>
+    fetchJson<import('@/types').AffordabilityComparisonResponse>('/affordability/compare', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }),
 };
 

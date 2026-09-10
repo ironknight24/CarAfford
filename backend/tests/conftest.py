@@ -1,5 +1,10 @@
 import asyncio
+import os
 from typing import AsyncGenerator
+
+# Ensure test environment mode is active for pytest execution
+os.environ["ENVIRONMENT"] = "test"
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -7,6 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_db, require_admin
+from app.core.config import settings
+
+# Explicitly set settings.ENVIRONMENT to test in case settings module was already cached
+settings.ENVIRONMENT = "test"
+
 from app.db.seed import ensure_default_admin
 from app.main import app
 from app.models.base import Base

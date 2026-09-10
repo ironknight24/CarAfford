@@ -83,6 +83,8 @@ jobs:
           python -m app.db.seed
 
       - name: Run Pytest Suite
+        env:
+          ENVIRONMENT: test
         run: |
           cd backend
           pytest -v --tb=short

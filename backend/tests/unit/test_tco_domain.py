@@ -216,7 +216,9 @@ class TestTCOFinancingAndPeriods:
         assert p5.financing_interest == Decimal("0.00")
         assert p5.financing_fees == Decimal("0.00")
         assert p5.total_loan_repayment_paid == Decimal("0.00")
-        assert p5.total_cash_outflow == round_inr(res.initial_cost.total_on_road_price + p5.total_operating_cost)
+        assert p5.total_cash_outflow == round_inr(
+            res.initial_cost.total_on_road_price + p5.total_operating_cost
+        )
 
 
 class TestTCOComparisonAndValidation:
@@ -239,7 +241,9 @@ class TestTCOComparisonAndValidation:
         assert res.data_status == "DEMO"
         assert len(res.compared_vehicles) == len(variants[:3])
         for i in range(len(res.compared_vehicles) - 1):
-            assert res.compared_vehicles[i].five_year_tco <= res.compared_vehicles[i + 1].five_year_tco
+            assert (
+                res.compared_vehicles[i].five_year_tco <= res.compared_vehicles[i + 1].five_year_tco
+            )
 
     @pytest.mark.asyncio
     async def test_location_validation_raises(self, db_session: AsyncSession):

@@ -65,7 +65,9 @@ async def main():
         ],
         help="Source adapter to execute",
     )
-    parser.add_argument("--notes", type=str, default="Manual CLI ingestion run", help="Optional notes for run")
+    parser.add_argument(
+        "--notes", type=str, default="Manual CLI ingestion run", help="Optional notes for run"
+    )
     args = parser.parse_args()
 
     print(f"🚀 Initializing CarAfford Ingestion for source: {args.source.upper()}...")
@@ -87,7 +89,13 @@ async def main():
         adapter = DelhiTaxRuleAdapter()
     elif args.source in {"tamilnadu_tax_rules", "tamilnadu_taxes", "tn_tax_rules", "tn_tax"}:
         adapter = TamilNaduTaxRuleAdapter()
-    elif args.source in {"telangana_tax_rules", "telangana_taxes", "ts_tax_rules", "ts_tax", "tg_tax"}:
+    elif args.source in {
+        "telangana_tax_rules",
+        "telangana_taxes",
+        "ts_tax_rules",
+        "ts_tax",
+        "tg_tax",
+    }:
         adapter = TelanganaTaxRuleAdapter()
     elif args.source in {"sbi_car_loans", "sbi"}:
         adapter = SbiCarLoanAdapter()

@@ -33,11 +33,19 @@ class LoanFeeCalculatorService:
         for fee in custom_fees:
             if not fee.active:
                 continue
-            eff_from = fee.effective_from.replace(tzinfo=timezone.utc) if fee.effective_from.tzinfo is None else fee.effective_from
+            eff_from = (
+                fee.effective_from.replace(tzinfo=timezone.utc)
+                if fee.effective_from.tzinfo is None
+                else fee.effective_from
+            )
             if eff_from > calc_date:
                 continue
             if fee.effective_to is not None:
-                eff_to = fee.effective_to.replace(tzinfo=timezone.utc) if fee.effective_to.tzinfo is None else fee.effective_to
+                eff_to = (
+                    fee.effective_to.replace(tzinfo=timezone.utc)
+                    if fee.effective_to.tzinfo is None
+                    else fee.effective_to
+                )
                 if eff_to < calc_date:
                     continue
             valid_fees.append(fee)
@@ -70,7 +78,11 @@ class LoanFeeCalculatorService:
                         fee_name=fee.fee_name,
                         fee_type=fee.fee_type,
                         calculation_method=fee.calculation_method,
-                        rate_or_amount=fee.percentage if method in ["PERCENTAGE", "CAPPED_PERCENTAGE"] else fee.fixed_amount,
+                        rate_or_amount=(
+                            fee.percentage
+                            if method in ["PERCENTAGE", "CAPPED_PERCENTAGE"]
+                            else fee.fixed_amount
+                        ),
                         calculated_amount=calculated_amt,
                     )
                 )

@@ -26,7 +26,11 @@ class AffordabilityEngine:
         cibil_score: int = 750,
         foir_limit_ratio: Optional[Decimal] = None,
     ) -> AffordabilityBudgetSummary:
-        foir_ratio = foir_limit_ratio if foir_limit_ratio is not None else Decimal(str(settings.DEFAULT_FOIR_LIMIT))
+        foir_ratio = (
+            foir_limit_ratio
+            if foir_limit_ratio is not None
+            else Decimal(str(settings.DEFAULT_FOIR_LIMIT))
+        )
         max_total_emi = round_inr(monthly_take_home_income * foir_ratio)
         available_car_emi = max(Decimal("0.00"), round_inr(max_total_emi - existing_monthly_emis))
 
@@ -101,7 +105,9 @@ class AffordabilityEngine:
         arai_mileage_kmpl: Decimal,
         monthly_income: Decimal,
     ) -> OwnershipCostBreakdown:
-        monthly_fuel = cls.estimate_monthly_fuel_cost(monthly_commute_km, fuel_type, arai_mileage_kmpl)
+        monthly_fuel = cls.estimate_monthly_fuel_cost(
+            monthly_commute_km, fuel_type, arai_mileage_kmpl
+        )
         monthly_insurance = round_inr(annual_insurance_estimate / Decimal("12.0"))
 
         # Maintenance benchmark: 1.5% of ex-showroom annually in India
@@ -109,7 +115,11 @@ class AffordabilityEngine:
         monthly_maint = round_inr(annual_maint / Decimal("12.0"))
 
         total_tco = monthly_emi + monthly_fuel + monthly_insurance + monthly_maint
-        tco_percent = round_inr((total_tco / monthly_income) * Decimal("100.0")) if monthly_income > 0 else Decimal("0.00")
+        tco_percent = (
+            round_inr((total_tco / monthly_income) * Decimal("100.0"))
+            if monthly_income > 0
+            else Decimal("0.00")
+        )
 
         return OwnershipCostBreakdown(
             monthly_emi=monthly_emi,
@@ -128,34 +138,30 @@ class AffordabilityEngine:
         existing_emis: Decimal,
     ) -> Tuple[int, AffordabilityCategory, str]:
         tco_pct = tco.tco_percentage_of_income
-        total_obligations_pct = ((existing_emis + tco.monthly_emi) / monthly_income) * Decimal("100.0") if monthly_income > 0 else Decimal("100.0")
+        total_obligations_pct = (
+            ((existing_emis + tco.monthly_emi) / monthly_income) * Decimal("100.0")
+            if monthly_income > 0
+            else Decimal("100.0")
+        )
 
         if tco_pct <= Decimal("20.0") and total_obligations_pct <= Decimal("40.0"):
             category = AffordabilityCategory.COMFORTABLE
             score = int(100 - (float(tco_pct) * 1.0))
             score = max(80, min(100, score))
-            rationale = (
-                f"Highly affordable. Car ownership requires only {tco_pct}% of your monthly income, leaving ample surplus for investments and savings."
-            )
+            rationale = f"Highly affordable. Car ownership requires only {tco_pct}% of your monthly income, leaving ample surplus for investments and savings."
         elif tco_pct <= Decimal("30.0") and total_obligations_pct <= Decimal("50.0"):
             category = AffordabilityCategory.BALANCED
             score = int(79 - ((float(tco_pct) - 20.0) * 1.9))
             score = max(60, min(79, score))
-            rationale = (
-                f"Balanced choice. Ownership cost is {tco_pct}% of your net income, well aligned with standard Indian personal finance benchmarks."
-            )
+            rationale = f"Balanced choice. Ownership cost is {tco_pct}% of your net income, well aligned with standard Indian personal finance benchmarks."
         elif tco_pct <= Decimal("40.0"):
             category = AffordabilityCategory.STRETCH
             score = int(59 - ((float(tco_pct) - 30.0) * 1.9))
             score = max(40, min(59, score))
-            rationale = (
-                f"Stretch budget. Car ownership consumes {tco_pct}% of take-home pay. Maintain an emergency fund for repairs/fuel."
-            )
+            rationale = f"Stretch budget. Car ownership consumes {tco_pct}% of take-home pay. Maintain an emergency fund for repairs/fuel."
         else:
             category = AffordabilityCategory.RISKY
             score = int(max(5.0, 39.0 - ((float(tco_pct) - 40.0) * 1.5)))
-            rationale = (
-                f"High financial risk. Total ownership cost is {tco_pct}% of your monthly income, which significantly exceeds recommended safety limits."
-            )
+            rationale = f"High financial risk. Total ownership cost is {tco_pct}% of your monthly income, which significantly exceeds recommended safety limits."
 
         return score, category, rationale

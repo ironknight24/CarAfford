@@ -75,7 +75,9 @@ class VehicleRepository:
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def create_manufacturer(self, manufacturer: Manufacturer | ManufacturerCreate | dict) -> Manufacturer:
+    async def create_manufacturer(
+        self, manufacturer: Manufacturer | ManufacturerCreate | dict
+    ) -> Manufacturer:
         if isinstance(manufacturer, dict):
             obj = Manufacturer(**manufacturer)
         elif not isinstance(manufacturer, Manufacturer):
@@ -378,7 +380,9 @@ class VehicleRepository:
         as_of_date: datetime,
         price_type: str = "EX_SHOWROOM",
     ) -> Optional[VehiclePrice]:
-        return await self.get_current_price(variant_id, as_of_date=as_of_date, price_type=price_type)
+        return await self.get_current_price(
+            variant_id, as_of_date=as_of_date, price_type=price_type
+        )
 
     async def check_price_period_overlap(
         self,
@@ -392,6 +396,7 @@ class VehicleRepository:
         Two intervals [A_from, A_to] and [B_from, B_to] overlap if:
         A_from <= (B_to or infinity) and (A_to or infinity) >= B_from
         """
+
         def to_utc(dt: Optional[datetime]) -> Optional[datetime]:
             if dt is None:
                 return None
@@ -545,7 +550,9 @@ class VehicleRepository:
 
         if params.minimum_seating_capacity:
             stmt = stmt.where(Variant.seating_capacity >= params.minimum_seating_capacity)
-            count_stmt = count_stmt.where(Variant.seating_capacity >= params.minimum_seating_capacity)
+            count_stmt = count_stmt.where(
+                Variant.seating_capacity >= params.minimum_seating_capacity
+            )
 
         if params.minimum_price is not None:
             stmt = stmt.where(VehiclePrice.ex_showroom_price >= params.minimum_price)

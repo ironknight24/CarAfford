@@ -3,7 +3,12 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.ingestion_constants import ConflictStatus, DataFreshnessStatus, IngestionRunStatus, VerificationStatus
+from app.core.ingestion_constants import (
+    ConflictStatus,
+    DataFreshnessStatus,
+    IngestionRunStatus,
+    VerificationStatus,
+)
 from app.db.seed import seed_database
 from app.models.data_source import DataSource
 from app.models.ingestion import DataConflictRecord, DataQualityReviewItem, IngestionRun

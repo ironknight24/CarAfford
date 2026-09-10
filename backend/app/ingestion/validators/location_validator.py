@@ -2,12 +2,45 @@ import re
 from typing import Any, Dict, List, Tuple
 from app.ingestion.base import DataValidator
 
-
 # Standard recognized 2-letter Indian States and Union Territories (ISO 3166-2:IN / MoRTH)
 RECOGNIZED_INDIAN_STATE_CODES = {
-    "AN", "AP", "AR", "AS", "BR", "CH", "CG", "DD", "DH", "DL", "GA", "GJ",
-    "HR", "HP", "JK", "JH", "KA", "KL", "LA", "LD", "MP", "MH", "MN", "ML",
-    "MZ", "NL", "OD", "PB", "PY", "RJ", "SK", "TN", "TS", "TR", "UK", "UP", "WB"
+    "AN",
+    "AP",
+    "AR",
+    "AS",
+    "BR",
+    "CH",
+    "CG",
+    "DD",
+    "DH",
+    "DL",
+    "GA",
+    "GJ",
+    "HR",
+    "HP",
+    "JK",
+    "JH",
+    "KA",
+    "KL",
+    "LA",
+    "LD",
+    "MP",
+    "MH",
+    "MN",
+    "ML",
+    "MZ",
+    "NL",
+    "OD",
+    "PB",
+    "PY",
+    "RJ",
+    "SK",
+    "TN",
+    "TS",
+    "TR",
+    "UK",
+    "UP",
+    "WB",
 }
 
 
@@ -26,9 +59,13 @@ class LocationDataValidator(DataValidator):
         if state_code:
             clean_code = str(state_code).strip().upper()
             if not self.STATE_CODE_PATTERN.match(clean_code):
-                errors.append(f"Invalid state_code '{state_code}'. Must be 2 uppercase alphabetic characters (e.g. 'KA', 'DL')")
+                errors.append(
+                    f"Invalid state_code '{state_code}'. Must be 2 uppercase alphabetic characters (e.g. 'KA', 'DL')"
+                )
             elif clean_code not in RECOGNIZED_INDIAN_STATE_CODES:
-                errors.append(f"Unrecognized state_code '{state_code}'. Must be a valid Indian State/UT code.")
+                errors.append(
+                    f"Unrecognized state_code '{state_code}'. Must be a valid Indian State/UT code."
+                )
 
         state_name = item.get("state_name")
         if state_name is not None and not str(state_name).strip():
@@ -36,7 +73,9 @@ class LocationDataValidator(DataValidator):
 
         region_type = item.get("region_type")
         if region_type and str(region_type).upper() not in {"STATE", "UNION_TERRITORY"}:
-            errors.append(f"Invalid region_type '{region_type}'. Must be 'STATE' or 'UNION_TERRITORY'.")
+            errors.append(
+                f"Invalid region_type '{region_type}'. Must be 'STATE' or 'UNION_TERRITORY'."
+            )
 
         # 2. City validation
         city_name = item.get("city_name")
@@ -45,15 +84,19 @@ class LocationDataValidator(DataValidator):
 
         city_tier = item.get("tier")
         if city_tier and str(city_tier) not in {"Tier 1", "Tier 2", "Tier 3"}:
-            errors.append(f"Invalid city tier '{city_tier}'. Expected 'Tier 1', 'Tier 2', or 'Tier 3'.")
+            errors.append(
+                f"Invalid city tier '{city_tier}'. Expected 'Tier 1', 'Tier 2', or 'Tier 3'."
+            )
 
         # 3. RTO validation
         rto_code = item.get("rto_code")
         if rto_code:
             clean_rto = str(rto_code).strip().upper()
             if not self.FLEXIBLE_RTO_CODE_PATTERN.match(clean_rto):
-                errors.append(f"Invalid rto_code '{rto_code}'. Must match standard Indian RTO pattern (e.g. 'KA-01', 'DL-04')")
-            
+                errors.append(
+                    f"Invalid rto_code '{rto_code}'. Must match standard Indian RTO pattern (e.g. 'KA-01', 'DL-04')"
+                )
+
             # 4. Hierarchical consistency: RTO prefix matches parent state code
             if state_code:
                 rto_prefix = clean_rto[:2]

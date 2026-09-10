@@ -5,10 +5,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.common import AuditSchemaMixin
 
-
 # =============================================================================
 # 1. READ / WRITE DTOs FOR ENTITIES
 # =============================================================================
+
 
 class BankBase(BaseModel):
     name: str = Field(..., max_length=100)
@@ -37,7 +37,9 @@ class BankRead(BankBase):
 
 
 class InterestRateBase(BaseModel):
-    annual_interest_rate: Decimal = Field(..., gt=0, le=36, description="Annual percentage rate (e.g. 8.75)")
+    annual_interest_rate: Decimal = Field(
+        ..., gt=0, le=36, description="Annual percentage rate (e.g. 8.75)"
+    )
     rate_type: str = Field(default="FLOATING", description="FIXED, FLOATING, VARIABLE")
     min_credit_score: Optional[int] = Field(None, ge=300, le=900)
     max_credit_score: Optional[int] = Field(None, ge=300, le=900)
@@ -110,8 +112,13 @@ class LoanEligibilityRuleRead(LoanEligibilityRuleBase):
 
 class LoanFeeBase(BaseModel):
     fee_name: str = Field(..., max_length=150)
-    fee_type: str = Field(default="PROCESSING_FEE", description="PROCESSING_FEE, DOCUMENTATION_FEE, VALUATION_FEE, FORECLOSURE_CHARGE, OTHER")
-    calculation_method: str = Field(default="PERCENTAGE", description="FIXED, PERCENTAGE, CAPPED_PERCENTAGE, WAIVED")
+    fee_type: str = Field(
+        default="PROCESSING_FEE",
+        description="PROCESSING_FEE, DOCUMENTATION_FEE, VALUATION_FEE, FORECLOSURE_CHARGE, OTHER",
+    )
+    calculation_method: str = Field(
+        default="PERCENTAGE", description="FIXED, PERCENTAGE, CAPPED_PERCENTAGE, WAIVED"
+    )
     fixed_amount: Optional[Decimal] = Field(None, ge=0)
     percentage: Optional[Decimal] = Field(None, ge=0, le=100)
     minimum_amount: Optional[Decimal] = Field(None, ge=0)
@@ -142,6 +149,7 @@ class LoanFeeRead(LoanFeeBase):
 
 class InterestRateSlabRead(BaseModel):
     """Legacy slab schema for backward compatibility."""
+
     id: int
     loan_product_id: int
     min_cibil_score: int
@@ -200,11 +208,20 @@ class LoanProductRead(LoanProductBase):
 # 2. FINANCIAL CALCULATION DTOs (EMI, AMORTIZATION, MAX LOAN, LTV)
 # =============================================================================
 
+
 class EmiCalculationRequest(BaseModel):
-    principal_amount: Optional[Decimal] = Field(None, gt=0, description="Loan principal amount in INR")
-    loan_amount: Optional[Decimal] = Field(None, gt=0, description="Alternative alias for principal amount")
-    annual_interest_rate: Decimal = Field(gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)")
-    tenure_months: int = Field(ge=1, le=120, description="Loan tenure in months (e.g. 60 for 5 years)")
+    principal_amount: Optional[Decimal] = Field(
+        None, gt=0, description="Loan principal amount in INR"
+    )
+    loan_amount: Optional[Decimal] = Field(
+        None, gt=0, description="Alternative alias for principal amount"
+    )
+    annual_interest_rate: Decimal = Field(
+        gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)"
+    )
+    tenure_months: int = Field(
+        ge=1, le=120, description="Loan tenure in months (e.g. 60 for 5 years)"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -264,9 +281,15 @@ class EmiCalculationResponse(BaseModel):
 
 
 class MaxLoanCalculationRequest(BaseModel):
-    maximum_emi: Optional[Decimal] = Field(None, gt=0, description="Maximum affordable monthly EMI in INR")
-    desired_monthly_emi: Optional[Decimal] = Field(None, gt=0, description="Alternative alias for maximum EMI")
-    annual_interest_rate: Decimal = Field(gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)")
+    maximum_emi: Optional[Decimal] = Field(
+        None, gt=0, description="Maximum affordable monthly EMI in INR"
+    )
+    desired_monthly_emi: Optional[Decimal] = Field(
+        None, gt=0, description="Alternative alias for maximum EMI"
+    )
+    annual_interest_rate: Decimal = Field(
+        gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)"
+    )
     tenure_months: int = Field(ge=1, le=120, description="Loan tenure in months")
 
     @model_validator(mode="before")
@@ -294,8 +317,12 @@ class MaxLoanCalculationResponse(BaseModel):
 
 class AmortizationScheduleRequest(BaseModel):
     principal: Optional[Decimal] = Field(None, gt=0, description="Loan principal amount in INR")
-    loan_amount: Optional[Decimal] = Field(None, gt=0, description="Alternative alias for principal amount")
-    annual_interest_rate: Decimal = Field(gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)")
+    loan_amount: Optional[Decimal] = Field(
+        None, gt=0, description="Alternative alias for principal amount"
+    )
+    annual_interest_rate: Decimal = Field(
+        gt=0, le=36, description="Annual interest rate percentage (e.g. 8.75)"
+    )
     tenure_months: int = Field(ge=1, le=120, description="Loan tenure in months")
 
     @model_validator(mode="before")
@@ -321,26 +348,51 @@ class AmortizationScheduleResponse(BaseModel):
 # 3. HIGH-LEVEL FINANCING & BANK COMPARISON DTOs
 # =============================================================================
 
+
 class FinanceCalculationRequest(BaseModel):
-    vehicle_variant_id: Optional[int] = Field(None, description="Vehicle variant ID to auto-calculate authoritative on-road price")
-    state_id: Optional[int] = Field(None, description="State ID for on-road pricing if vehicle_variant_id is supplied")
+    vehicle_variant_id: Optional[int] = Field(
+        None, description="Vehicle variant ID to auto-calculate authoritative on-road price"
+    )
+    state_id: Optional[int] = Field(
+        None, description="State ID for on-road pricing if vehicle_variant_id is supplied"
+    )
     city_id: Optional[int] = Field(None, description="Optional City ID")
     rto_id: Optional[int] = Field(None, description="Optional RTO ID")
-    on_road_price: Optional[Decimal] = Field(None, gt=0, description="Explicit on-road price if vehicle_variant_id is omitted")
+    on_road_price: Optional[Decimal] = Field(
+        None, gt=0, description="Explicit on-road price if vehicle_variant_id is omitted"
+    )
     loan_amount: Optional[Decimal] = Field(None, gt=0, description="Direct loan principal amount")
-    
-    down_payment: Decimal = Field(default=Decimal("0.00"), ge=0, description="Available down payment in INR")
-    loan_tenure_months: int = Field(default=60, ge=12, le=120, description="Desired loan tenure in months")
-    tenure_months: Optional[int] = Field(None, ge=12, le=120, description="Alternative alias for loan_tenure_months")
-    credit_score: Optional[int] = Field(default=750, ge=300, le=900, description="Applicant credit score (e.g. CIBIL)")
-    monthly_income: Optional[Decimal] = Field(None, ge=0, description="Monthly take-home income for eligibility check")
-    employment_type: Optional[str] = Field(default="SALARIED", description="SALARIED or SELF_EMPLOYED")
+
+    down_payment: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Available down payment in INR"
+    )
+    loan_tenure_months: int = Field(
+        default=60, ge=12, le=120, description="Desired loan tenure in months"
+    )
+    tenure_months: Optional[int] = Field(
+        None, ge=12, le=120, description="Alternative alias for loan_tenure_months"
+    )
+    credit_score: Optional[int] = Field(
+        default=750, ge=300, le=900, description="Applicant credit score (e.g. CIBIL)"
+    )
+    monthly_income: Optional[Decimal] = Field(
+        None, ge=0, description="Monthly take-home income for eligibility check"
+    )
+    employment_type: Optional[str] = Field(
+        default="SALARIED", description="SALARIED or SELF_EMPLOYED"
+    )
     applicant_age: Optional[int] = Field(default=30, ge=18, le=100)
-    
+
     bank_id: Optional[int] = Field(None, description="Optional specific bank to target")
-    loan_product_id: Optional[int] = Field(None, description="Optional specific loan product to target")
-    calculation_date: Optional[datetime] = Field(None, description="Target calculation date for historical rate resolution")
-    include_amortization: bool = Field(default=False, description="Include full month-by-month amortization schedule")
+    loan_product_id: Optional[int] = Field(
+        None, description="Optional specific loan product to target"
+    )
+    calculation_date: Optional[datetime] = Field(
+        None, description="Target calculation date for historical rate resolution"
+    )
+    include_amortization: bool = Field(
+        default=False, description="Include full month-by-month amortization schedule"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -348,7 +400,11 @@ class FinanceCalculationRequest(BaseModel):
         if isinstance(data, dict):
             if "tenure_months" in data and "loan_tenure_months" not in data:
                 data["loan_tenure_months"] = data["tenure_months"]
-            if "loan_amount" in data and "on_road_price" not in data and "vehicle_variant_id" not in data:
+            if (
+                "loan_amount" in data
+                and "on_road_price" not in data
+                and "vehicle_variant_id" not in data
+            ):
                 dp = Decimal(str(data.get("down_payment", "0.00")))
                 data["on_road_price"] = Decimal(str(data["loan_amount"])) + dp
         return data
@@ -372,7 +428,7 @@ class LoanOfferItem(BaseModel):
     product_name: str
     product_slug: str
     product_category: str
-    
+
     annual_interest_rate: Decimal
     rate_type: str  # FIXED, FLOATING, VARIABLE
     tenure_months: int
@@ -380,22 +436,24 @@ class LoanOfferItem(BaseModel):
     monthly_emi: Decimal
     total_interest: Decimal
     total_repayment: Decimal
-    
+
     ltv_percent: Decimal
     processing_fee: Decimal
     total_fees: Decimal
     fees_breakdown: List[FeeBreakdownItem] = []
-    
+
     estimated_eligibility: bool
     eligibility_status: str  # ESTIMATED_ELIGIBLE, MARGINAL, ESTIMATED_INELIGIBLE
     eligibility_reasons: List[str] = []
-    
+
     rate_effective_from: datetime
     rate_effective_to: Optional[datetime] = None
     rate_source_name: Optional[str] = None
     is_recommended: bool = False
     data_status: str = "DEMO"
-    disclaimer: str = "Estimated eligibility only - not a credit sanction. Actual rates and fees depend on bank underwriting."
+    disclaimer: str = (
+        "Estimated eligibility only - not a credit sanction. Actual rates and fees depend on bank underwriting."
+    )
 
 
 class FinanceCalculationResponse(BaseModel):
@@ -409,14 +467,14 @@ class FinanceCalculationResponse(BaseModel):
     tenure_months: int
     credit_score_used: int
     calculation_date: datetime
-    
+
     selected_offer: LoanOfferItem
     amortization_schedule: Optional[List[AmortizationScheduleItem]] = None
-    
+
     bank_name: Optional[str] = None
     applied_interest_rate: Optional[Decimal] = None
     eligibility: Optional[Dict[str, Any]] = None
-    
+
     data_quality: Dict[str, Any] = {
         "is_estimated": True,
         "data_status": "DEMO",
@@ -443,10 +501,14 @@ class BankComparisonRequest(BaseModel):
     state_id: Optional[int] = Field(None, description="State ID")
     city_id: Optional[int] = Field(None, description="City ID")
     rto_id: Optional[int] = Field(None, description="RTO ID")
-    on_road_price: Optional[Decimal] = Field(None, gt=0, description="Explicit on-road price if vehicle_variant_id is omitted")
+    on_road_price: Optional[Decimal] = Field(
+        None, gt=0, description="Explicit on-road price if vehicle_variant_id is omitted"
+    )
     loan_amount: Optional[Decimal] = Field(None, gt=0, description="Direct loan principal amount")
-    
-    down_payment: Decimal = Field(default=Decimal("0.00"), ge=0, description="Available down payment in INR")
+
+    down_payment: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Available down payment in INR"
+    )
     loan_tenure_months: int = Field(default=60, ge=12, le=120)
     tenure_months: Optional[int] = Field(None, ge=12, le=120)
     credit_score: Optional[int] = Field(default=750, ge=300, le=900)
@@ -461,7 +523,11 @@ class BankComparisonRequest(BaseModel):
         if isinstance(data, dict):
             if "tenure_months" in data and "loan_tenure_months" not in data:
                 data["loan_tenure_months"] = data["tenure_months"]
-            if "loan_amount" in data and "on_road_price" not in data and "vehicle_variant_id" not in data:
+            if (
+                "loan_amount" in data
+                and "on_road_price" not in data
+                and "vehicle_variant_id" not in data
+            ):
                 dp = Decimal(str(data.get("down_payment", "0.00")))
                 data["on_road_price"] = Decimal(str(data["loan_amount"])) + dp
         return data
@@ -478,7 +544,7 @@ class BankComparisonResponse(BaseModel):
     tenure_months: int
     credit_score_used: int
     calculation_date: datetime
-    
+
     offers: List[LoanOfferItem]
     total_offers_count: int
     eligible_offers_count: int
@@ -493,12 +559,17 @@ class BankComparisonResponse(BaseModel):
 # 4. LEGACY ELIGIBILITY SCHEMAS (Backwards Compatibility)
 # =============================================================================
 
+
 class LoanEligibilityRequest(BaseModel):
     monthly_take_home_income: Decimal = Field(gt=0, description="Net monthly income in INR")
-    existing_monthly_emis: Decimal = Field(default=Decimal("0.00"), ge=0, description="Existing ongoing EMIs")
+    existing_monthly_emis: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Existing ongoing EMIs"
+    )
     tenure_months: int = Field(default=60, ge=12, le=120)
     cibil_score: Optional[int] = Field(default=750, ge=300, le=900)
-    foir_limit_percent: Optional[Decimal] = Field(default=Decimal("40.0"), ge=10, le=70, description="FOIR / DTI limit %")
+    foir_limit_percent: Optional[Decimal] = Field(
+        default=Decimal("40.0"), ge=10, le=70, description="FOIR / DTI limit %"
+    )
     annual_interest_rate: Optional[Decimal] = None
 
 

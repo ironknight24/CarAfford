@@ -14,11 +14,11 @@ class RecommendationCategory(str, Enum):
 
 
 class ScoringWeights(BaseModel):
-    affordability_weight: Decimal = Decimal("0.30")       # 30%
-    tco_weight: Decimal = Decimal("0.25")                 # 25%
-    preference_match_weight: Decimal = Decimal("0.20")    # 20%
-    monthly_cost_weight: Decimal = Decimal("0.15")        # 15%
-    vehicle_value_weight: Decimal = Decimal("0.10")       # 10%
+    affordability_weight: Decimal = Decimal("0.30")  # 30%
+    tco_weight: Decimal = Decimal("0.25")  # 25%
+    preference_match_weight: Decimal = Decimal("0.20")  # 20%
+    monthly_cost_weight: Decimal = Decimal("0.15")  # 15%
+    vehicle_value_weight: Decimal = Decimal("0.10")  # 10%
 
 
 DEFAULT_SCORING_WEIGHTS = ScoringWeights()

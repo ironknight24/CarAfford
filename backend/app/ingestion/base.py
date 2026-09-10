@@ -15,6 +15,7 @@ from app.core.ingestion_constants import (
 
 def compute_payload_hash(payload: Any) -> str:
     """Computes a deterministic SHA-256 hash of a JSON-serializable dictionary."""
+
     def default_serializer(obj):
         if isinstance(obj, Decimal):
             return str(obj)

@@ -38,10 +38,10 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email address already exists.",
         )
-    
+
     # Enforce USER role for public registrations (ADMIN role cannot be self-assigned publicly)
     assigned_role = UserRole.USER.value
-    
+
     user = User(
         email=user_in.email.lower(),
         hashed_password=get_password_hash(user_in.password),
@@ -66,27 +66,27 @@ async def login(
     """Authenticate with email and password to receive JWT access and refresh tokens."""
     result = await db.execute(select(User).where(User.email == credentials.email.lower()))
     user = result.scalar_one_or_none()
-    
+
     if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account has been deactivated",
         )
-    
+
     access_token = create_access_token(
         subject=user.id,
         role=user.role,
         email=user.email,
     )
     refresh_token = create_refresh_token(subject=user.id)
-    
+
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
@@ -117,32 +117,32 @@ async def refresh_access_token(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if payload.get("type") != "refresh":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id = int(payload.get("sub", 0))
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     new_access_token = create_access_token(
         subject=user.id,
         role=user.role,
         email=user.email,
     )
     new_refresh_token = create_refresh_token(subject=user.id)
-    
+
     return TokenResponse(
         access_token=new_access_token,
         refresh_token=new_refresh_token,

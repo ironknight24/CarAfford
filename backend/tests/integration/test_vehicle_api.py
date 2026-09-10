@@ -93,7 +93,11 @@ async def test_vehicle_catalogue_api_flow(db_session: AsyncSession, async_client
         assert "Tata" in item["manufacturer_name"]
         assert item["fuel_type"] == "Electric"
         assert item["current_ex_showroom_price"] is not None
-        assert Decimal("1000000") <= Decimal(str(item["current_ex_showroom_price"])) <= Decimal("2500000")
+        assert (
+            Decimal("1000000")
+            <= Decimal(str(item["current_ex_showroom_price"]))
+            <= Decimal("2500000")
+        )
 
     # 8. Test 404 handling
     resp_404_mfg = await async_client.get("/api/v1/manufacturers/999999")

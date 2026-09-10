@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # 1. FETCHER
 # =============================================================================
 
+
 class GovernmentTaxFetcher(DataFetcher):
     """Fetches official state motor vehicle tax and registration rule schedules.
 
@@ -56,6 +57,7 @@ class GovernmentTaxFetcher(DataFetcher):
 # 2. PARSER
 # =============================================================================
 
+
 class GovernmentTaxParser(DataParser):
     """Parses raw tax rule payloads into structured intermediate dictionaries."""
 
@@ -72,6 +74,7 @@ class GovernmentTaxParser(DataParser):
 # 3. NORMALIZER
 # =============================================================================
 
+
 class GovernmentTaxNormalizer(DataNormalizer):
     """Standardizes tax rule names, calculation methods, rates, brackets, and temporal dates."""
 
@@ -87,7 +90,9 @@ class GovernmentTaxNormalizer(DataNormalizer):
         # Standardize rule category and tax type
         norm["rule_category"] = str(norm.get("rule_category", "TAX")).strip().upper()
         norm["tax_type"] = str(norm.get("tax_type", "ROAD_TAX")).strip().upper()
-        norm["calculation_method"] = str(norm.get("calculation_method", "PERCENTAGE")).strip().upper()
+        norm["calculation_method"] = (
+            str(norm.get("calculation_method", "PERCENTAGE")).strip().upper()
+        )
         norm["base_amount_type"] = str(norm.get("base_amount_type", "EX_SHOWROOM")).strip().upper()
         norm["vehicle_type"] = str(norm.get("vehicle_type", "CAR")).strip().upper()
         norm["usage_type"] = str(norm.get("usage_type", "PRIVATE")).strip().upper()
@@ -117,15 +122,21 @@ class GovernmentTaxNormalizer(DataNormalizer):
                     b_dict["rate"] = Decimal(str(b_dict["rate"]))
                 if b_dict.get("fixed_amount") is not None:
                     b_dict["fixed_amount"] = Decimal(str(b_dict["fixed_amount"]))
-                b_dict["calculation_method"] = str(b_dict.get("calculation_method", "PERCENTAGE")).strip().upper()
+                b_dict["calculation_method"] = (
+                    str(b_dict.get("calculation_method", "PERCENTAGE")).strip().upper()
+                )
                 norm_brackets.append(b_dict)
             norm["brackets"] = norm_brackets
 
         # Normalize effective dates
         if isinstance(norm.get("effective_from"), str):
-            norm["effective_from"] = datetime.fromisoformat(norm["effective_from"].replace("Z", "+00:00"))
+            norm["effective_from"] = datetime.fromisoformat(
+                norm["effective_from"].replace("Z", "+00:00")
+            )
         if isinstance(norm.get("effective_to"), str):
-            norm["effective_to"] = datetime.fromisoformat(norm["effective_to"].replace("Z", "+00:00"))
+            norm["effective_to"] = datetime.fromisoformat(
+                norm["effective_to"].replace("Z", "+00:00")
+            )
 
         return norm
 
@@ -133,6 +144,7 @@ class GovernmentTaxNormalizer(DataNormalizer):
 # =============================================================================
 # 4. CANONICAL MAPPER
 # =============================================================================
+
 
 class GovernmentTaxCanonicalMapper(CanonicalMapper):
     """Maps normalized tax rule records to canonical domain representation."""
@@ -144,6 +156,7 @@ class GovernmentTaxCanonicalMapper(CanonicalMapper):
 # =============================================================================
 # 5. BASE GOVERNMENT TAX ADAPTER
 # =============================================================================
+
 
 class GovernmentTaxRuleDataSourceAdapter(DataSourceAdapter, ABC):
     """Reusable abstract adapter for official Indian State/UT motor vehicle tax rules."""
@@ -245,7 +258,10 @@ class GovernmentTaxRuleDataSourceAdapter(DataSourceAdapter, ABC):
         return self.mapper
 
     def get_source_record_id(self, item: Dict[str, Any]) -> str:
-        return item.get("source_record_id") or f"{self.state_code}-{item.get('tax_type')}-{item.get('name', 'RULE').replace(' ', '-')}"
+        return (
+            item.get("source_record_id")
+            or f"{self.state_code}-{item.get('tax_type')}-{item.get('name', 'RULE').replace(' ', '-')}"
+        )
 
 
 # =============================================================================
@@ -276,10 +292,38 @@ KARNATAKA_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "17.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 4, "minimum_value": "2000000.00", "maximum_value": None, "rate": "18.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "500000.00",
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "500000.00",
+                "maximum_value": "1000000.00",
+                "rate": "14.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "17.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 4,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "18.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 2. Karnataka Infrastructure Development Cess (11% on Road Tax)
@@ -450,9 +494,30 @@ MAHARASHTRA_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "1000000.00", "rate": "11.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "12.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "2000000.00", "maximum_value": None, "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "1000000.00",
+                "rate": "11.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "12.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 2. Maharashtra Diesel Car Motor Vehicle Tax Slabs (2% higher rate)
@@ -475,9 +540,30 @@ MAHARASHTRA_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "1000000.00", "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "14.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "2000000.00", "maximum_value": None, "rate": "15.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "1000000.00",
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "14.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "15.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 3. Maharashtra CNG Car Motor Vehicle Tax Slabs
@@ -500,9 +586,30 @@ MAHARASHTRA_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "1000000.00", "rate": "7.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "8.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "2000000.00", "maximum_value": None, "rate": "9.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "1000000.00",
+                "rate": "7.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "8.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "9.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 4. Maharashtra EV Road Tax Exemption
@@ -619,9 +726,30 @@ DELHI_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "600000.00", "rate": "4.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "600000.00", "maximum_value": "1000000.00", "rate": "7.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": None, "rate": "10.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "600000.00",
+                "rate": "4.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "600000.00",
+                "maximum_value": "1000000.00",
+                "rate": "7.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": None,
+                "rate": "10.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 2. Delhi Diesel Road Tax Slabs
@@ -644,9 +772,30 @@ DELHI_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "600000.00", "rate": "5.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "600000.00", "maximum_value": "1000000.00", "rate": "8.7500", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": None, "rate": "12.5000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "600000.00",
+                "rate": "5.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "600000.00",
+                "maximum_value": "1000000.00",
+                "rate": "8.7500",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": None,
+                "rate": "12.5000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 3. Delhi EV Road Tax Waiver (Delhi EV Policy 2020)
@@ -779,10 +928,38 @@ TAMIL_NADU_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "12.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "15.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 4, "minimum_value": "2000000.00", "maximum_value": None, "rate": "18.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "500000.00",
+                "rate": "12.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "500000.00",
+                "maximum_value": "1000000.00",
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "15.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 4,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "18.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 2. Tamil Nadu EV Road Tax Exemption
@@ -899,10 +1076,38 @@ TELANGANA_TAX_RULES_FIXTURE = [
         "effective_to": None,
         "verification_status": "VERIFIED",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": "2000000.00", "rate": "17.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 4, "minimum_value": "2000000.00", "maximum_value": None, "rate": "18.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "500000.00",
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "500000.00",
+                "maximum_value": "1000000.00",
+                "rate": "14.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": "2000000.00",
+                "rate": "17.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 4,
+                "minimum_value": "2000000.00",
+                "maximum_value": None,
+                "rate": "18.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     },
     # 2. Telangana EV Road Tax Exemption (Telangana EV Policy 2024-2026)

@@ -56,11 +56,21 @@ class AffordabilityCalculateRequest(BaseModel):
         description="Affordability risk profile: CONSERVATIVE (30%), BALANCED (35%), or STRETCH (40%)",
     )
     # Optional preference and filter fields
-    employment_type: Optional[str] = Field(default="SALARIED", description="Employment type (SALARIED, SELF_EMPLOYED)")
-    monthly_driving_distance: Optional[int] = Field(default=1000, ge=0, description="Estimated monthly driving in km")
-    fuel_preference: Optional[str] = Field(default=None, description="Preferred fuel type (PETROL, DIESEL, ELECTRIC, CNG)")
-    body_type: Optional[str] = Field(default=None, description="Preferred body type (SUV, SEDAN, HATCHBACK)")
-    transmission: Optional[str] = Field(default=None, description="Preferred transmission (MANUAL, AUTOMATIC)")
+    employment_type: Optional[str] = Field(
+        default="SALARIED", description="Employment type (SALARIED, SELF_EMPLOYED)"
+    )
+    monthly_driving_distance: Optional[int] = Field(
+        default=1000, ge=0, description="Estimated monthly driving in km"
+    )
+    fuel_preference: Optional[str] = Field(
+        default=None, description="Preferred fuel type (PETROL, DIESEL, ELECTRIC, CNG)"
+    )
+    body_type: Optional[str] = Field(
+        default=None, description="Preferred body type (SUV, SEDAN, HATCHBACK)"
+    )
+    transmission: Optional[str] = Field(
+        default=None, description="Preferred transmission (MANUAL, AUTOMATIC)"
+    )
     preferred_body_types: Optional[List[str]] = None
     preferred_fuel_types: Optional[List[str]] = None
     preferred_transmission: Optional[List[str]] = None
@@ -130,7 +140,7 @@ class AffordabilityBudgetBreakdown(BaseModel):
     data_status: str = DATA_STATUS_DEMO
     warnings: List[str] = []
     disclaimer: str = DISCLAIMER_TEXT
-    
+
     # Backward compatibility properties
     @computed_field
     @property
@@ -170,14 +180,22 @@ class AffordabilityProfileInfo(BaseModel):
 
 class VehicleAffordabilityRequest(BaseModel):
     variant_id: int = Field(..., description="Vehicle variant ID to evaluate")
-    monthly_take_home_income: Decimal = Field(..., gt=0, description="Monthly net take-home salary in INR")
-    existing_monthly_emi: Decimal = Field(default=Decimal("0.00"), ge=0, description="Total existing monthly EMIs")
-    available_down_payment: Decimal = Field(default=Decimal("0.00"), ge=0, description="Available down payment in INR")
+    monthly_take_home_income: Decimal = Field(
+        ..., gt=0, description="Monthly net take-home salary in INR"
+    )
+    existing_monthly_emi: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Total existing monthly EMIs"
+    )
+    available_down_payment: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Available down payment in INR"
+    )
     state_id: int = Field(..., description="Target registration State ID")
     city_id: Optional[int] = Field(default=None, description="Optional City ID")
     rto_id: Optional[int] = Field(default=None, description="Optional RTO ID")
     credit_score: int = Field(default=750, ge=300, le=900, description="Credit score (300-900)")
-    preferred_loan_tenure_months: int = Field(default=60, ge=12, le=84, description="Tenure in months")
+    preferred_loan_tenure_months: int = Field(
+        default=60, ge=12, le=84, description="Tenure in months"
+    )
     affordability_profile: AffordabilityProfile = Field(
         default=AffordabilityProfile.BALANCED,
         description="Affordability profile (CONSERVATIVE, BALANCED, STRETCH)",
@@ -212,7 +230,9 @@ class VehicleAffordabilityResponse(BaseModel):
 
 
 class MultiVehicleAffordabilityRequest(BaseModel):
-    variant_ids: List[int] = Field(..., min_length=1, max_length=20, description="List of variant IDs to evaluate")
+    variant_ids: List[int] = Field(
+        ..., min_length=1, max_length=20, description="List of variant IDs to evaluate"
+    )
     monthly_take_home_income: Decimal = Field(..., gt=0)
     existing_monthly_emi: Decimal = Field(default=Decimal("0.00"), ge=0)
     available_down_payment: Decimal = Field(default=Decimal("0.00"), ge=0)
@@ -235,7 +255,9 @@ class MultiVehicleAffordabilityResponse(BaseModel):
 
 
 class AffordabilityComparisonRequest(BaseModel):
-    variant_ids: List[int] = Field(..., min_length=2, max_length=5, description="2 to 5 variant IDs to compare")
+    variant_ids: List[int] = Field(
+        ..., min_length=2, max_length=5, description="2 to 5 variant IDs to compare"
+    )
     monthly_take_home_income: Decimal = Field(..., gt=0)
     existing_monthly_emi: Decimal = Field(default=Decimal("0.00"), ge=0)
     available_down_payment: Decimal = Field(default=Decimal("0.00"), ge=0)

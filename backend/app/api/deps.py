@@ -8,6 +8,7 @@ from app.core.database import AsyncSessionLocal, get_db_session
 from app.core.security import decode_token
 from app.models.user import User, UserRole
 
+
 # Direct session dependency
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
@@ -34,7 +35,7 @@ async def get_current_user(
             detail="Authentication credentials were not provided",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     token = credentials.credentials
     try:
         payload = decode_token(token)
@@ -44,14 +45,14 @@ async def get_current_user(
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     user_id_str = payload.get("sub")
     if not user_id_str:
         raise HTTPException(
@@ -59,7 +60,7 @@ async def get_current_user(
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     try:
         user_id = int(user_id_str)
     except ValueError:
@@ -68,23 +69,23 @@ async def get_current_user(
             detail="Invalid user identifier in token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive",
         )
-    
+
     return user
 
 
@@ -121,4 +122,3 @@ async def require_admin(
             detail="Administrative privileges required to perform this action",
         )
     return current_user
-

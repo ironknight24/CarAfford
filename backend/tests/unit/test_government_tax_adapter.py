@@ -50,9 +50,30 @@ def test_tax_validator_valid_bracketed_rule():
         "effective_from": "2024-01-01T00:00:00Z",
         "effective_to": None,
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "13.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
-            {"bracket_order": 3, "minimum_value": "1000000.00", "maximum_value": None, "rate": "17.0000", "fixed_amount": "0.00", "calculation_method": "PERCENTAGE"},
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "500000.00",
+                "rate": "13.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "500000.00",
+                "maximum_value": "1000000.00",
+                "rate": "14.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
+            {
+                "bracket_order": 3,
+                "minimum_value": "1000000.00",
+                "maximum_value": None,
+                "rate": "17.0000",
+                "fixed_amount": "0.00",
+                "calculation_method": "PERCENTAGE",
+            },
         ],
     }
     is_valid, errors = validator.validate(payload)
@@ -85,8 +106,18 @@ def test_tax_validator_rejects_negative_rate_and_overlapping_brackets():
         "calculation_method": "BRACKETED",
         "effective_from": "2024-01-01T00:00:00Z",
         "brackets": [
-            {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "800000.00", "rate": "12.00"},
-            {"bracket_order": 2, "minimum_value": "600000.00", "maximum_value": "1500000.00", "rate": "14.00"},  # Overlaps 6L < 8L
+            {
+                "bracket_order": 1,
+                "minimum_value": "0.00",
+                "maximum_value": "800000.00",
+                "rate": "12.00",
+            },
+            {
+                "bracket_order": 2,
+                "minimum_value": "600000.00",
+                "maximum_value": "1500000.00",
+                "rate": "14.00",
+            },  # Overlaps 6L < 8L
         ],
     }
     is_valid, errors = validator.validate(payload_overlap)

@@ -7,17 +7,25 @@ from app.schemas.common import PaginatedResponse
 from app.schemas.data_source import DataSourceRead
 from app.schemas.location import CitySimple, RtoOfficeSimple, StateSimple
 
-
 # =============================================================================
 # TAX RULE BRACKET SCHEMAS
 # =============================================================================
 
+
 class TaxRuleBracketBase(BaseModel):
     bracket_order: int = Field(default=1, ge=1, description="Ascending execution order of slab")
-    minimum_value: Decimal = Field(default=Decimal("0.00"), ge=0, description="Minimum price / CC for slab")
-    maximum_value: Optional[Decimal] = Field(None, description="Maximum price / CC for slab, None for unbounded upper limit")
-    rate: Optional[Decimal] = Field(None, ge=0, description="Percentage rate for slab (e.g., 14.00 for 14%)")
-    fixed_amount: Optional[Decimal] = Field(default=Decimal("0.00"), ge=0, description="Fixed charge for slab")
+    minimum_value: Decimal = Field(
+        default=Decimal("0.00"), ge=0, description="Minimum price / CC for slab"
+    )
+    maximum_value: Optional[Decimal] = Field(
+        None, description="Maximum price / CC for slab, None for unbounded upper limit"
+    )
+    rate: Optional[Decimal] = Field(
+        None, ge=0, description="Percentage rate for slab (e.g., 14.00 for 14%)"
+    )
+    fixed_amount: Optional[Decimal] = Field(
+        default=Decimal("0.00"), ge=0, description="Fixed charge for slab"
+    )
     calculation_method: str = Field(default="PERCENTAGE", description="PERCENTAGE, FIXED, FORMULA")
 
     @model_validator(mode="after")
@@ -46,6 +54,7 @@ class TaxRuleBracketRead(TaxRuleBracketBase):
 # TAX RULE SCHEMAS
 # =============================================================================
 
+
 class TaxRuleBase(BaseModel):
     name: str = Field(..., max_length=150, description="Descriptive name of rule")
     description: Optional[str] = Field(None, max_length=500)
@@ -64,7 +73,9 @@ class TaxRuleBase(BaseModel):
     )
 
     vehicle_type: str = Field(default="CAR", description="CAR, TWO_WHEELER, COMMERCIAL, ANY")
-    fuel_type: Optional[str] = Field(None, description="Petrol, Diesel, CNG, Electric, Hybrid, ANY, or None")
+    fuel_type: Optional[str] = Field(
+        None, description="Petrol, Diesel, CNG, Electric, Hybrid, ANY, or None"
+    )
     is_ev: Optional[bool] = Field(None, description="EV status constraint")
     usage_type: str = Field(default="PRIVATE", description="PRIVATE, COMMERCIAL, ANY")
 
@@ -75,15 +86,25 @@ class TaxRuleBase(BaseModel):
     min_seating_capacity: Optional[int] = Field(None, ge=1)
     max_seating_capacity: Optional[int] = Field(None, ge=1)
 
-    rate: Optional[Decimal] = Field(None, ge=0, description="Percentage rate when calculation_method=PERCENTAGE")
-    fixed_amount: Optional[Decimal] = Field(default=Decimal("0.00"), ge=0, description="Fixed charge in INR")
-    base_amount_type: str = Field(default="EX_SHOWROOM", description="EX_SHOWROOM, ROAD_TAX, BASE_TAX, FIXED, CUSTOM")
+    rate: Optional[Decimal] = Field(
+        None, ge=0, description="Percentage rate when calculation_method=PERCENTAGE"
+    )
+    fixed_amount: Optional[Decimal] = Field(
+        default=Decimal("0.00"), ge=0, description="Fixed charge in INR"
+    )
+    base_amount_type: str = Field(
+        default="EX_SHOWROOM", description="EX_SHOWROOM, ROAD_TAX, BASE_TAX, FIXED, CUSTOM"
+    )
 
-    formula_definition: Optional[Dict[str, Any]] = Field(None, description="Safe structured AST parameter dictionary")
+    formula_definition: Optional[Dict[str, Any]] = Field(
+        None, description="Safe structured AST parameter dictionary"
+    )
     priority: int = Field(default=100, ge=0, description="Rule resolution priority weight")
 
     effective_from: datetime = Field(..., description="Start of rule validity period")
-    effective_to: Optional[datetime] = Field(None, description="End of rule validity period, None for ongoing")
+    effective_to: Optional[datetime] = Field(
+        None, description="End of rule validity period, None for ongoing"
+    )
     active: bool = Field(default=True)
 
     source_id: Optional[int] = Field(None, description="Provenance DataSource ID")
@@ -100,11 +121,19 @@ class TaxRuleBase(BaseModel):
             raise ValueError(
                 f"effective_to ({self.effective_to}) cannot be earlier than effective_from ({self.effective_from})"
             )
-        if self.max_price is not None and self.min_price is not None and self.max_price < self.min_price:
+        if (
+            self.max_price is not None
+            and self.min_price is not None
+            and self.max_price < self.min_price
+        ):
             raise ValueError(
                 f"max_price ({self.max_price}) cannot be less than min_price ({self.min_price})"
             )
-        if self.max_engine_cc is not None and self.min_engine_cc is not None and self.max_engine_cc < self.min_engine_cc:
+        if (
+            self.max_engine_cc is not None
+            and self.min_engine_cc is not None
+            and self.max_engine_cc < self.min_engine_cc
+        ):
             raise ValueError(
                 f"max_engine_cc ({self.max_engine_cc}) cannot be less than min_engine_cc ({self.min_engine_cc})"
             )
@@ -169,6 +198,7 @@ class TaxRuleDetailRead(TaxRuleRead):
 # RULE RESOLUTION SCHEMAS (Clean DTOs for Rule Resolution Service & API)
 # =============================================================================
 
+
 class LocationResolutionContext(BaseModel):
     state_id: int
     state_name: str
@@ -207,7 +237,9 @@ class ResolvedTaxRuleItem(BaseModel):
     formula_definition: Optional[Dict[str, Any]] = None
     priority: int
     precedence_tier: int = Field(..., description="300=RTO, 200=City, 100=State, 0=Default")
-    precedence_label: str = Field(..., description="'RTO-specific', 'City-specific', 'State-level', 'National'")
+    precedence_label: str = Field(
+        ..., description="'RTO-specific', 'City-specific', 'State-level', 'National'"
+    )
     effective_from: datetime
     effective_to: Optional[datetime] = None
     source_name: Optional[str] = None

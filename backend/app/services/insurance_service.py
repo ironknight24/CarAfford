@@ -50,8 +50,8 @@ class InsuranceService:
         else:
             if is_ev:
                 tp_tariff = Decimal("5543.00")  # Standard 3-yr EV tariff
-                od_rate = Decimal("0.025")       # 2.5% of IDV
-                zero_dep_rate = Decimal("0.006") # 0.6% of IDV
+                od_rate = Decimal("0.025")  # 2.5% of IDV
+                zero_dep_rate = Decimal("0.006")  # 0.6% of IDV
             elif engine_cc and engine_cc < 1000:
                 tp_tariff = Decimal("5286.00")  # ~₹2094/yr * 3 minus bundle discount
                 od_rate = Decimal("0.026")
@@ -61,7 +61,7 @@ class InsuranceService:
                 od_rate = Decimal("0.028")
                 zero_dep_rate = Decimal("0.007")
             else:
-                tp_tariff = Decimal("24596.00") # >1500cc (₹7897/yr * 3)
+                tp_tariff = Decimal("24596.00")  # >1500cc (₹7897/yr * 3)
                 od_rate = Decimal("0.032")
                 zero_dep_rate = Decimal("0.008")
 

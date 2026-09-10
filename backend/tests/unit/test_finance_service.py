@@ -59,7 +59,9 @@ def test_loan_summary_and_amortization():
     rate = Decimal("9.00")
     tenure = 12
 
-    res = FinanceService.calculate_full_loan_summary(principal, rate, tenure, generate_amortization=True)
+    res = FinanceService.calculate_full_loan_summary(
+        principal, rate, tenure, generate_amortization=True
+    )
     assert res.monthly_emi > Decimal("0")
     assert res.total_amount_payable > principal
     assert res.total_interest_payable == res.total_amount_payable - principal

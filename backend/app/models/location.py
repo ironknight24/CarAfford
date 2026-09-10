@@ -16,11 +16,16 @@ from app.models.base import AuditableMixin, Base, TimestampMixin, utc_now
 
 class Country(Base, TimestampMixin):
     """Sovereign nation entities for geographical and regulatory partitioning."""
+
     __tablename__ = "countries"
 
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
-    iso_code: Mapped[str] = mapped_column(String(2), unique=True, nullable=False, index=True)  # e.g., IN, US
-    iso3_code: Mapped[str] = mapped_column(String(3), unique=True, nullable=False, index=True)  # e.g., IND, USA
+    iso_code: Mapped[str] = mapped_column(
+        String(2), unique=True, nullable=False, index=True
+    )  # e.g., IN, US
+    iso3_code: Mapped[str] = mapped_column(
+        String(3), unique=True, nullable=False, index=True
+    )  # e.g., IND, USA
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
     # Relationships
@@ -31,6 +36,7 @@ class Country(Base, TimestampMixin):
 
 class State(Base, TimestampMixin):
     """First-level administrative divisions (States, Union Territories, Provinces)."""
+
     __tablename__ = "states"
     __table_args__ = (
         UniqueConstraint("country_id", "code", name="uq_states_country_code"),
@@ -41,7 +47,9 @@ class State(Base, TimestampMixin):
         ForeignKey("countries.id", ondelete="CASCADE"), default=1, nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)  # e.g., DL, MH, KA, TN
+    code: Mapped[str] = mapped_column(
+        String(10), nullable=False, index=True
+    )  # e.g., DL, MH, KA, TN
     region_type: Mapped[str] = mapped_column(
         String(30), default="STATE", nullable=False, index=True
     )  # STATE, UNION_TERRITORY
@@ -80,6 +88,7 @@ class State(Base, TimestampMixin):
 
 class City(Base, TimestampMixin):
     """Major urban municipal areas and district centers."""
+
     __tablename__ = "cities"
     __table_args__ = (
         UniqueConstraint("state_id", "name", name="uq_cities_state_name"),
@@ -115,10 +124,9 @@ class City(Base, TimestampMixin):
 
 class RtoOffice(Base, TimestampMixin):
     """Regional Transport Office (RTO) jurisdictions responsible for vehicle registration & taxation."""
+
     __tablename__ = "rto_offices"
-    __table_args__ = (
-        UniqueConstraint("state_id", "code", name="uq_rto_offices_state_code"),
-    )
+    __table_args__ = (UniqueConstraint("state_id", "code", name="uq_rto_offices_state_code"),)
 
     state_id: Mapped[int] = mapped_column(
         ForeignKey("states.id", ondelete="CASCADE"), nullable=False, index=True
@@ -156,6 +164,7 @@ RTO = RtoOffice
 
 class TaxSlab(Base, TimestampMixin, AuditableMixin):
     """State/RTO Motor Vehicle Road Tax slabs based on fuel, price, and engine capacity."""
+
     __tablename__ = "tax_slabs"
 
     state_id: Mapped[int] = mapped_column(
@@ -170,9 +179,7 @@ class TaxSlab(Base, TimestampMixin, AuditableMixin):
     max_ex_showroom: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(12, 2), nullable=True
     )  # Null means no upper cap
-    tax_percent: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False
-    )  # e.g. 10.00%
+    tax_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)  # e.g. 10.00%
     cess_percent: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), default=Decimal("0.00"), nullable=False
     )  # e.g. 10% on tax

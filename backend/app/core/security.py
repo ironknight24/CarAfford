@@ -37,7 +37,7 @@ def create_access_token(
         expire = now + expires_delta
     else:
         expire = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     payload: Dict[str, Any] = {
         "sub": str(subject),
         "role": role,
@@ -62,7 +62,7 @@ def create_refresh_token(
         expire = now + expires_delta
     else:
         expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    
+
     payload: Dict[str, Any] = {
         "sub": str(subject),
         "role": role,

@@ -45,7 +45,7 @@ def round_inr(amount: Decimal) -> Decimal:
 
 class AffordabilityService:
     """Core domain orchestrator for Indian vehicle affordability intelligence.
-    
+
     Architectural Responsibilities:
     - Orchestrates User Financial Profile against the On-Road Price Engine and Finance Engine.
     - Pure Decimal arithmetic (zero floating-point precision error).
@@ -116,7 +116,9 @@ class AffordabilityService:
         )
         max_foir_ratio: Decimal = profile_cfg["max_foir_ratio"]
         max_total_emi = round_inr(request.monthly_take_home_income * max_foir_ratio)
-        available_car_emi = max(Decimal("0.00"), round_inr(max_total_emi - request.existing_monthly_emi))
+        available_car_emi = max(
+            Decimal("0.00"), round_inr(max_total_emi - request.existing_monthly_emi)
+        )
 
         # 3. Resolve Best Available Bank Financing Rate & Terms
         finance_repo = FinanceRepository(db)
@@ -155,7 +157,11 @@ class AffordabilityService:
 
         assumptions = AffordabilityFinancingAssumption(
             bank_id=best_product.bank_id if best_product else None,
-            bank_name=best_product.bank.name if (best_product and best_product.bank) else "Benchmark Retail Lenders",
+            bank_name=(
+                best_product.bank.name
+                if (best_product and best_product.bank)
+                else "Benchmark Retail Lenders"
+            ),
             loan_product_id=best_product.id if best_product else None,
             loan_product_name=best_product.name if best_product else "Standard Auto Loan",
             interest_rate=best_rate,
@@ -232,7 +238,9 @@ class AffordabilityService:
             ltv_ratio = max_ltv_percent / Decimal("100.0")
             if ltv_ratio < Decimal("1.0"):
                 # If down payment is 0, maximum loan cannot exceed LTV * On-Road => loan must be 0 if down payment is 0
-                ltv_supported_loan = round_inr((ltv_ratio / (Decimal("1.0") - ltv_ratio)) * request.available_down_payment)
+                ltv_supported_loan = round_inr(
+                    (ltv_ratio / (Decimal("1.0") - ltv_ratio)) * request.available_down_payment
+                )
                 if request.available_down_payment == Decimal("0.00"):
                     warnings.append(
                         f"Most lenders require a minimum {float(Decimal('100.0') - max_ltv_percent):.0f}% down payment. "
@@ -313,7 +321,9 @@ class AffordabilityService:
         veh_repo = VehicleRepository(db)
         variant = await veh_repo.get_variant_by_id(request.variant_id)
         if not variant:
-            raise ResourceNotFoundException(f"Vehicle variant with ID {request.variant_id} not found.")
+            raise ResourceNotFoundException(
+                f"Vehicle variant with ID {request.variant_id} not found."
+            )
 
         # 4. Authoritative Location-Specific On-Road Price Calculation
         pricing_req = OnRoadPriceCalculationRequest(
@@ -346,7 +356,11 @@ class AffordabilityService:
                 variant_id=variant.id,
                 variant_name=variant.name,
                 model_name=variant.model.name if variant.model else "",
-                manufacturer_name=variant.model.manufacturer.name if (variant.model and variant.model.manufacturer) else "",
+                manufacturer_name=(
+                    variant.model.manufacturer.name
+                    if (variant.model and variant.model.manufacturer)
+                    else ""
+                ),
                 fuel_type=variant.fuel_type or "PETROL",
                 transmission=variant.transmission or "MANUAL",
                 ex_showroom_price=ex_showroom_price,
@@ -391,7 +405,11 @@ class AffordabilityService:
                 variant_id=variant.id,
                 variant_name=variant.name,
                 model_name=variant.model.name if variant.model else "",
-                manufacturer_name=variant.model.manufacturer.name if (variant.model and variant.model.manufacturer) else "",
+                manufacturer_name=(
+                    variant.model.manufacturer.name
+                    if (variant.model and variant.model.manufacturer)
+                    else ""
+                ),
                 fuel_type=variant.fuel_type or "PETROL",
                 transmission=variant.transmission or "MANUAL",
                 ex_showroom_price=ex_showroom_price,
@@ -417,12 +435,20 @@ class AffordabilityService:
 
         # Check if offer is eligible
         if not selected_offer.estimated_eligibility:
-            reasons = "; ".join(selected_offer.eligibility_reasons) if selected_offer.eligibility_reasons else "Lender criteria not met"
+            reasons = (
+                "; ".join(selected_offer.eligibility_reasons)
+                if selected_offer.eligibility_reasons
+                else "Lender criteria not met"
+            )
             return VehicleAffordabilityResponse(
                 variant_id=variant.id,
                 variant_name=variant.name,
                 model_name=variant.model.name if variant.model else "",
-                manufacturer_name=variant.model.manufacturer.name if (variant.model and variant.model.manufacturer) else "",
+                manufacturer_name=(
+                    variant.model.manufacturer.name
+                    if (variant.model and variant.model.manufacturer)
+                    else ""
+                ),
                 fuel_type=variant.fuel_type or "PETROL",
                 transmission=variant.transmission or "MANUAL",
                 ex_showroom_price=ex_showroom_price,
@@ -452,7 +478,9 @@ class AffordabilityService:
                 f"while this vehicle requires a monthly EMI of ₹{estimated_emi:,.2f}."
             )
         elif estimated_emi <= available_car_emi:
-            headroom_ratio = emi_headroom / available_car_emi if available_car_emi > 0 else Decimal("0.00")
+            headroom_ratio = (
+                emi_headroom / available_car_emi if available_car_emi > 0 else Decimal("0.00")
+            )
             if headroom_ratio >= HEADROOM_COMFORTABLE_THRESHOLD:
                 status = AffordabilityStatus.COMFORTABLE
                 affordable = True
@@ -472,7 +500,9 @@ class AffordabilityService:
         else:
             # Check if fits within absolute Stretch limit (40% FOIR)
             stretch_max_total_emi = round_inr(request.monthly_take_home_income * Decimal("0.40"))
-            stretch_car_emi = max(Decimal("0.00"), round_inr(stretch_max_total_emi - request.existing_monthly_emi))
+            stretch_car_emi = max(
+                Decimal("0.00"), round_inr(stretch_max_total_emi - request.existing_monthly_emi)
+            )
 
             if estimated_emi <= stretch_car_emi:
                 status = AffordabilityStatus.STRETCH
@@ -495,7 +525,11 @@ class AffordabilityService:
             variant_id=variant.id,
             variant_name=variant.name,
             model_name=variant.model.name if variant.model else "",
-            manufacturer_name=variant.model.manufacturer.name if (variant.model and variant.model.manufacturer) else "",
+            manufacturer_name=(
+                variant.model.manufacturer.name
+                if (variant.model and variant.model.manufacturer)
+                else ""
+            ),
             fuel_type=variant.fuel_type or "PETROL",
             transmission=variant.transmission or "MANUAL",
             ex_showroom_price=ex_showroom_price,
@@ -539,9 +573,21 @@ class AffordabilityService:
             eval_res = await cls.evaluate_vehicle_affordability(db, veh_req)
             results.append(eval_res)
 
-        aff_count = sum(1 for r in results if r.affordability_status in (AffordabilityStatus.COMFORTABLE, AffordabilityStatus.AFFORDABLE))
-        stretch_count = sum(1 for r in results if r.affordability_status == AffordabilityStatus.STRETCH)
-        unaff_count = sum(1 for r in results if r.affordability_status in (AffordabilityStatus.NOT_AFFORDABLE, AffordabilityStatus.NO_FINANCING_OPTION))
+        aff_count = sum(
+            1
+            for r in results
+            if r.affordability_status
+            in (AffordabilityStatus.COMFORTABLE, AffordabilityStatus.AFFORDABLE)
+        )
+        stretch_count = sum(
+            1 for r in results if r.affordability_status == AffordabilityStatus.STRETCH
+        )
+        unaff_count = sum(
+            1
+            for r in results
+            if r.affordability_status
+            in (AffordabilityStatus.NOT_AFFORDABLE, AffordabilityStatus.NO_FINANCING_OPTION)
+        )
 
         return MultiVehicleAffordabilityResponse(
             results=results,

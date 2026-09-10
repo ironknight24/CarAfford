@@ -20,8 +20,12 @@ async def test_affordability_api_complete_flows(
     state = (await db_session.execute(select(State).where(State.code == "KA"))).scalars().first()
     assert state is not None
 
-    city = (await db_session.execute(select(City).where(City.state_id == state.id))).scalars().first()
-    variant = (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().first()
+    city = (
+        (await db_session.execute(select(City).where(City.state_id == state.id))).scalars().first()
+    )
+    variant = (
+        (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().first()
+    )
     assert variant is not None
 
     # 2. Test GET /api/v1/affordability/profiles
@@ -55,7 +59,10 @@ async def test_affordability_api_complete_flows(
     assert float(calc_data["available_car_emi"]) == 25000.0
     assert float(calc_data["available_down_payment"]) == 200000.0
     assert float(calc_data["maximum_affordable_loan"]) > 1000000.0
-    assert float(calc_data["maximum_affordable_on_road_price"]) == float(calc_data["maximum_affordable_loan"]) + 200000.0
+    assert (
+        float(calc_data["maximum_affordable_on_road_price"])
+        == float(calc_data["maximum_affordable_loan"]) + 200000.0
+    )
     assert calc_data["data_status"] == "DEMO"
     assert "disclaimer" in calc_data
     assert calc_data["limiting_factor"] in ["EMI_CAP", "LOAN_MAXIMUM"]
@@ -80,12 +87,19 @@ async def test_affordability_api_complete_flows(
     assert float(veh_data["on_road_price"]) > 0
     assert float(veh_data["down_payment"]) == 250000.0
     assert float(veh_data["estimated_emi"]) > 0
-    assert veh_data["affordability_status"] in ["COMFORTABLE", "AFFORDABLE", "STRETCH", "NOT_AFFORDABLE"]
+    assert veh_data["affordability_status"] in [
+        "COMFORTABLE",
+        "AFFORDABLE",
+        "STRETCH",
+        "NOT_AFFORDABLE",
+    ]
     assert "data_status" in veh_data
     assert veh_data["data_status"] == "DEMO"
 
     # 5. Test POST /api/v1/affordability/vehicles (batch evaluation)
-    variants_all = (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().all()
+    variants_all = (
+        (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().all()
+    )
     variant_ids = [v.id for v in variants_all[:3]]
     batch_payload = {
         "variant_ids": variant_ids,

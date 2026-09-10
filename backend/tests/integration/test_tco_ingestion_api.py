@@ -69,7 +69,9 @@ async def test_tco_location_specificity_and_economic_cost(
         db_session.add(ka_state)
         await db_session.flush()
 
-    blr_res = await db_session.execute(select(City).where(City.name == "Bengaluru", City.state_id == ka_state.id))
+    blr_res = await db_session.execute(
+        select(City).where(City.name == "Bengaluru", City.state_id == ka_state.id)
+    )
     blr_city = blr_res.scalars().first()
     if not blr_city:
         blr_city = City(name="Bengaluru", slug="bengaluru", state_id=ka_state.id, active=True)
@@ -84,7 +86,9 @@ async def test_tco_location_specificity_and_economic_cost(
         db_session.add(dl_state)
         await db_session.flush()
 
-    del_res = await db_session.execute(select(City).where(City.name == "Delhi", City.state_id == dl_state.id))
+    del_res = await db_session.execute(
+        select(City).where(City.name == "Delhi", City.state_id == dl_state.id)
+    )
     del_city = del_res.scalars().first()
     if not del_city:
         del_city = City(name="Delhi", slug="delhi", state_id=dl_state.id, active=True)
@@ -115,7 +119,9 @@ async def test_tco_location_specificity_and_economic_cost(
     # Verify 1-year economic cost is strictly positive and non-negative
     pb_1yr = blr_data["periods"]["1_year"]
     assert Decimal(str(pb_1yr["estimated_economic_cost"])) > Decimal("0.00")
-    assert Decimal(str(pb_1yr["estimated_economic_cost"])) < Decimal(str(pb_1yr["total_cash_outflow"]))
+    assert Decimal(str(pb_1yr["estimated_economic_cost"])) < Decimal(
+        str(pb_1yr["total_cash_outflow"])
+    )
 
     # Calculate TCO for Delhi (DL)
     res_dl = await async_client.post(
@@ -137,7 +143,9 @@ async def test_tco_location_specificity_and_economic_cost(
     assert dl_data["driving_profile"]["location_match_level"] == "CITY"
 
     # Bengaluru annual fuel cost should be higher than Delhi due to tax/fuel price difference
-    assert Decimal(str(blr_data["operating_costs"]["annual_fuel_cost"])) > Decimal(str(dl_data["operating_costs"]["annual_fuel_cost"]))
+    assert Decimal(str(blr_data["operating_costs"]["annual_fuel_cost"])) > Decimal(
+        str(dl_data["operating_costs"]["annual_fuel_cost"])
+    )
 
 
 @pytest.mark.asyncio
@@ -150,10 +158,12 @@ async def test_historical_fuel_prices_retention(
 
     # Check that Bengaluru petrol has both 2026 and 2025 records preserved
     res = await db_session.execute(
-        select(FuelPrice).where(
+        select(FuelPrice)
+        .where(
             FuelPrice.fuel_type == "PETROL",
             FuelPrice.city_name == "Bengaluru",
-        ).order_by(FuelPrice.observed_date.desc())
+        )
+        .order_by(FuelPrice.observed_date.desc())
     )
     records = list(res.scalars().all())
     assert len(records) >= 2

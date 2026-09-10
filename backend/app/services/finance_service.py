@@ -11,7 +11,7 @@ def round_inr(amount: Decimal) -> Decimal:
 
 class FinanceService:
     """Pure domain mathematical calculations for auto loans, EMIs, amortization, and LTV.
-    
+
     Guarantees:
     - Pure Decimal arithmetic (zero floating-point precision error).
     - Exact month-by-month reconciliation.
@@ -34,7 +34,9 @@ class FinanceService:
         if tenure_months <= 0:
             raise InvalidFinancialInputException("Tenure months must be greater than zero.")
         if tenure_months > 120:
-            raise InvalidFinancialInputException("Tenure months cannot exceed 120 months (10 years).")
+            raise InvalidFinancialInputException(
+                "Tenure months cannot exceed 120 months (10 years)."
+            )
 
         # 0% Interest promotional edge case
         if annual_interest_rate == 0:
@@ -51,7 +53,9 @@ class FinanceService:
         denominator = power_factor - Decimal("1.0")
 
         if denominator == 0:
-            raise InvalidFinancialInputException("Invalid loan parameters resulting in zero denominator.")
+            raise InvalidFinancialInputException(
+                "Invalid loan parameters resulting in zero denominator."
+            )
 
         emi = numerator / denominator
         return round_inr(emi)
@@ -153,9 +157,11 @@ class FinanceService:
         """Legacy helper returning full loan summary and optional amortization."""
         emi = cls.calculate_emi(principal, annual_interest_rate, tenure_months)
         schedule: Optional[List[AmortizationScheduleItem]] = None
-        
+
         if generate_amortization:
-            schedule = cls.calculate_amortization_schedule(principal, annual_interest_rate, tenure_months)
+            schedule = cls.calculate_amortization_schedule(
+                principal, annual_interest_rate, tenure_months
+            )
             total_interest = sum(item.interest_component for item in schedule)
             total_payable = sum(item.emi for item in schedule)
         else:
@@ -191,6 +197,6 @@ class FinanceService:
         elif cibil_score >= 700:
             return Decimal("9.25")  # Standard
         elif cibil_score >= 650:
-            return Decimal("10.50") # Sub-prime
+            return Decimal("10.50")  # Sub-prime
         else:
-            return Decimal("12.00") # High risk
+            return Decimal("12.00")  # High risk

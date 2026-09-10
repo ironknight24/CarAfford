@@ -62,7 +62,7 @@ def round_inr(amount: Decimal) -> Decimal:
 
 class TCOService:
     """Authoritative domain calculation engine for Vehicle Total Cost of Ownership (TCO).
-    
+
     Orchestrates:
     - OnRoadPriceCalculationService for location-specific vehicle acquisition cost & statutory taxes.
     - FinancingEngineService / FinanceService for loan interest, processing fees, and amortization.
@@ -117,7 +117,7 @@ class TCOService:
         custom_fuel_price: Optional[Decimal] = None,
     ) -> Tuple[Decimal, str, str, str, str]:
         """Resolves authoritative fuel or electricity price per unit with location matching and explicit fallback.
-        
+
         Returns:
             (price_per_unit, unit, source_name, verification_status, match_level)
             match_level: "USER_CUSTOM" | "CITY" | "STATE" | "NATIONAL_FALLBACK" | "BENCHMARK_ASSUMPTION"
@@ -143,10 +143,12 @@ class TCOService:
         # 1. EV Electricity Tariff query if EV
         if norm_fuel == "ELECTRIC" and state_id is not None:
             tariff_res = await db.execute(
-                select(ElectricityTariff).where(
+                select(ElectricityTariff)
+                .where(
                     ElectricityTariff.state_id == state_id,
                     ElectricityTariff.is_active == True,
-                ).order_by(ElectricityTariff.effective_from.desc())
+                )
+                .order_by(ElectricityTariff.effective_from.desc())
             )
             tariff = tariff_res.scalars().first()
             if tariff:
@@ -164,11 +166,13 @@ class TCOService:
         # 2. Fuel price by City
         if city_id is not None:
             city_res = await db.execute(
-                select(FuelPrice).where(
+                select(FuelPrice)
+                .where(
                     FuelPrice.fuel_type == norm_fuel,
                     FuelPrice.city_id == city_id,
                     FuelPrice.is_active == True,
-                ).order_by(FuelPrice.observed_date.desc())
+                )
+                .order_by(FuelPrice.observed_date.desc())
             )
             fp_city = city_res.scalars().first()
             if fp_city:
@@ -186,11 +190,13 @@ class TCOService:
         # 3. Fuel price by State
         if state_id is not None:
             state_res = await db.execute(
-                select(FuelPrice).where(
+                select(FuelPrice)
+                .where(
                     FuelPrice.fuel_type == norm_fuel,
                     FuelPrice.state_id == state_id,
                     FuelPrice.is_active == True,
-                ).order_by(FuelPrice.observed_date.desc())
+                )
+                .order_by(FuelPrice.observed_date.desc())
             )
             fp_state = state_res.scalars().first()
             if fp_state:
@@ -205,11 +211,13 @@ class TCOService:
 
         # 4. National Database Active Price
         nat_res = await db.execute(
-            select(FuelPrice).where(
+            select(FuelPrice)
+            .where(
                 FuelPrice.fuel_type == norm_fuel,
                 FuelPrice.state_id == None,
                 FuelPrice.is_active == True,
-            ).order_by(FuelPrice.observed_date.desc())
+            )
+            .order_by(FuelPrice.observed_date.desc())
         )
         fp_nat = nat_res.scalars().first()
         if fp_nat:
@@ -246,11 +254,13 @@ class TCOService:
         # Try exact powertrain + segment
         if segment:
             res = await db.execute(
-                select(MaintenanceCostBenchmark).where(
+                select(MaintenanceCostBenchmark)
+                .where(
                     MaintenanceCostBenchmark.powertrain == norm_fuel,
                     MaintenanceCostBenchmark.segment == segment.upper(),
                     MaintenanceCostBenchmark.is_active == True,
-                ).order_by(MaintenanceCostBenchmark.effective_from.desc())
+                )
+                .order_by(MaintenanceCostBenchmark.effective_from.desc())
             )
             m = res.scalars().first()
             if m:
@@ -263,11 +273,13 @@ class TCOService:
 
         # Try powertrain generic
         res = await db.execute(
-            select(MaintenanceCostBenchmark).where(
+            select(MaintenanceCostBenchmark)
+            .where(
                 MaintenanceCostBenchmark.powertrain == norm_fuel,
                 MaintenanceCostBenchmark.segment == None,
                 MaintenanceCostBenchmark.is_active == True,
-            ).order_by(MaintenanceCostBenchmark.effective_from.desc())
+            )
+            .order_by(MaintenanceCostBenchmark.effective_from.desc())
         )
         m_gen = res.scalars().first()
         if m_gen:
@@ -296,9 +308,9 @@ class TCOService:
     ) -> Tuple[Decimal, Decimal, Decimal, Decimal, str, str]:
         """Resolves insurance renewal multipliers for Years 2 to 5."""
         res = await db.execute(
-            select(InsuranceRenewalBenchmark).where(
-                InsuranceRenewalBenchmark.is_active == True
-            ).order_by(InsuranceRenewalBenchmark.effective_from.desc())
+            select(InsuranceRenewalBenchmark)
+            .where(InsuranceRenewalBenchmark.is_active == True)
+            .order_by(InsuranceRenewalBenchmark.effective_from.desc())
         )
         ins = res.scalars().first()
         if ins:
@@ -329,9 +341,9 @@ class TCOService:
     ) -> Tuple[Decimal, Decimal, Decimal, Decimal, Decimal, str, str]:
         """Resolves cumulative depreciation schedules for 1 to 5 years."""
         res = await db.execute(
-            select(DepreciationBenchmark).where(
-                DepreciationBenchmark.is_active == True
-            ).order_by(DepreciationBenchmark.effective_from.desc())
+            select(DepreciationBenchmark)
+            .where(DepreciationBenchmark.is_active == True)
+            .order_by(DepreciationBenchmark.effective_from.desc())
         )
         dep = res.scalars().first()
         if dep:
@@ -431,7 +443,7 @@ class TCOService:
         unit: Optional[str] = None,
     ) -> Tuple[Decimal, Decimal, str, str]:
         """Calculates annual fuel or electricity expenditure in INR.
-        
+
         Returns:
             (annual_fuel_cost, price_per_unit, fuel_unit, efficiency_unit)
         """
@@ -496,7 +508,7 @@ class TCOService:
         y5_factor: Decimal = Decimal("0.70"),
     ) -> Decimal:
         """Calculates renewal premium for a given ownership year (Year 2 to 5).
-        
+
         Year 1 is covered in on-road price.
         """
         if year_index == 2:
@@ -710,7 +722,9 @@ class TCOService:
             vehicle_repo = VehicleRepository(db)
             variant = await vehicle_repo.get_variant_by_id(request.variant_id)
             if not variant:
-                raise ResourceNotFoundException(f"Vehicle variant with ID {request.variant_id} not found.")
+                raise ResourceNotFoundException(
+                    f"Vehicle variant with ID {request.variant_id} not found."
+                )
 
             # Authoritative On-Road Price from OnRoadPriceCalculationService
             pricing_req = OnRoadPriceCalculationRequest(
@@ -723,7 +737,9 @@ class TCOService:
                 is_bh_series=False,
                 is_financed=request.is_financed,
             )
-            pricing_res = await OnRoadPriceCalculationService.calculate_on_road_price(db, pricing_req)
+            pricing_res = await OnRoadPriceCalculationService.calculate_on_road_price(
+                db, pricing_req
+            )
             total_on_road_price = pricing_res.totals.on_road_price
             ex_showroom_price = pricing_res.totals.ex_showroom_price
             first_year_insurance = pricing_res.totals.total_insurance
@@ -736,7 +752,11 @@ class TCOService:
                 efficiency = request.mileage_kmpl
                 eff_source = "USER_OVERRIDE"
             elif is_ev:
-                if variant.range_km and variant.battery_capacity_kwh and variant.battery_capacity_kwh > 0:
+                if (
+                    variant.range_km
+                    and variant.battery_capacity_kwh
+                    and variant.battery_capacity_kwh > 0
+                ):
                     efficiency = round_inr(variant.range_km / variant.battery_capacity_kwh)
                     eff_source = "OEM_CLAIMED_RANGE"
                 else:
@@ -750,7 +770,11 @@ class TCOService:
                 "variant_id": variant.id,
                 "variant_name": variant.name,
                 "model_name": variant.model.name if variant.model else None,
-                "manufacturer_name": variant.model.manufacturer.name if variant.model and variant.model.manufacturer else None,
+                "manufacturer_name": (
+                    variant.model.manufacturer.name
+                    if variant.model and variant.model.manufacturer
+                    else None
+                ),
                 "fuel_type": variant.fuel_type,
                 "transmission": variant.transmission,
                 "seating_capacity": variant.seating_capacity,
@@ -799,20 +823,32 @@ class TCOService:
                     product_name = best_offer.product_name
                     bank_id = best_offer.bank_id
                 else:
-                    interest_rate = FinanceService.resolve_interest_rate_by_cibil(request.credit_score or 750)
-                    monthly_emi = FinanceService.calculate_emi(loan_principal, interest_rate, tenure_months)
+                    interest_rate = FinanceService.resolve_interest_rate_by_cibil(
+                        request.credit_score or 750
+                    )
+                    monthly_emi = FinanceService.calculate_emi(
+                        loan_principal, interest_rate, tenure_months
+                    )
                     total_repayment = round_inr(monthly_emi * Decimal(str(tenure_months)))
                     total_interest = round_inr(total_repayment - loan_principal)
-                    processing_fees = round_inr(min(Decimal("10000.00"), loan_principal * Decimal("0.005")))
+                    processing_fees = round_inr(
+                        min(Decimal("10000.00"), loan_principal * Decimal("0.005"))
+                    )
                     bank_name = "Retail Auto Finance Benchmark"
                     product_name = "Prime Auto Loan"
                     bank_id = None
             except Exception:
-                interest_rate = FinanceService.resolve_interest_rate_by_cibil(request.credit_score or 750)
-                monthly_emi = FinanceService.calculate_emi(loan_principal, interest_rate, tenure_months)
+                interest_rate = FinanceService.resolve_interest_rate_by_cibil(
+                    request.credit_score or 750
+                )
+                monthly_emi = FinanceService.calculate_emi(
+                    loan_principal, interest_rate, tenure_months
+                )
                 total_repayment = round_inr(monthly_emi * Decimal(str(tenure_months)))
                 total_interest = round_inr(total_repayment - loan_principal)
-                processing_fees = round_inr(min(Decimal("10000.00"), loan_principal * Decimal("0.005")))
+                processing_fees = round_inr(
+                    min(Decimal("10000.00"), loan_principal * Decimal("0.005"))
+                )
                 bank_name = "Retail Auto Finance Benchmark"
                 product_name = "Prime Auto Loan"
                 bank_id = None
@@ -1022,8 +1058,12 @@ class TCOService:
                     one_year_tco=one_yr.total_cash_outflow if one_yr else Decimal("0.00"),
                     three_year_tco=three_yr.total_cash_outflow if three_yr else Decimal("0.00"),
                     five_year_tco=five_yr.total_cash_outflow if five_yr else Decimal("0.00"),
-                    five_year_monthly_average=five_yr.average_monthly_cost if five_yr else Decimal("0.00"),
-                    five_year_economic_cost=five_yr.estimated_economic_cost if five_yr else Decimal("0.00"),
+                    five_year_monthly_average=(
+                        five_yr.average_monthly_cost if five_yr else Decimal("0.00")
+                    ),
+                    five_year_economic_cost=(
+                        five_yr.estimated_economic_cost if five_yr else Decimal("0.00")
+                    ),
                 )
                 compared_items.append(item)
             except Exception:

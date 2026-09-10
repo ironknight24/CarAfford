@@ -60,7 +60,9 @@ async def test_on_road_pricing_api_flows(db_session: AsyncSession, async_client:
     assert data["location"]["state_id"] == ka_state["id"]
     assert data["location"]["city_id"] == blr_city["id"]
     assert data["location"]["rto_id"] == ka01_rto["id"]
-    assert Decimal(str(data["totals"]["on_road_price"])) > Decimal(str(data["totals"]["ex_showroom_price"]))
+    assert Decimal(str(data["totals"]["on_road_price"])) > Decimal(
+        str(data["totals"]["ex_showroom_price"])
+    )
     assert len(data["breakdown"]) >= 4
     assert data["data_quality"]["data_status"] == "DEMO"
 
@@ -85,7 +87,9 @@ async def test_on_road_pricing_api_flows(db_session: AsyncSession, async_client:
     assert legacy_resp.status_code == 200
     legacy_data = legacy_resp.json()["data"]
     assert legacy_data["variant_id"] == variant_id
-    assert Decimal(str(legacy_data["on_road_price"])) == Decimal(str(data["totals"]["on_road_price"]))
+    assert Decimal(str(legacy_data["on_road_price"])) == Decimal(
+        str(data["totals"]["on_road_price"])
+    )
 
     # 6. Test GET /api/v1/pricing/history/{variant_id}
     hist_resp = await async_client.get(f"/api/v1/pricing/history/{variant_id}")

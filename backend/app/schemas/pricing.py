@@ -5,17 +5,22 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.common import AuditSchemaMixin
 from app.schemas.tax_rule import LocationResolutionContext, VehicleResolutionContext
 
-
 # =============================================================================
 # VEHICLE PRICE SCHEMAS
 # =============================================================================
 
+
 class VehiclePriceCreate(BaseModel):
     variant_id: int
     ex_showroom_price: Decimal = Field(..., gt=0, description="Ex-showroom price in INR")
-    price_type: str = Field(default="EX_SHOWROOM", description="Price type (EX_SHOWROOM, INTRODUCTORY, PROMOTIONAL, OTHER)")
+    price_type: str = Field(
+        default="EX_SHOWROOM",
+        description="Price type (EX_SHOWROOM, INTRODUCTORY, PROMOTIONAL, OTHER)",
+    )
     effective_from: datetime = Field(..., description="Timestamp from which price is effective")
-    effective_to: Optional[datetime] = Field(default=None, description="Timestamp until price is effective (NULL for active)")
+    effective_to: Optional[datetime] = Field(
+        default=None, description="Timestamp until price is effective (NULL for active)"
+    )
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
@@ -64,20 +69,31 @@ class PriceHistoryRead(BaseModel):
 # ON-ROAD PRICING CALCULATION SCHEMAS
 # =============================================================================
 
+
 class OnRoadPriceCalculationRequest(BaseModel):
     variant_id: int = Field(..., description="Vehicle Variant ID")
-    country_id: Optional[int] = Field(None, description="Country ID (defaults to India / resolved via state)")
+    country_id: Optional[int] = Field(
+        None, description="Country ID (defaults to India / resolved via state)"
+    )
     state_id: int = Field(..., description="Target State/UT ID")
     city_id: Optional[int] = Field(None, description="Optional target City ID")
     rto_id: Optional[int] = Field(None, description="Optional target RTO Office ID")
-    calculation_date: Optional[datetime] = Field(None, description="Target date for historical/current calculation")
+    calculation_date: Optional[datetime] = Field(
+        None, description="Target date for historical/current calculation"
+    )
     insurance_option: str = Field(
         default="DEFAULT_ESTIMATE",
         description="Insurance calculation method: DEFAULT_ESTIMATE, USER_PROVIDED, ZERO_DEP, THIRD_PARTY_ONLY",
     )
-    insurance_amount: Optional[Decimal] = Field(None, ge=0, description="User-supplied insurance quote in INR")
-    is_bh_series: bool = Field(default=False, description="Whether to calculate Bharat (BH) Series road tax")
-    is_financed: bool = Field(default=True, description="Whether vehicle is hypothecated under bank finance")
+    insurance_amount: Optional[Decimal] = Field(
+        None, ge=0, description="User-supplied insurance quote in INR"
+    )
+    is_bh_series: bool = Field(
+        default=False, description="Whether to calculate Bharat (BH) Series road tax"
+    )
+    is_financed: bool = Field(
+        default=True, description="Whether vehicle is hypothecated under bank finance"
+    )
 
 
 class PriceBreakdownItem(BaseModel):
@@ -91,16 +107,23 @@ class PriceBreakdownItem(BaseModel):
         ...,
         description="BASE_PRICE, FIXED, PERCENTAGE, BRACKETED, FORMULA, ESTIMATE, USER_OVERRIDE",
     )
-    base_amount: Optional[Decimal] = Field(None, description="Base amount in INR on which percentage/bracket was computed")
+    base_amount: Optional[Decimal] = Field(
+        None, description="Base amount in INR on which percentage/bracket was computed"
+    )
     rate: Optional[Decimal] = Field(None, description="Applied percentage or multiplier rate")
     fixed_amount: Optional[Decimal] = Field(None, description="Fixed statutory charge in INR")
     calculated_amount: Decimal = Field(..., description="Final computed line item amount in INR")
-    source: Optional[str] = Field(None, description="Authoritative data source or gazette authority")
+    source: Optional[str] = Field(
+        None, description="Authoritative data source or gazette authority"
+    )
     source_url: Optional[str] = Field(None, description="Public verification URL")
     effective_from: Optional[datetime] = Field(None, description="Rule effective start date")
     effective_to: Optional[datetime] = Field(None, description="Rule effective end date")
     explanation: str = Field(..., description="Transparent textual explanation of derivation")
-    is_estimated: bool = Field(default=False, description="True if value is an algorithmic estimate rather than exact statutory charge")
+    is_estimated: bool = Field(
+        default=False,
+        description="True if value is an algorithmic estimate rather than exact statutory charge",
+    )
     status: str = Field(
         default="APPLIED",
         description="APPLIED, ZERO_CHARGE, NOT_APPLICABLE, USER_OVERRIDDEN",
@@ -121,7 +144,9 @@ class DataQualityInfo(BaseModel):
     has_demo_rules: bool = True
     data_status: str = Field(default="DEMO", description="'DEMO' or 'AUTHORITATIVE'")
     sources: List[str] = []
-    disclaimer: str = "Estimated vehicle on-road pricing computed using demonstration statutory tax & registration rules. Actual dealer invoices and RTO receipts may vary."
+    disclaimer: str = (
+        "Estimated vehicle on-road pricing computed using demonstration statutory tax & registration rules. Actual dealer invoices and RTO receipts may vary."
+    )
 
 
 class OnRoadPriceResponse(BaseModel):
@@ -139,6 +164,7 @@ class OnRoadPriceResponse(BaseModel):
 # =============================================================================
 # BACKWARD-COMPATIBILITY ALIASES
 # =============================================================================
+
 
 class OnRoadPriceRequest(BaseModel):
     variant_id: int

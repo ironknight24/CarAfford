@@ -37,7 +37,9 @@ async def get_countries(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
-    search: Optional[str] = Query(default=None, description="Search by country name, ISO, or ISO3 code"),
+    search: Optional[str] = Query(
+        default=None, description="Search by country name, ISO, or ISO3 code"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     repo = LocationRepository(db)
@@ -101,7 +103,9 @@ async def get_states(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=50, ge=1, le=100, description="Items per page"),
     country_id: Optional[int] = Query(default=None, description="Filter by country ID"),
-    region_type: Optional[str] = Query(default=None, description="Filter by region type (STATE, UNION_TERRITORY)"),
+    region_type: Optional[str] = Query(
+        default=None, description="Filter by region type (STATE, UNION_TERRITORY)"
+    ),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
     search: Optional[str] = Query(default=None, description="Search by state name or code"),
     db: AsyncSession = Depends(get_db),
@@ -216,7 +220,9 @@ async def get_cities(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=50, ge=1, le=100, description="Items per page"),
     state_id: Optional[int] = Query(default=None, description="Filter by state ID"),
-    tier: Optional[str] = Query(default=None, description="Filter by city tier (e.g., Tier 1, Tier 2)"),
+    tier: Optional[str] = Query(
+        default=None, description="Filter by city tier (e.g., Tier 1, Tier 2)"
+    ),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
     search: Optional[str] = Query(default=None, description="Search by city name or slug"),
     db: AsyncSession = Depends(get_db),
@@ -308,7 +314,9 @@ async def get_rtos(
     state_id: Optional[int] = Query(default=None, description="Filter by state ID"),
     city_id: Optional[int] = Query(default=None, description="Filter by city ID"),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
-    search: Optional[str] = Query(default=None, description="Search by RTO code, name, or jurisdiction"),
+    search: Optional[str] = Query(
+        default=None, description="Search by RTO code, name, or jurisdiction"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     repo = LocationRepository(db)
@@ -360,7 +368,11 @@ async def get_rto_by_id(
     description="Hierarchical case-insensitive search matching Countries, States, Cities, and RTOs (codes, names, jurisdictions).",
 )
 async def search_locations(
-    q: Optional[str] = Query(default=None, alias="q", description="Search query string (e.g. Bengaluru, KA, Delhi, MH-01)"),
+    q: Optional[str] = Query(
+        default=None,
+        alias="q",
+        description="Search query string (e.g. Bengaluru, KA, Delhi, MH-01)",
+    ),
     search: Optional[str] = Query(default=None, description="Alternative search parameter"),
     country_id: Optional[int] = Query(default=None, description="Optional filter by Country ID"),
     state_id: Optional[int] = Query(default=None, description="Optional filter by State ID"),

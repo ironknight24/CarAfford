@@ -75,4 +75,3 @@ async def async_client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, 
         yield client
 
     app.dependency_overrides.clear()
-

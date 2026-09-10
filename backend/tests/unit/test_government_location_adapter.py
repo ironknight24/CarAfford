@@ -62,14 +62,16 @@ class TestGovernmentLocationAdapterComponents:
         normalizer = GovernmentLocationNormalizer()
 
         # Bangalore -> Bengaluru
-        res_blr = normalizer.normalize({
-            "state_code": "ka",
-            "state_name": "Karnataka",
-            "city_name": "Bangalore",
-            "city_tier": "1",
-            "rto_code": "ka01",
-            "rto_name": "Koramangala",
-        })
+        res_blr = normalizer.normalize(
+            {
+                "state_code": "ka",
+                "state_name": "Karnataka",
+                "city_name": "Bangalore",
+                "city_tier": "1",
+                "rto_code": "ka01",
+                "rto_name": "Koramangala",
+            }
+        )
         assert res_blr["city_name"] == "Bengaluru"
         assert res_blr["city_slug"] == "bengaluru"
         assert res_blr["tier"] == "Tier 1"
@@ -77,20 +79,24 @@ class TestGovernmentLocationAdapterComponents:
         assert res_blr["rto_code"] == "KA-01"
 
         # Bombay -> Mumbai
-        res_mum = normalizer.normalize({
-            "state_code": "MH",
-            "city_name": "Bombay",
-            "rto_code": "MH-1",
-        })
+        res_mum = normalizer.normalize(
+            {
+                "state_code": "MH",
+                "city_name": "Bombay",
+                "rto_code": "MH-1",
+            }
+        )
         assert res_mum["city_name"] == "Mumbai"
         assert res_mum["rto_code"] == "MH-01"
 
         # Gurgaon -> Gurugram
-        res_ggn = normalizer.normalize({
-            "state_code": "HR",
-            "city_name": "Gurgaon",
-            "rto_code": "hr26",
-        })
+        res_ggn = normalizer.normalize(
+            {
+                "state_code": "HR",
+                "city_name": "Gurgaon",
+                "rto_code": "hr26",
+            }
+        )
         assert res_ggn["city_name"] == "Gurugram"
         assert res_ggn["rto_code"] == "HR-26"
 
@@ -99,14 +105,16 @@ class TestGovernmentLocationAdapterComponents:
         validator = LocationDataValidator()
 
         # Valid payload
-        valid_res, valid_errs = validator.validate({
-            "state_code": "KA",
-            "state_name": "Karnataka",
-            "city_name": "Bengaluru",
-            "tier": "Tier 1",
-            "rto_code": "KA-01",
-            "rto_name": "Bangalore Central",
-        })
+        valid_res, valid_errs = validator.validate(
+            {
+                "state_code": "KA",
+                "state_name": "Karnataka",
+                "city_name": "Bengaluru",
+                "tier": "Tier 1",
+                "rto_code": "KA-01",
+                "rto_name": "Bangalore Central",
+            }
+        )
         assert valid_res is True
         assert len(valid_errs) == 0
 
@@ -121,35 +129,47 @@ class TestGovernmentLocationAdapterComponents:
         assert any("Unrecognized" in e for e in errs_unk)
 
         # Hierarchical mismatch: RTO code DL-01 inside State KA
-        inv_hier, errs_hier = validator.validate({
-            "state_code": "KA",
-            "rto_code": "DL-01",
-        })
+        inv_hier, errs_hier = validator.validate(
+            {
+                "state_code": "KA",
+                "rto_code": "DL-01",
+            }
+        )
         assert inv_hier is False
         assert any("Hierarchical mismatch" in e for e in errs_hier)
 
     def test_validator_status_classification(self):
         """classify_status correctly distinguishes AUTHORITATIVE_MATCH, FORMAT_VALID, and UNVERIFIED."""
-        assert LocationDataValidator.classify_status("KA-01", is_authoritative=True) == "AUTHORITATIVE_MATCH"
-        assert LocationDataValidator.classify_status("KA-01", is_authoritative=False) == "FORMAT_VALID"
-        assert LocationDataValidator.classify_status("INVALID-CODE", is_authoritative=True) == "UNVERIFIED"
+        assert (
+            LocationDataValidator.classify_status("KA-01", is_authoritative=True)
+            == "AUTHORITATIVE_MATCH"
+        )
+        assert (
+            LocationDataValidator.classify_status("KA-01", is_authoritative=False) == "FORMAT_VALID"
+        )
+        assert (
+            LocationDataValidator.classify_status("INVALID-CODE", is_authoritative=True)
+            == "UNVERIFIED"
+        )
 
     def test_mapper_hierarchical_structure(self):
         """Mapper converts normalized dictionaries into hierarchical Country->State->City->RTO structure."""
         mapper = GovernmentLocationMapper()
-        mapped = mapper.map_to_canonical({
-            "source_record_id": "MORTH-KA-01",
-            "state_name": "Karnataka",
-            "state_code": "KA",
-            "region_type": "STATE",
-            "city_name": "Bengaluru",
-            "city_slug": "bengaluru",
-            "tier": "Tier 1",
-            "rto_code": "KA-01",
-            "rto_name": "Bangalore Central",
-            "jurisdiction": "Koramangala",
-            "effective_date": None,
-        })
+        mapped = mapper.map_to_canonical(
+            {
+                "source_record_id": "MORTH-KA-01",
+                "state_name": "Karnataka",
+                "state_code": "KA",
+                "region_type": "STATE",
+                "city_name": "Bengaluru",
+                "city_slug": "bengaluru",
+                "tier": "Tier 1",
+                "rto_code": "KA-01",
+                "rto_name": "Bangalore Central",
+                "jurisdiction": "Koramangala",
+                "effective_date": None,
+            }
+        )
         assert mapped["country"]["name"] == "India"
         assert mapped["state"]["code"] == "KA"
         assert mapped["city"]["slug"] == "bengaluru"
@@ -162,7 +182,9 @@ class TestGovernmentLocationPipelineAndDeduplication:
     async def test_government_location_end_to_end_ingestion(self, db_session: AsyncSession):
         """Government location adapter executes full Fetch -> Stage -> Validate -> Map -> Canonical workflow."""
         adapter = GovernmentLocationDataSourceAdapter()
-        run = await IngestionService.run_adapter(db_session, adapter, notes="Unit test gov location run")
+        run = await IngestionService.run_adapter(
+            db_session, adapter, notes="Unit test gov location run"
+        )
 
         assert run.id is not None
         assert run.status == IngestionRunStatus.COMPLETED.value
@@ -179,26 +201,32 @@ class TestGovernmentLocationPipelineAndDeduplication:
 
         # Verify raw records staged with SHA-256 payload hash
         raw_recs = (
-            await db_session.execute(
-                select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run.id)
+            (
+                await db_session.execute(
+                    select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run.id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(raw_recs) == run.records_seen
         assert all(len(r.payload_hash) == 64 for r in raw_recs)
         assert all(r.validation_status == "VALID" for r in raw_recs)
 
         # Verify canonical entities created
         ka_rto = (
-            await db_session.execute(
-                select(RtoOffice).where(RtoOffice.code == "KA-01")
-            )
-        ).scalars().first()
+            (await db_session.execute(select(RtoOffice).where(RtoOffice.code == "KA-01")))
+            .scalars()
+            .first()
+        )
         assert ka_rto is not None
         assert ka_rto.source_id == ds.id
         assert ka_rto.source_record_id == "MORTH-KA-01-KORAMANGALA"
 
     @pytest.mark.asyncio
-    async def test_idempotent_repeat_ingestion_produces_no_duplicates(self, db_session: AsyncSession):
+    async def test_idempotent_repeat_ingestion_produces_no_duplicates(
+        self, db_session: AsyncSession
+    ):
         """Repeating the exact same government ingestion run is idempotent and creates 0 duplicate entities."""
         adapter = GovernmentLocationDataSourceAdapter()
 
@@ -216,30 +244,34 @@ class TestGovernmentLocationPipelineAndDeduplication:
         assert run2.records_created == 0
 
     @pytest.mark.asyncio
-    async def test_authoritative_provenance_attaches_to_seeded_entities(self, db_session: AsyncSession):
+    async def test_authoritative_provenance_attaches_to_seeded_entities(
+        self, db_session: AsyncSession
+    ):
         """When authoritative government data matches pre-existing DEMO entities, provenance updates without destroying records."""
         await seed_database(db_session)
 
         # Check initial state of KA-01 before government ingestion
         ka_rto_before = (
-            await db_session.execute(
-                select(RtoOffice).where(RtoOffice.code == "KA-01")
-            )
-        ).scalars().first()
+            (await db_session.execute(select(RtoOffice).where(RtoOffice.code == "KA-01")))
+            .scalars()
+            .first()
+        )
         assert ka_rto_before is not None
         initial_id = ka_rto_before.id
 
         # Ingest authoritative MoRTH data
         adapter = GovernmentLocationDataSourceAdapter()
-        run = await IngestionService.run_adapter(db_session, adapter, notes="Authoritative update run")
+        run = await IngestionService.run_adapter(
+            db_session, adapter, notes="Authoritative update run"
+        )
         assert run.status == IngestionRunStatus.COMPLETED.value
 
         # Check KA-01 after government ingestion
         ka_rto_after = (
-            await db_session.execute(
-                select(RtoOffice).where(RtoOffice.code == "KA-01")
-            )
-        ).scalars().first()
+            (await db_session.execute(select(RtoOffice).where(RtoOffice.code == "KA-01")))
+            .scalars()
+            .first()
+        )
         assert ka_rto_after is not None
         assert ka_rto_after.id == initial_id  # Canonical ID preserved
         assert ka_rto_after.source_id == run.data_source_id  # Provenance updated to MoRTH

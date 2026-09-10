@@ -34,7 +34,9 @@ class FinanceDataValidator(DataValidator):
                 if min_l < 0 or max_l < 0:
                     errors.append("Loan amounts must be non-negative")
                 if min_l > max_l:
-                    errors.append(f"min_loan_amount ({min_l}) cannot exceed max_loan_amount ({max_l})")
+                    errors.append(
+                        f"min_loan_amount ({min_l}) cannot exceed max_loan_amount ({max_l})"
+                    )
             except Exception:
                 errors.append("Invalid decimal for loan amounts")
 
@@ -45,7 +47,9 @@ class FinanceDataValidator(DataValidator):
             if min_tenure <= 0 or max_tenure <= 0:
                 errors.append("Tenure months must be positive")
             if min_tenure > max_tenure:
-                errors.append(f"min_tenure_months ({min_tenure}) cannot exceed max_tenure_months ({max_tenure})")
+                errors.append(
+                    f"min_tenure_months ({min_tenure}) cannot exceed max_tenure_months ({max_tenure})"
+                )
 
         # Rates validation (either standalone or in rates list)
         rate = item.get("annual_interest_rate")
@@ -53,7 +57,9 @@ class FinanceDataValidator(DataValidator):
             try:
                 dec_rate = Decimal(str(rate))
                 if dec_rate < Decimal("0.0") or dec_rate > Decimal("30.0"):
-                    errors.append(f"Interest rate {dec_rate}% is outside realistic auto loan bounds (0% to 30%)")
+                    errors.append(
+                        f"Interest rate {dec_rate}% is outside realistic auto loan bounds (0% to 30%)"
+                    )
             except Exception:
                 errors.append(f"Invalid decimal format for annual_interest_rate: {rate}")
 
@@ -66,7 +72,9 @@ class FinanceDataValidator(DataValidator):
             if not isinstance(max_cibil, int) or max_cibil < 300 or max_cibil > 900:
                 errors.append(f"max_cibil_score '{max_cibil}' must be between 300 and 900")
         if min_cibil is not None and max_cibil is not None and min_cibil > max_cibil:
-            errors.append(f"min_cibil_score ({min_cibil}) cannot exceed max_cibil_score ({max_cibil})")
+            errors.append(
+                f"min_cibil_score ({min_cibil}) cannot exceed max_cibil_score ({max_cibil})"
+            )
 
         # Validate rates array if present
         rates = item.get("rates")
@@ -77,7 +85,9 @@ class FinanceDataValidator(DataValidator):
                     try:
                         dec = Decimal(str(r_rate))
                         if dec < Decimal("0.0") or dec > Decimal("30.0"):
-                            errors.append(f"Rate at index {i} ({dec}%) is outside valid bounds (0% to 30%)")
+                            errors.append(
+                                f"Rate at index {i} ({dec}%) is outside valid bounds (0% to 30%)"
+                            )
                     except Exception:
                         errors.append(f"Invalid rate decimal at index {i}: {r_rate}")
                 r_min_c = r.get("min_credit_score")
@@ -104,17 +114,29 @@ class FinanceDataValidator(DataValidator):
                     errors.append(f"Fee at index {k} missing fee_name")
                 calc_method = f.get("calculation_method", "PERCENTAGE")
                 if calc_method not in ("FIXED", "PERCENTAGE", "CAPPED_PERCENTAGE", "WAIVED"):
-                    errors.append(f"Fee at index {k} has invalid calculation_method '{calc_method}'")
+                    errors.append(
+                        f"Fee at index {k} has invalid calculation_method '{calc_method}'"
+                    )
 
         # Validate effective dates
         eff_from = item.get("effective_from")
         eff_to = item.get("effective_to")
         if eff_from and eff_to:
             try:
-                dt_from = eff_from if isinstance(eff_from, datetime) else datetime.fromisoformat(str(eff_from).replace("Z", "+00:00"))
-                dt_to = eff_to if isinstance(eff_to, datetime) else datetime.fromisoformat(str(eff_to).replace("Z", "+00:00"))
+                dt_from = (
+                    eff_from
+                    if isinstance(eff_from, datetime)
+                    else datetime.fromisoformat(str(eff_from).replace("Z", "+00:00"))
+                )
+                dt_to = (
+                    eff_to
+                    if isinstance(eff_to, datetime)
+                    else datetime.fromisoformat(str(eff_to).replace("Z", "+00:00"))
+                )
                 if dt_to < dt_from:
-                    errors.append(f"effective_to ({dt_to}) cannot precede effective_from ({dt_from})")
+                    errors.append(
+                        f"effective_to ({dt_to}) cannot precede effective_from ({dt_from})"
+                    )
             except Exception:
                 pass
 

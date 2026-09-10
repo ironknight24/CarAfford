@@ -62,7 +62,13 @@ async def handle_run(args):
         adapter = DelhiTaxRuleAdapter()
     elif args.source in {"tamilnadu_tax_rules", "tamilnadu_taxes", "tn_tax_rules", "tn_tax"}:
         adapter = TamilNaduTaxRuleAdapter()
-    elif args.source in {"telangana_tax_rules", "telangana_taxes", "ts_tax_rules", "ts_tax", "tg_tax"}:
+    elif args.source in {
+        "telangana_tax_rules",
+        "telangana_taxes",
+        "ts_tax_rules",
+        "ts_tax",
+        "tg_tax",
+    }:
         adapter = TelanganaTaxRuleAdapter()
     elif args.source in {"sbi_car_loans", "sbi"}:
         adapter = SbiCarLoanAdapter()
@@ -91,7 +97,9 @@ async def handle_run(args):
         run = await IngestionService.run_adapter(session, adapter, notes=args.notes)
         print(f"✅ Ingestion Run Completed!")
         print(f"   Run ID: {run.id} | Dataset: {run.dataset_name} | Status: {run.status}")
-        print(f"   Records: Seen={run.records_seen}, Created={run.records_created}, Updated={run.records_updated}, Rejected={run.records_rejected}")
+        print(
+            f"   Records: Seen={run.records_seen}, Created={run.records_created}, Updated={run.records_updated}, Rejected={run.records_rejected}"
+        )
         print(f"   Errors: {run.error_count + run.validation_error_count}")
 
 
@@ -130,8 +138,20 @@ def handle_validate(args):
             "calculation_method": "BRACKETED",
             "effective_from": "2024-01-01T00:00:00Z",
             "brackets": [
-                {"bracket_order": 1, "minimum_value": "0.00", "maximum_value": "500000.00", "rate": "13.0000", "calculation_method": "PERCENTAGE"},
-                {"bracket_order": 2, "minimum_value": "500000.00", "maximum_value": "1000000.00", "rate": "14.0000", "calculation_method": "PERCENTAGE"},
+                {
+                    "bracket_order": 1,
+                    "minimum_value": "0.00",
+                    "maximum_value": "500000.00",
+                    "rate": "13.0000",
+                    "calculation_method": "PERCENTAGE",
+                },
+                {
+                    "bracket_order": 2,
+                    "minimum_value": "500000.00",
+                    "maximum_value": "1000000.00",
+                    "rate": "14.0000",
+                    "calculation_method": "PERCENTAGE",
+                },
             ],
         }
         is_valid, errors = v.validate(sample)
@@ -224,11 +244,21 @@ async def handle_quality(args):
     print("📊 Computing transparent Data Quality & Governance score...")
     async with AsyncSessionLocal() as session:
         overview = await IngestionService.get_data_quality_overview(session)
-        print(f"✅ Overall Quality Score: {overview.overall_quality_score}/100 [Status: {overview.data_status}]")
-        print(f"   Source Trust: {overview.breakdown.source_trust_score}/100 | Freshness: {overview.breakdown.freshness_score}/100")
-        print(f"   Completeness: {overview.breakdown.completeness_score}/100 | Validation: {overview.breakdown.validation_score}/100")
-        print(f"   Active Sources: {overview.active_sources}/{overview.total_sources} | Total Runs: {overview.total_ingestion_runs}")
-        print(f"   Unresolved Conflicts: {overview.unresolved_conflicts_count} | Items in Review: {overview.pending_review_items_count}")
+        print(
+            f"✅ Overall Quality Score: {overview.overall_quality_score}/100 [Status: {overview.data_status}]"
+        )
+        print(
+            f"   Source Trust: {overview.breakdown.source_trust_score}/100 | Freshness: {overview.breakdown.freshness_score}/100"
+        )
+        print(
+            f"   Completeness: {overview.breakdown.completeness_score}/100 | Validation: {overview.breakdown.validation_score}/100"
+        )
+        print(
+            f"   Active Sources: {overview.active_sources}/{overview.total_sources} | Total Runs: {overview.total_ingestion_runs}"
+        )
+        print(
+            f"   Unresolved Conflicts: {overview.unresolved_conflicts_count} | Items in Review: {overview.pending_review_items_count}"
+        )
 
 
 async def handle_freshness(args):
@@ -236,7 +266,9 @@ async def handle_freshness(args):
     async with AsyncSessionLocal() as session:
         reports = await IngestionService.get_freshness_report(session)
         for item in reports:
-            print(f"   - {item.dataset_name}: Status={item.status.value} | SLA={item.sla_days} days | Age={item.age_days} days")
+            print(
+                f"   - {item.dataset_name}: Status={item.status.value} | SLA={item.sla_days} days | Age={item.age_days} days"
+            )
 
 
 def main():
@@ -279,7 +311,13 @@ def main():
 
     # validate command
     val_parser = subparsers.add_parser("validate", help="Validate dataset payload")
-    val_parser.add_argument("--dataset", type=str, required=True, choices=["vehicles", "prices", "taxes", "finance", "locations", "tco"], help="Dataset to validate")
+    val_parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        choices=["vehicles", "prices", "taxes", "finance", "locations", "tco"],
+        help="Dataset to validate",
+    )
 
     # conflicts command
     subparsers.add_parser("conflicts", help="Inspect cross-source data conflicts")

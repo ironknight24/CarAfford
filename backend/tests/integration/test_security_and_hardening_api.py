@@ -76,6 +76,7 @@ async def test_standardized_error_format_on_404_and_422():
 @pytest.mark.asyncio
 async def test_admin_endpoint_authorization_gate(db_session: AsyncSession):
     app.dependency_overrides.pop(require_admin, None)
+
     async def override_get_db():
         yield db_session
 

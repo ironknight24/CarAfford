@@ -86,10 +86,7 @@ class TestFinanceServiceMath:
         first = schedule[0]
         assert first.installment_number == 1
         assert first.opening_balance == principal
-        assert (
-            first.principal_component + first.interest_component
-            == first.emi
-        )
+        assert first.principal_component + first.interest_component == first.emi
 
         # Check last month
         last = schedule[-1]
@@ -97,9 +94,7 @@ class TestFinanceServiceMath:
         assert last.closing_balance == Decimal("0.00")
 
         # Sum of principal components MUST equal original principal exactly
-        total_principal_paid = sum(
-            item.principal_component for item in schedule
-        )
+        total_principal_paid = sum(item.principal_component for item in schedule)
         assert total_principal_paid == principal
 
     def test_ltv_calculation(self):
@@ -221,25 +216,21 @@ class TestLoanRateResolverService:
         product.interest_rates = [old_rate, current_rate]
 
         # Query in 2023
-        rate_2023, _, matched_2023 = (
-            LoanRateResolverService.resolve_product_interest_rate(
-                loan_product=product,
-                loan_amount=Decimal("500000"),
-                tenure_months=36,
-                calculation_date=datetime(2023, 6, 1, tzinfo=timezone.utc),
-            )
+        rate_2023, _, matched_2023 = LoanRateResolverService.resolve_product_interest_rate(
+            loan_product=product,
+            loan_amount=Decimal("500000"),
+            tenure_months=36,
+            calculation_date=datetime(2023, 6, 1, tzinfo=timezone.utc),
         )
         assert rate_2023 == Decimal("7.50")
         assert matched_2023.id == 10
 
         # Query in 2025
-        rate_2025, _, matched_2025 = (
-            LoanRateResolverService.resolve_product_interest_rate(
-                loan_product=product,
-                loan_amount=Decimal("500000"),
-                tenure_months=36,
-                calculation_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
-            )
+        rate_2025, _, matched_2025 = LoanRateResolverService.resolve_product_interest_rate(
+            loan_product=product,
+            loan_amount=Decimal("500000"),
+            tenure_months=36,
+            calculation_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
         )
         assert rate_2025 == Decimal("8.75")
         assert matched_2025.id == 11
@@ -272,22 +263,18 @@ class TestLoanFeeCalculatorService:
         product.fees = [fee_fixed, fee_pct]
 
         # Loan amount: 200,000 -> 0.5% = 1,000 -> capped at min 2,000 + 1,500 = 3,500
-        total_fee_small, items_small = (
-            LoanFeeCalculatorService.calculate_product_fees(
-                loan_product=product,
-                loan_amount=Decimal("200000.00"),
-                calculation_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
-            )
+        total_fee_small, items_small = LoanFeeCalculatorService.calculate_product_fees(
+            loan_product=product,
+            loan_amount=Decimal("200000.00"),
+            calculation_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
         )
         assert total_fee_small == Decimal("3500.00")
 
         # Loan amount: 2,000,000 -> 0.5% = 10,000 -> capped at max 5,000 + 1,500 = 6,500
-        total_fee_large, items_large = (
-            LoanFeeCalculatorService.calculate_product_fees(
-                loan_product=product,
-                loan_amount=Decimal("2000000.00"),
-                calculation_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
-            )
+        total_fee_large, items_large = LoanFeeCalculatorService.calculate_product_fees(
+            loan_product=product,
+            loan_amount=Decimal("2000000.00"),
+            calculation_date=datetime(2025, 6, 1, tzinfo=timezone.utc),
         )
         assert total_fee_large == Decimal("6500.00")
 
@@ -318,32 +305,28 @@ class TestLoanEligibilityEvaluatorService:
         product.eligibility_rules = [rule]
 
         # 1. Fully eligible
-        is_el_1, status_1, reasons_1 = (
-            LoanEligibilityEvaluatorService.evaluate_product_eligibility(
-                loan_product=product,
-                loan_amount=Decimal("800000.00"),
-                on_road_price=Decimal("1000000.00"),  # LTV = 80%
-                tenure_months=60,
-                credit_score=750,
-                monthly_income=Decimal("50000.00"),
-                applicant_age=30,
-            )
+        is_el_1, status_1, reasons_1 = LoanEligibilityEvaluatorService.evaluate_product_eligibility(
+            loan_product=product,
+            loan_amount=Decimal("800000.00"),
+            on_road_price=Decimal("1000000.00"),  # LTV = 80%
+            tenure_months=60,
+            credit_score=750,
+            monthly_income=Decimal("50000.00"),
+            applicant_age=30,
         )
         assert is_el_1 is True
         assert status_1 == "ESTIMATED_ELIGIBLE"
         assert len(reasons_1) == 0
 
         # 2. Ineligible due to credit score below rule requirement
-        is_el_2, status_2, reasons_2 = (
-            LoanEligibilityEvaluatorService.evaluate_product_eligibility(
-                loan_product=product,
-                loan_amount=Decimal("800000.00"),
-                on_road_price=Decimal("1000000.00"),
-                tenure_months=60,
-                credit_score=600,
-                monthly_income=Decimal("50000.00"),
-                applicant_age=30,
-            )
+        is_el_2, status_2, reasons_2 = LoanEligibilityEvaluatorService.evaluate_product_eligibility(
+            loan_product=product,
+            loan_amount=Decimal("800000.00"),
+            on_road_price=Decimal("1000000.00"),
+            tenure_months=60,
+            credit_score=600,
+            monthly_income=Decimal("50000.00"),
+            applicant_age=30,
         )
         assert is_el_2 is False
         assert status_2 == "ESTIMATED_INELIGIBLE"

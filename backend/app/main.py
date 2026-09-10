@@ -31,7 +31,9 @@ logger = logging.getLogger("carafford")
 async def lifespan(app: FastAPI):
     # Validate environment settings in production
     settings.validate_production_configuration()
-    logger.info(f"Initializing {settings.PROJECT_NAME} in [{settings.ENVIRONMENT.upper()}] environment...")
+    logger.info(
+        f"Initializing {settings.PROJECT_NAME} in [{settings.ENVIRONMENT.upper()}] environment..."
+    )
 
     # Initialize redis connection
     if settings.REDIS_ENABLED:
@@ -88,6 +90,7 @@ app.add_middleware(
 # STANDARDIZED API ERROR HANDLERS
 # =============================================================================
 
+
 @app.exception_handler(CarAffordException)
 async def carafford_exception_handler(request: Request, exc: CarAffordException):
     request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
@@ -100,7 +103,7 @@ async def carafford_exception_handler(request: Request, exc: CarAffordException)
                 "message": exc.message,
                 "request_id": request_id,
                 "details": exc.details,
-            }
+            },
         },
         headers={"X-Request-ID": request_id},
     )
@@ -120,7 +123,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
                 "code": f"HTTP_{exc.status_code}",
                 "message": detail_msg,
                 "request_id": request_id,
-            }
+            },
         },
         headers=response_headers,
     )
@@ -142,7 +145,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "message": "The request payload failed schema validation.",
                 "request_id": request_id,
                 "details": errors,
-            }
+            },
         },
         headers={"X-Request-ID": request_id},
     )

@@ -79,7 +79,11 @@ class IngestionService:
         if ds:
             return ds
 
-        assigned_trust = trust_level if trust_level is not None else DATA_SOURCE_DEFAULT_TRUST_LEVELS.get(source_type, 70)
+        assigned_trust = (
+            trust_level
+            if trust_level is not None
+            else DATA_SOURCE_DEFAULT_TRUST_LEVELS.get(source_type, 70)
+        )
         new_ds = DataSource(
             name=name,
             slug=slug,
@@ -145,13 +149,17 @@ class IngestionService:
 
                 # Check deduplication on raw payload hash
                 existing_raw = (
-                    await db.execute(
-                        select(RawIngestionRecord).where(
-                            RawIngestionRecord.payload_hash == payload_hash,
-                            RawIngestionRecord.ingestion_run_id == run_id,
+                    (
+                        await db.execute(
+                            select(RawIngestionRecord).where(
+                                RawIngestionRecord.payload_hash == payload_hash,
+                                RawIngestionRecord.ingestion_run_id == run_id,
+                            )
                         )
                     )
-                ).scalars().first()
+                    .scalars()
+                    .first()
+                )
 
                 if existing_raw:
                     run.records_unchanged += 1
@@ -201,15 +209,30 @@ class IngestionService:
                     entity_ident = f"{normalized.get('bank_name', '')} {normalized.get('product_name', '')}".strip()
                 elif adapter.entity_type == IngestionEntityType.TAX_RULE:
                     entity_ident = f"{normalized.get('state_code', '')} {normalized.get('tax_type', '')} {normalized.get('name', '')}".strip()
-                elif adapter.entity_type == IngestionEntityType.FUEL_PRICE or normalized.get("tco_category") == "fuel_price":
+                elif (
+                    adapter.entity_type == IngestionEntityType.FUEL_PRICE
+                    or normalized.get("tco_category") == "fuel_price"
+                ):
                     entity_ident = f"{normalized.get('state_code', 'NATIONAL')} {normalized.get('city_name', 'ALL')} {normalized.get('fuel_type', '')}".strip()
-                elif adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF or normalized.get("tco_category") == "electricity_tariff":
+                elif (
+                    adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF
+                    or normalized.get("tco_category") == "electricity_tariff"
+                ):
                     entity_ident = f"{normalized.get('state_code', '')} {normalized.get('tariff_type', '')} {normalized.get('discom_name', '')}".strip()
-                elif adapter.entity_type == IngestionEntityType.MAINTENANCE_COST or normalized.get("tco_category") == "maintenance":
+                elif (
+                    adapter.entity_type == IngestionEntityType.MAINTENANCE_COST
+                    or normalized.get("tco_category") == "maintenance"
+                ):
                     entity_ident = f"{normalized.get('powertrain', '')} {normalized.get('segment', 'ALL')}".strip()
-                elif adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK or normalized.get("tco_category") == "insurance_renewal":
+                elif (
+                    adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK
+                    or normalized.get("tco_category") == "insurance_renewal"
+                ):
                     entity_ident = f"{normalized.get('fuel_type', 'ALL')} {normalized.get('segment', 'ALL')} INSURANCE".strip()
-                elif adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK or normalized.get("tco_category") == "depreciation":
+                elif (
+                    adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK
+                    or normalized.get("tco_category") == "depreciation"
+                ):
                     entity_ident = f"{normalized.get('powertrain', 'ALL')} {normalized.get('segment', 'ALL')} DEPRECIATION".strip()
                 else:
                     entity_ident = f"{normalized.get('manufacturer_name', '')} {normalized.get('model_name', '')} {normalized.get('variant_name', '')}".strip()
@@ -248,35 +271,49 @@ class IngestionService:
                         source_id=ds.id,
                         source_record_id=source_record_id,
                     )
-                elif adapter.entity_type == IngestionEntityType.FUEL_PRICE or tco_cat == "fuel_price":
+                elif (
+                    adapter.entity_type == IngestionEntityType.FUEL_PRICE or tco_cat == "fuel_price"
+                ):
                     promoted = await cls._promote_fuel_price_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
                         source_record_id=source_record_id,
                     )
-                elif adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF or tco_cat == "electricity_tariff":
+                elif (
+                    adapter.entity_type == IngestionEntityType.ELECTRICITY_TARIFF
+                    or tco_cat == "electricity_tariff"
+                ):
                     promoted = await cls._promote_electricity_tariff_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
                         source_record_id=source_record_id,
                     )
-                elif adapter.entity_type == IngestionEntityType.MAINTENANCE_COST or tco_cat == "maintenance":
+                elif (
+                    adapter.entity_type == IngestionEntityType.MAINTENANCE_COST
+                    or tco_cat == "maintenance"
+                ):
                     promoted = await cls._promote_maintenance_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
                         source_record_id=source_record_id,
                     )
-                elif adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK or tco_cat == "insurance_renewal":
+                elif (
+                    adapter.entity_type == IngestionEntityType.INSURANCE_BENCHMARK
+                    or tco_cat == "insurance_renewal"
+                ):
                     promoted = await cls._promote_insurance_renewal_to_canonical(
                         db=db,
                         data=mapped_data,
                         source_id=ds.id,
                         source_record_id=source_record_id,
                     )
-                elif adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK or tco_cat == "depreciation":
+                elif (
+                    adapter.entity_type == IngestionEntityType.DEPRECIATION_BENCHMARK
+                    or tco_cat == "depreciation"
+                ):
                     promoted = await cls._promote_depreciation_to_canonical(
                         db=db,
                         data=mapped_data,
@@ -301,7 +338,11 @@ class IngestionService:
             # 4. Finalize Ingestion Run
             run.completed_at = datetime.now(timezone.utc)
             if run.error_count > 0 or run.validation_error_count > 0:
-                run.status = IngestionRunStatus.PARTIAL.value if (run.records_created + run.records_updated) > 0 else IngestionRunStatus.FAILED.value
+                run.status = (
+                    IngestionRunStatus.PARTIAL.value
+                    if (run.records_created + run.records_updated) > 0
+                    else IngestionRunStatus.FAILED.value
+                )
             else:
                 run.status = IngestionRunStatus.COMPLETED.value
 
@@ -409,7 +450,7 @@ class IngestionService:
         variant_slug = f"{car_model.slug}-{variant_name.lower().replace(' ', '-')}"
         fuel = data.get("fuel_type", "Petrol")
         trans = data.get("transmission", "Manual")
-        
+
         var_res = await db.execute(
             select(Variant).where(
                 ((Variant.model_id == car_model.id) & (Variant.name.ilike(variant_name)))
@@ -520,13 +561,17 @@ class IngestionService:
 
             # Query currently active price (effective_to is NULL)
             active_price = (
-                await db.execute(
-                    select(VehiclePrice).where(
-                        VehiclePrice.variant_id == variant.id,
-                        VehiclePrice.effective_to.is_(None),
+                (
+                    await db.execute(
+                        select(VehiclePrice).where(
+                            VehiclePrice.variant_id == variant.id,
+                            VehiclePrice.effective_to.is_(None),
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
 
             if active_price:
                 if Decimal(str(active_price.ex_showroom_price)) != Decimal(str(ex_price)):
@@ -594,7 +639,9 @@ class IngestionService:
         now = datetime.now(timezone.utc)
 
         # 1. Resolve Country (Default India, id=1)
-        country = (await db.execute(select(Country).where(Country.iso_code == "IN"))).scalars().first()
+        country = (
+            (await db.execute(select(Country).where(Country.iso_code == "IN"))).scalars().first()
+        )
         if not country:
             country = Country(
                 name="India",
@@ -608,9 +655,7 @@ class IngestionService:
 
         # 2. Resolve State
         state_res = await db.execute(
-            select(State).where(
-                (State.code == state_code) | (State.name.ilike(state_name))
-            )
+            select(State).where((State.code == state_code) | (State.name.ilike(state_name)))
         )
         state = state_res.scalars().first()
         state_created = False
@@ -643,8 +688,8 @@ class IngestionService:
         if city_name:
             city_res = await db.execute(
                 select(City).where(
-                    (City.state_id == state.id) &
-                    ((City.slug == city_slug) | (City.name.ilike(city_name)))
+                    (City.state_id == state.id)
+                    & ((City.slug == city_slug) | (City.name.ilike(city_name)))
                 )
             )
             city = city_res.scalars().first()
@@ -678,8 +723,8 @@ class IngestionService:
 
         rto_res = await db.execute(
             select(RtoOffice).where(
-                (RtoOffice.state_id == state.id) &
-                ((RtoOffice.code == rto_code) | (RtoOffice.source_record_id == rto_record_id))
+                (RtoOffice.state_id == state.id)
+                & ((RtoOffice.code == rto_code) | (RtoOffice.source_record_id == rto_record_id))
             )
         )
         rto = rto_res.scalars().first()
@@ -733,9 +778,7 @@ class IngestionService:
         # 1. Resolve Bank
         bank_slug = bank_name.lower().replace(" ", "-")
         bank_res = await db.execute(
-            select(Bank).where(
-                (Bank.slug == bank_slug) | (Bank.name.ilike(bank_name))
-            )
+            select(Bank).where((Bank.slug == bank_slug) | (Bank.name.ilike(bank_name)))
         )
         bank = bank_res.scalars().first()
         if not bank:
@@ -765,8 +808,8 @@ class IngestionService:
         product_slug = f"{bank.slug}-{product_name.lower().replace(' ', '-')}"
         prod_res = await db.execute(
             select(LoanProduct).where(
-                (LoanProduct.bank_id == bank.id) &
-                ((LoanProduct.slug == product_slug) | (LoanProduct.name.ilike(product_name)))
+                (LoanProduct.bank_id == bank.id)
+                & ((LoanProduct.slug == product_slug) | (LoanProduct.name.ilike(product_name)))
             )
         )
         loan_product = prod_res.scalars().first()
@@ -877,7 +920,9 @@ class IngestionService:
             else:
                 conds.append(InterestRate.max_tenure_months.is_(None))
 
-            matching_rate = (await db.execute(select(InterestRate).where(and_(*conds)))).scalars().first()
+            matching_rate = (
+                (await db.execute(select(InterestRate).where(and_(*conds)))).scalars().first()
+            )
 
             if matching_rate:
                 if Decimal(str(matching_rate.annual_interest_rate)) != Decimal(str(ann_rate)):
@@ -939,14 +984,18 @@ class IngestionService:
         for e_item in elig_data:
             rule_name = e_item.get("rule_name", "General Eligibility Criteria")
             existing_rule = (
-                await db.execute(
-                    select(LoanEligibilityRule).where(
-                        LoanEligibilityRule.loan_product_id == loan_product.id,
-                        LoanEligibilityRule.rule_name == rule_name,
-                        LoanEligibilityRule.active.is_(True),
+                (
+                    await db.execute(
+                        select(LoanEligibilityRule).where(
+                            LoanEligibilityRule.loan_product_id == loan_product.id,
+                            LoanEligibilityRule.rule_name == rule_name,
+                            LoanEligibilityRule.active.is_(True),
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
 
             e_eff_from = e_item.get("effective_from") or data.get("effective_from")
             if isinstance(e_eff_from, str):
@@ -996,8 +1045,12 @@ class IngestionService:
                     min_age_years=e_item.get("min_age_years", 21),
                     max_age_years=e_item.get("max_age_years", 65),
                     min_employment_months=e_item.get("min_employment_months", 12),
-                    allowed_employment_types=e_item.get("allowed_employment_types", "SALARIED,SELF_EMPLOYED"),
-                    allowed_residency_types=e_item.get("allowed_residency_types", "RESIDENT_INDIAN,NRI"),
+                    allowed_employment_types=e_item.get(
+                        "allowed_employment_types", "SALARIED,SELF_EMPLOYED"
+                    ),
+                    allowed_residency_types=e_item.get(
+                        "allowed_residency_types", "RESIDENT_INDIAN,NRI"
+                    ),
                     effective_from=eff_from_dt,
                     effective_to=None,
                     active=True,
@@ -1014,14 +1067,18 @@ class IngestionService:
             fee_name = f_item.get("fee_name", "Standard Fee")
             fee_type = f_item.get("fee_type", "PROCESSING_FEE")
             existing_fee = (
-                await db.execute(
-                    select(LoanFee).where(
-                        LoanFee.loan_product_id == loan_product.id,
-                        LoanFee.fee_name == fee_name,
-                        LoanFee.active.is_(True),
+                (
+                    await db.execute(
+                        select(LoanFee).where(
+                            LoanFee.loan_product_id == loan_product.id,
+                            LoanFee.fee_name == fee_name,
+                            LoanFee.active.is_(True),
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
 
             f_eff_from = f_item.get("effective_from") or data.get("effective_from")
             if isinstance(f_eff_from, str):
@@ -1103,7 +1160,11 @@ class IngestionService:
             state = state_res.scalars().first()
 
         if not state and state_code:
-            country = (await db.execute(select(Country).where(Country.iso_code == "IN"))).scalars().first()
+            country = (
+                (await db.execute(select(Country).where(Country.iso_code == "IN")))
+                .scalars()
+                .first()
+            )
             if not country:
                 country = Country(name="India", iso_code="IN", iso3_code="IND", active=True)
                 db.add(country)
@@ -1135,8 +1196,8 @@ class IngestionService:
         elif city_slug or city_name:
             city_res = await db.execute(
                 select(City).where(
-                    (City.state_id == state.id) &
-                    ((City.slug == city_slug) | (City.name.ilike(city_name or "")))
+                    (City.state_id == state.id)
+                    & ((City.slug == city_slug) | (City.name.ilike(city_name or "")))
                 )
             )
             city = city_res.scalars().first()
@@ -1374,14 +1435,21 @@ class IngestionService:
                     c = Country(name="India", iso_code="IN", iso3_code="IND", active=True)
                     db.add(c)
                     await db.flush()
-                st = State(name=f"State {state_code.upper()}", code=state_code.upper(), country_id=c.id, active=True)
+                st = State(
+                    name=f"State {state_code.upper()}",
+                    code=state_code.upper(),
+                    country_id=c.id,
+                    active=True,
+                )
                 db.add(st)
                 await db.flush()
             state_id = st.id
 
             if city_name:
                 ct_res = await db.execute(
-                    select(City).where(City.name.ilike(city_name.strip()), City.state_id == state_id)
+                    select(City).where(
+                        City.name.ilike(city_name.strip()), City.state_id == state_id
+                    )
                 )
                 ct = ct_res.scalars().first()
                 if not ct:
@@ -1416,12 +1484,14 @@ class IngestionService:
 
         # Check for previous active record to close effective_to
         prev_active_res = await db.execute(
-            select(FuelPrice).where(
+            select(FuelPrice)
+            .where(
                 FuelPrice.fuel_type == fuel_type,
                 FuelPrice.state_id == state_id,
                 FuelPrice.city_id == city_id,
                 FuelPrice.is_active == True,
-            ).order_by(FuelPrice.effective_from.desc())
+            )
+            .order_by(FuelPrice.effective_from.desc())
         )
         prev_active = prev_active_res.scalars().first()
         if prev_active and _ensure_tz_utc(prev_active.effective_from) <= _ensure_tz_utc(eff_from):
@@ -1635,7 +1705,12 @@ class IngestionService:
         existing = existing_res.scalars().first()
 
         if existing:
-            if existing.year_2_factor != y2 or existing.year_3_factor != y3 or existing.year_4_factor != y4 or existing.year_5_factor != y5:
+            if (
+                existing.year_2_factor != y2
+                or existing.year_3_factor != y3
+                or existing.year_4_factor != y4
+                or existing.year_5_factor != y5
+            ):
                 existing.effective_to = eff_from
                 existing.is_active = False
 
@@ -1796,14 +1871,19 @@ class IngestionService:
                     other_price = other_payload.get("price")
                     if other_price and Decimal(str(other_price)) != Decimal(str(price_val)):
                         existing_conflict = (
-                            await db.execute(
-                                select(DataConflictRecord).where(
-                                    DataConflictRecord.entity_identifier == entity_identifier,
-                                    DataConflictRecord.field_name == "ex_showroom_price",
-                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                            (
+                                await db.execute(
+                                    select(DataConflictRecord).where(
+                                        DataConflictRecord.entity_identifier == entity_identifier,
+                                        DataConflictRecord.field_name == "ex_showroom_price",
+                                        DataConflictRecord.status
+                                        == ConflictStatus.UNRESOLVED.value,
+                                    )
                                 )
                             )
-                        ).scalars().first()
+                            .scalars()
+                            .first()
+                        )
 
                         if not existing_conflict:
                             conflict = DataConflictRecord(
@@ -1840,16 +1920,25 @@ class IngestionService:
                 if other_rto and str(other_rto).strip().upper() == str(rto_code).strip().upper():
                     other_jurisdiction = other_payload.get("jurisdiction")
                     current_jurisdiction = normalized_payload.get("jurisdiction")
-                    if current_jurisdiction and other_jurisdiction and current_jurisdiction != other_jurisdiction:
+                    if (
+                        current_jurisdiction
+                        and other_jurisdiction
+                        and current_jurisdiction != other_jurisdiction
+                    ):
                         existing_conflict = (
-                            await db.execute(
-                                select(DataConflictRecord).where(
-                                    DataConflictRecord.entity_identifier == entity_identifier,
-                                    DataConflictRecord.field_name == "jurisdiction",
-                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                            (
+                                await db.execute(
+                                    select(DataConflictRecord).where(
+                                        DataConflictRecord.entity_identifier == entity_identifier,
+                                        DataConflictRecord.field_name == "jurisdiction",
+                                        DataConflictRecord.status
+                                        == ConflictStatus.UNRESOLVED.value,
+                                    )
                                 )
                             )
-                        ).scalars().first()
+                            .scalars()
+                            .first()
+                        )
                         if not existing_conflict:
                             conflict = DataConflictRecord(
                                 dataset_name=dataset_name,
@@ -1889,21 +1978,31 @@ class IngestionService:
                         other_ident = f"{other_bank} {other_product}".strip()
                         if other_ident.lower() == entity_identifier.lower():
                             for other_r in other_payload.get("rates", []):
-                                if (
-                                    other_r.get("min_credit_score") == r_entry.get("min_credit_score")
-                                    and other_r.get("rate_type", "FLOATING") == r_entry.get("rate_type", "FLOATING")
+                                if other_r.get("min_credit_score") == r_entry.get(
+                                    "min_credit_score"
+                                ) and other_r.get("rate_type", "FLOATING") == r_entry.get(
+                                    "rate_type", "FLOATING"
                                 ):
                                     other_rate_val = other_r.get("annual_interest_rate")
-                                    if other_rate_val and Decimal(str(other_rate_val)) != Decimal(str(r_rate)):
+                                    if other_rate_val and Decimal(str(other_rate_val)) != Decimal(
+                                        str(r_rate)
+                                    ):
                                         existing_conflict = (
-                                            await db.execute(
-                                                select(DataConflictRecord).where(
-                                                    DataConflictRecord.entity_identifier == entity_identifier,
-                                                    DataConflictRecord.field_name == "annual_interest_rate",
-                                                    DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                            (
+                                                await db.execute(
+                                                    select(DataConflictRecord).where(
+                                                        DataConflictRecord.entity_identifier
+                                                        == entity_identifier,
+                                                        DataConflictRecord.field_name
+                                                        == "annual_interest_rate",
+                                                        DataConflictRecord.status
+                                                        == ConflictStatus.UNRESOLVED.value,
+                                                    )
                                                 )
                                             )
-                                        ).scalars().first()
+                                            .scalars()
+                                            .first()
+                                        )
                                         if not existing_conflict:
                                             conflict = DataConflictRecord(
                                                 dataset_name=dataset_name,
@@ -1949,14 +2048,20 @@ class IngestionService:
                         if other_rate is not None and rule_rate is not None:
                             if Decimal(str(other_rate)) != Decimal(str(rule_rate)):
                                 existing_conflict = (
-                                    await db.execute(
-                                        select(DataConflictRecord).where(
-                                            DataConflictRecord.entity_identifier == entity_identifier,
-                                            DataConflictRecord.field_name == "rate",
-                                            DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                    (
+                                        await db.execute(
+                                            select(DataConflictRecord).where(
+                                                DataConflictRecord.entity_identifier
+                                                == entity_identifier,
+                                                DataConflictRecord.field_name == "rate",
+                                                DataConflictRecord.status
+                                                == ConflictStatus.UNRESOLVED.value,
+                                            )
                                         )
                                     )
-                                ).scalars().first()
+                                    .scalars()
+                                    .first()
+                                )
                                 if not existing_conflict:
                                     conflict = DataConflictRecord(
                                         dataset_name=dataset_name,
@@ -1977,14 +2082,20 @@ class IngestionService:
                         if other_fixed is not None and rule_fixed is not None:
                             if Decimal(str(other_fixed)) != Decimal(str(rule_fixed)):
                                 existing_conflict = (
-                                    await db.execute(
-                                        select(DataConflictRecord).where(
-                                            DataConflictRecord.entity_identifier == entity_identifier,
-                                            DataConflictRecord.field_name == "fixed_amount",
-                                            DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                    (
+                                        await db.execute(
+                                            select(DataConflictRecord).where(
+                                                DataConflictRecord.entity_identifier
+                                                == entity_identifier,
+                                                DataConflictRecord.field_name == "fixed_amount",
+                                                DataConflictRecord.status
+                                                == ConflictStatus.UNRESOLVED.value,
+                                            )
                                         )
                                     )
-                                ).scalars().first()
+                                    .scalars()
+                                    .first()
+                                )
                                 if not existing_conflict:
                                     conflict = DataConflictRecord(
                                         dataset_name=dataset_name,
@@ -2026,16 +2137,24 @@ class IngestionService:
                         and other_payload.get("city_name") == city_name
                     ):
                         other_price = other_payload.get("price_per_unit")
-                        if other_price is not None and Decimal(str(other_price)) != Decimal(str(cur_price)):
+                        if other_price is not None and Decimal(str(other_price)) != Decimal(
+                            str(cur_price)
+                        ):
                             existing_conflict = (
-                                await db.execute(
-                                    select(DataConflictRecord).where(
-                                        DataConflictRecord.entity_identifier == entity_identifier,
-                                        DataConflictRecord.field_name == "price_per_unit",
-                                        DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                (
+                                    await db.execute(
+                                        select(DataConflictRecord).where(
+                                            DataConflictRecord.entity_identifier
+                                            == entity_identifier,
+                                            DataConflictRecord.field_name == "price_per_unit",
+                                            DataConflictRecord.status
+                                            == ConflictStatus.UNRESOLVED.value,
+                                        )
                                     )
                                 )
-                            ).scalars().first()
+                                .scalars()
+                                .first()
+                            )
                             if not existing_conflict:
                                 conflict = DataConflictRecord(
                                     dataset_name=dataset_name,
@@ -2077,16 +2196,24 @@ class IngestionService:
                         and other_payload.get("discom_name") == discom
                     ):
                         other_rate = other_payload.get("rate_per_kwh")
-                        if other_rate is not None and Decimal(str(other_rate)) != Decimal(str(cur_rate)):
+                        if other_rate is not None and Decimal(str(other_rate)) != Decimal(
+                            str(cur_rate)
+                        ):
                             existing_conflict = (
-                                await db.execute(
-                                    select(DataConflictRecord).where(
-                                        DataConflictRecord.entity_identifier == entity_identifier,
-                                        DataConflictRecord.field_name == "rate_per_kwh",
-                                        DataConflictRecord.status == ConflictStatus.UNRESOLVED.value,
+                                (
+                                    await db.execute(
+                                        select(DataConflictRecord).where(
+                                            DataConflictRecord.entity_identifier
+                                            == entity_identifier,
+                                            DataConflictRecord.field_name == "rate_per_kwh",
+                                            DataConflictRecord.status
+                                            == ConflictStatus.UNRESOLVED.value,
+                                        )
                                     )
                                 )
-                            ).scalars().first()
+                                .scalars()
+                                .first()
+                            )
                             if not existing_conflict:
                                 conflict = DataConflictRecord(
                                     dataset_name=dataset_name,
@@ -2208,9 +2335,7 @@ class IngestionService:
             )
         ).scalar() or 0
         validation_score = (
-            Decimal(str((valid_raw / total_raw) * 100.0))
-            if total_raw > 0
-            else Decimal("95.00")
+            Decimal(str((valid_raw / total_raw) * 100.0)) if total_raw > 0 else Decimal("95.00")
         )
 
         completeness_score = Decimal("92.00")

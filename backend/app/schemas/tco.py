@@ -3,10 +3,10 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 # =============================================================================
 # ASSUMPTION SCHEMAS
 # =============================================================================
+
 
 class FuelPriceAssumption(BaseModel):
     fuel_type: str
@@ -80,29 +80,48 @@ class TCOAssumptionsResponse(BaseModel):
 # CALCULATION REQUEST SCHEMAS
 # =============================================================================
 
+
 class TCOCalculationRequest(BaseModel):
     variant_id: Optional[int] = Field(None, description="Vehicle Variant ID")
     state_id: int = Field(..., description="Target State/UT ID for on-road pricing and taxes")
     city_id: Optional[int] = Field(None, description="Optional target City ID")
     rto_id: Optional[int] = Field(None, description="Optional target RTO ID")
-    
+
     # Driving distance (either monthly or annual)
-    monthly_driving_distance_km: Optional[Decimal] = Field(None, ge=0, le=20000, description="Monthly driving distance in km")
-    annual_driving_distance_km: Optional[Decimal] = Field(None, ge=0, le=200000, description="Annual driving distance in km")
-    
+    monthly_driving_distance_km: Optional[Decimal] = Field(
+        None, ge=0, le=20000, description="Monthly driving distance in km"
+    )
+    annual_driving_distance_km: Optional[Decimal] = Field(
+        None, ge=0, le=200000, description="Annual driving distance in km"
+    )
+
     # Financing & Down payment
-    down_payment: Optional[Decimal] = Field(None, ge=0, description="Available upfront down payment in INR")
+    down_payment: Optional[Decimal] = Field(
+        None, ge=0, description="Available upfront down payment in INR"
+    )
     credit_score: Optional[int] = Field(750, ge=300, le=900, description="CIBIL / Credit Score")
-    preferred_loan_tenure_months: Optional[int] = Field(60, ge=12, le=84, description="Preferred loan tenure in months")
+    preferred_loan_tenure_months: Optional[int] = Field(
+        60, ge=12, le=84, description="Preferred loan tenure in months"
+    )
     is_financed: bool = Field(True, description="Whether the purchase is financed via an auto loan")
-    
+
     # Optional manual overrides / generic calculation inputs
     fuel_type: Optional[str] = Field(None, description="Petrol, Diesel, CNG, Electric, Hybrid")
-    mileage_kmpl: Optional[Decimal] = Field(None, gt=0, description="Fuel efficiency in km/l (or km/kWh for EV)")
-    custom_fuel_price: Optional[Decimal] = Field(None, gt=0, description="User-supplied fuel/energy price per unit in INR")
-    custom_on_road_price: Optional[Decimal] = Field(None, gt=0, description="User-supplied total on-road price in INR")
-    custom_ex_showroom_price: Optional[Decimal] = Field(None, gt=0, description="User-supplied ex-showroom price in INR")
-    calculation_date: Optional[datetime] = Field(None, description="Calculation date for rules & rates")
+    mileage_kmpl: Optional[Decimal] = Field(
+        None, gt=0, description="Fuel efficiency in km/l (or km/kWh for EV)"
+    )
+    custom_fuel_price: Optional[Decimal] = Field(
+        None, gt=0, description="User-supplied fuel/energy price per unit in INR"
+    )
+    custom_on_road_price: Optional[Decimal] = Field(
+        None, gt=0, description="User-supplied total on-road price in INR"
+    )
+    custom_ex_showroom_price: Optional[Decimal] = Field(
+        None, gt=0, description="User-supplied ex-showroom price in INR"
+    )
+    calculation_date: Optional[datetime] = Field(
+        None, description="Calculation date for rules & rates"
+    )
 
     @model_validator(mode="after")
     def validate_and_reconcile_distances(self) -> "TCOCalculationRequest":
@@ -110,16 +129,26 @@ class TCOCalculationRequest(BaseModel):
             # Default to benchmark 1,000 km/month (12,000 km/year)
             self.monthly_driving_distance_km = Decimal("1000.00")
             self.annual_driving_distance_km = Decimal("12000.00")
-        elif self.annual_driving_distance_km is not None and self.monthly_driving_distance_km is None:
-            self.monthly_driving_distance_km = (self.annual_driving_distance_km / Decimal("12.0")).quantize(Decimal("0.01"))
-        elif self.monthly_driving_distance_km is not None and self.annual_driving_distance_km is None:
-            self.annual_driving_distance_km = (self.monthly_driving_distance_km * Decimal("12.0")).quantize(Decimal("0.01"))
+        elif (
+            self.annual_driving_distance_km is not None and self.monthly_driving_distance_km is None
+        ):
+            self.monthly_driving_distance_km = (
+                self.annual_driving_distance_km / Decimal("12.0")
+            ).quantize(Decimal("0.01"))
+        elif (
+            self.monthly_driving_distance_km is not None and self.annual_driving_distance_km is None
+        ):
+            self.annual_driving_distance_km = (
+                self.monthly_driving_distance_km * Decimal("12.0")
+            ).quantize(Decimal("0.01"))
         else:
             # Both supplied: verify consistency or synchronize from annual
             expected_annual = self.monthly_driving_distance_km * Decimal("12.0")
             if abs(self.annual_driving_distance_km - expected_annual) > Decimal("10.0"):
                 # Prefer annual distance if specifically specified
-                self.monthly_driving_distance_km = (self.annual_driving_distance_km / Decimal("12.0")).quantize(Decimal("0.01"))
+                self.monthly_driving_distance_km = (
+                    self.annual_driving_distance_km / Decimal("12.0")
+                ).quantize(Decimal("0.01"))
         return self
 
 
@@ -130,6 +159,7 @@ class TCOVehicleRequest(TCOCalculationRequest):
 # =============================================================================
 # OUTPUT BREAKDOWN SCHEMAS
 # =============================================================================
+
 
 class TCOInitialCostBreakdown(BaseModel):
     ex_showroom_price: Decimal
@@ -219,6 +249,7 @@ class TCOCalculationResponse(BaseModel):
 # COMPARISON SCHEMAS
 # =============================================================================
 
+
 class TCOComparisonItem(BaseModel):
     variant_id: int
     variant_name: str
@@ -238,7 +269,9 @@ class TCOComparisonItem(BaseModel):
 
 
 class TCOComparisonRequest(BaseModel):
-    variant_ids: List[int] = Field(..., min_length=2, max_length=10, description="List of Variant IDs to compare")
+    variant_ids: List[int] = Field(
+        ..., min_length=2, max_length=10, description="List of Variant IDs to compare"
+    )
     state_id: int = Field(..., description="Target State/UT ID")
     city_id: Optional[int] = Field(None, description="Optional target City ID")
     rto_id: Optional[int] = Field(None, description="Optional target RTO ID")

@@ -28,10 +28,16 @@ logger = logging.getLogger(__name__)
 # FETCHER
 # =============================================================================
 
+
 class BankFinanceFetcher(DataFetcher):
     """Fetches official bank car loan product schedules, rate cards, and fee structures."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None, api_url: Optional[str] = None):
+    def __init__(
+        self,
+        mode: str = "FIXTURE_ONLY",
+        fixture_data: Optional[List[Dict[str, Any]]] = None,
+        api_url: Optional[str] = None,
+    ):
         self.mode = mode
         self.fixture_data = fixture_data or []
         self.api_url = api_url
@@ -48,6 +54,7 @@ class BankFinanceFetcher(DataFetcher):
 # PARSER
 # =============================================================================
 
+
 class BankFinanceParser(DataParser):
     """Parses raw bank car loan payloads into structured intermediate dictionaries."""
 
@@ -60,7 +67,9 @@ class BankFinanceParser(DataParser):
             raise ValueError(f"Unsupported payload type: {type(raw_payload)}")
 
         return {
-            "source_record_id": str(payload_dict.get("source_record_id") or payload_dict.get("product_slug") or ""),
+            "source_record_id": str(
+                payload_dict.get("source_record_id") or payload_dict.get("product_slug") or ""
+            ),
             "bank_name": str(payload_dict.get("bank_name", "")).strip(),
             "bank_type": str(payload_dict.get("bank_type", "Public")).strip(),
             "website_url": payload_dict.get("website_url"),
@@ -89,6 +98,7 @@ class BankFinanceParser(DataParser):
 # NORMALIZER
 # =============================================================================
 
+
 class BankFinanceNormalizer(DataNormalizer):
     """Normalizes bank names, product identifiers, rate percentages, CIBIL tiers, and fee types."""
 
@@ -98,9 +108,16 @@ class BankFinanceNormalizer(DataNormalizer):
         # Standardize bank name and product slug
         item["bank_name"] = str(item.get("bank_name", "")).strip()
         item["product_name"] = str(item.get("product_name", "")).strip()
-        
+
         # Numeric conversions
-        for decimal_col in ("min_loan_amount", "max_loan_amount", "max_ltv_percent", "processing_fee_percent", "min_processing_fee", "max_processing_fee"):
+        for decimal_col in (
+            "min_loan_amount",
+            "max_loan_amount",
+            "max_ltv_percent",
+            "processing_fee_percent",
+            "min_processing_fee",
+            "max_processing_fee",
+        ):
             val = item.get(decimal_col)
             if val is not None:
                 item[decimal_col] = Decimal(str(val))
@@ -142,10 +159,21 @@ class BankFinanceNormalizer(DataNormalizer):
         for e in item.get("eligibility_rules", []):
             ne = dict(e)
             ne["rule_name"] = str(ne.get("rule_name", "General Criteria")).strip()
-            for dec_e in ("min_monthly_income", "max_loan_amount", "max_ltv_percent", "max_foir_percent"):
+            for dec_e in (
+                "min_monthly_income",
+                "max_loan_amount",
+                "max_ltv_percent",
+                "max_foir_percent",
+            ):
                 if dec_e in ne and ne[dec_e] is not None:
                     ne[dec_e] = Decimal(str(ne[dec_e]))
-            for int_e in ("min_credit_score", "max_credit_score", "min_age_years", "max_age_years", "min_employment_months"):
+            for int_e in (
+                "min_credit_score",
+                "max_credit_score",
+                "min_age_years",
+                "max_age_years",
+                "min_employment_months",
+            ):
                 if int_e in ne and ne[int_e] is not None:
                     ne[int_e] = int(ne[int_e])
             normalized_eligibility.append(ne)
@@ -157,7 +185,9 @@ class BankFinanceNormalizer(DataNormalizer):
             nf = dict(f)
             nf["fee_name"] = str(nf.get("fee_name", "")).strip()
             nf["fee_type"] = str(nf.get("fee_type", "PROCESSING_FEE")).upper().strip()
-            nf["calculation_method"] = str(nf.get("calculation_method", "PERCENTAGE")).upper().strip()
+            nf["calculation_method"] = (
+                str(nf.get("calculation_method", "PERCENTAGE")).upper().strip()
+            )
             for dec_f in ("fixed_amount", "percentage", "minimum_amount", "maximum_amount"):
                 if dec_f in nf and nf[dec_f] is not None:
                     nf[dec_f] = Decimal(str(nf[dec_f]))
@@ -170,6 +200,7 @@ class BankFinanceNormalizer(DataNormalizer):
 # =============================================================================
 # MAPPER
 # =============================================================================
+
 
 class BankFinanceCanonicalMapper(CanonicalMapper):
     """Maps normalized bank finance records to canonical entity dictionaries."""
@@ -184,6 +215,7 @@ class BankFinanceCanonicalMapper(CanonicalMapper):
 # =============================================================================
 # BASE BANK FINANCE ADAPTER
 # =============================================================================
+
 
 class BaseBankFinanceAdapter(DataSourceAdapter, ABC):
     """Base abstract adapter for authoritative bank car loan products, rates, fees, and eligibility."""
@@ -208,7 +240,9 @@ class BaseBankFinanceAdapter(DataSourceAdapter, ABC):
         self._source_url = source_url
         self._api_url = api_url
 
-        self.fetcher = BankFinanceFetcher(mode=mode, fixture_data=self._fixture_data, api_url=api_url)
+        self.fetcher = BankFinanceFetcher(
+            mode=mode, fixture_data=self._fixture_data, api_url=api_url
+        )
         self.parser = BankFinanceParser()
         self.normalizer = BankFinanceNormalizer()
         self.validator = FinanceDataValidator()
@@ -314,10 +348,13 @@ class BaseBankFinanceAdapter(DataSourceAdapter, ABC):
 # CONCRETE BANK ADAPTERS WITH AUTHORITATIVE FIXTURE DATA
 # =============================================================================
 
+
 class SbiCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for State Bank of India car loan schemes (Regular Car Loan & Green Car Loan)."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "sbi-car-loan-standard",
@@ -428,7 +465,7 @@ class SbiCarLoanAdapter(BaseBankFinanceAdapter):
                         "percentage": "0.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             },
             {
@@ -504,7 +541,7 @@ class SbiCarLoanAdapter(BaseBankFinanceAdapter):
                         "effective_to": None,
                     }
                 ],
-            }
+            },
         ]
         super().__init__(
             source_name="sbi_car_loans",
@@ -520,7 +557,9 @@ class SbiCarLoanAdapter(BaseBankFinanceAdapter):
 class HdfcCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for HDFC Bank CustomFit car loan schemes."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "hdfc-customfit-car-loan",
@@ -610,7 +649,7 @@ class HdfcCarLoanAdapter(BaseBankFinanceAdapter):
                         "fixed_amount": "650.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             }
         ]
@@ -628,7 +667,9 @@ class HdfcCarLoanAdapter(BaseBankFinanceAdapter):
 class IciciCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for ICICI Bank Auto Loan schemes."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "icici-bank-auto-loan",
@@ -718,7 +759,7 @@ class IciciCarLoanAdapter(BaseBankFinanceAdapter):
                         "fixed_amount": "600.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             }
         ]
@@ -736,7 +777,9 @@ class IciciCarLoanAdapter(BaseBankFinanceAdapter):
 class AxisCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for Axis Bank New Car Loan schemes."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "axis-bank-car-loan",
@@ -816,7 +859,7 @@ class AxisCarLoanAdapter(BaseBankFinanceAdapter):
                         "fixed_amount": "500.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             }
         ]
@@ -834,7 +877,9 @@ class AxisCarLoanAdapter(BaseBankFinanceAdapter):
 class BankOfBarodaCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for Bank of Baroda Baroda Car Loan schemes."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "bob-car-loan",
@@ -932,7 +977,7 @@ class BankOfBarodaCarLoanAdapter(BaseBankFinanceAdapter):
                         "fixed_amount": "400.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             }
         ]
@@ -950,7 +995,9 @@ class BankOfBarodaCarLoanAdapter(BaseBankFinanceAdapter):
 class KotakCarLoanAdapter(BaseBankFinanceAdapter):
     """Authoritative adapter for Kotak Mahindra Bank Car Finance schemes."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None):
+    def __init__(
+        self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None
+    ):
         data = fixture_data or [
             {
                 "source_record_id": "kotak-car-finance",
@@ -1030,7 +1077,7 @@ class KotakCarLoanAdapter(BaseBankFinanceAdapter):
                         "fixed_amount": "600.00",
                         "effective_from": "2026-01-01T00:00:00Z",
                         "effective_to": None,
-                    }
+                    },
                 ],
             }
         ]

@@ -58,7 +58,13 @@ router = APIRouter()
 # INGESTION RUNS
 # =============================================================================
 
-@router.post("/runs", response_model=BaseResponse[IngestionRunRead], status_code=status.HTTP_201_CREATED, summary="Trigger Ingestion Run")
+
+@router.post(
+    "/runs",
+    response_model=BaseResponse[IngestionRunRead],
+    status_code=status.HTTP_201_CREATED,
+    summary="Trigger Ingestion Run",
+)
 async def trigger_ingestion_run(
     request: IngestionRunCreate,
     db: AsyncSession = Depends(get_db),
@@ -103,7 +109,12 @@ async def trigger_ingestion_run(
         adapter = MarutiSuzukiVehicleDataSourceAdapter()
     elif dataset in {"hyundai_vehicles", "hyundai"}:
         adapter = HyundaiVehicleDataSourceAdapter()
-    elif dataset in {"locations_rto_directory", "locations", "rto_directory", "government_location"}:
+    elif dataset in {
+        "locations_rto_directory",
+        "locations",
+        "rto_directory",
+        "government_location",
+    }:
         adapter = GovernmentLocationDataSourceAdapter()
     else:
         adapter = DemoDataSourceAdapter()
@@ -112,7 +123,9 @@ async def trigger_ingestion_run(
     return BaseResponse(data=run)
 
 
-@router.get("/runs", response_model=BaseResponse[List[IngestionRunRead]], summary="List Ingestion Runs")
+@router.get(
+    "/runs", response_model=BaseResponse[List[IngestionRunRead]], summary="List Ingestion Runs"
+)
 async def list_ingestion_runs(
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -125,7 +138,9 @@ async def list_ingestion_runs(
     return BaseResponse(data=runs)
 
 
-@router.get("/runs/{id}", response_model=BaseResponse[IngestionRunRead], summary="Get Ingestion Run Details")
+@router.get(
+    "/runs/{id}", response_model=BaseResponse[IngestionRunRead], summary="Get Ingestion Run Details"
+)
 async def get_ingestion_run(
     id: int,
     db: AsyncSession = Depends(get_db),
@@ -145,14 +160,23 @@ async def get_ingestion_run(
 # DATA QUALITY & GOVERNANCE
 # =============================================================================
 
-@router.get("/data-quality", response_model=BaseResponse[DataQualityOverviewResponse], summary="Get Data Quality Overview")
+
+@router.get(
+    "/data-quality",
+    response_model=BaseResponse[DataQualityOverviewResponse],
+    summary="Get Data Quality Overview",
+)
 async def get_data_quality_overview(db: AsyncSession = Depends(get_db)):
     """Computes transparent data quality score, source trust average, freshness SLAs, and unresolved counts."""
     overview = await IngestionService.get_data_quality_overview(db)
     return BaseResponse(data=overview)
 
 
-@router.get("/data-quality/conflicts", response_model=BaseResponse[List[DataConflictRead]], summary="List Data Conflicts")
+@router.get(
+    "/data-quality/conflicts",
+    response_model=BaseResponse[List[DataConflictRead]],
+    summary="List Data Conflicts",
+)
 async def list_data_conflicts(
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -162,7 +186,11 @@ async def list_data_conflicts(
     return BaseResponse(data=conflicts)
 
 
-@router.post("/data-quality/conflicts/{conflict_id}/resolve", response_model=BaseResponse[DataConflictRead], summary="Resolve Data Conflict")
+@router.post(
+    "/data-quality/conflicts/{conflict_id}/resolve",
+    response_model=BaseResponse[DataConflictRead],
+    summary="Resolve Data Conflict",
+)
 async def resolve_data_conflict(
     conflict_id: int,
     request: DataConflictResolutionRequest,
@@ -183,9 +211,15 @@ async def resolve_data_conflict(
     return BaseResponse(data=conflict)
 
 
-@router.get("/data-quality/review-queue", response_model=BaseResponse[List[DataQualityReviewItemRead]], summary="Get Review Queue")
+@router.get(
+    "/data-quality/review-queue",
+    response_model=BaseResponse[List[DataQualityReviewItemRead]],
+    summary="Get Review Queue",
+)
 async def get_review_queue(
-    status: Optional[str] = Query(None, description="Optional status filter (e.g. PENDING_REVIEW, VERIFIED, REJECTED)"),
+    status: Optional[str] = Query(
+        None, description="Optional status filter (e.g. PENDING_REVIEW, VERIFIED, REJECTED)"
+    ),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
@@ -194,7 +228,11 @@ async def get_review_queue(
     return BaseResponse(data=items)
 
 
-@router.post("/data-quality/{record_id}/approve", response_model=BaseResponse[DataQualityReviewItemRead], summary="Approve Review Item")
+@router.post(
+    "/data-quality/{record_id}/approve",
+    response_model=BaseResponse[DataQualityReviewItemRead],
+    summary="Approve Review Item",
+)
 async def approve_review_item(
     record_id: int,
     action: DataQualityReviewAction,
@@ -215,7 +253,11 @@ async def approve_review_item(
     return BaseResponse(data=item)
 
 
-@router.post("/data-quality/{record_id}/reject", response_model=BaseResponse[DataQualityReviewItemRead], summary="Reject Review Item")
+@router.post(
+    "/data-quality/{record_id}/reject",
+    response_model=BaseResponse[DataQualityReviewItemRead],
+    summary="Reject Review Item",
+)
 async def reject_review_item(
     record_id: int,
     action: DataQualityReviewAction,

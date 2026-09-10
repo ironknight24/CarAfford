@@ -265,20 +265,32 @@ class TestManufacturerVehiclePipelineAndDeduplication:
 
         # 4. Verify historical price was closed (effective_to = eff_from)
         all_prices = (
-            await db_session.execute(
-                select(VehiclePrice)
-                .where(VehiclePrice.variant_id == var.id)
-                .order_by(VehiclePrice.effective_from.asc())
+            (
+                await db_session.execute(
+                    select(VehiclePrice)
+                    .where(VehiclePrice.variant_id == var.id)
+                    .order_by(VehiclePrice.effective_from.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(all_prices) == 2
         old_price, current_price = all_prices[0], all_prices[1]
 
         assert old_price.ex_showroom_price == Decimal("1099900.00")
-        assert (old_price.effective_to.replace(tzinfo=timezone.utc) if old_price.effective_to.tzinfo is None else old_price.effective_to) == eff_from
+        assert (
+            old_price.effective_to.replace(tzinfo=timezone.utc)
+            if old_price.effective_to.tzinfo is None
+            else old_price.effective_to
+        ) == eff_from
 
         assert current_price.ex_showroom_price == Decimal("1125000.00")
-        assert (current_price.effective_from.replace(tzinfo=timezone.utc) if current_price.effective_from.tzinfo is None else current_price.effective_from) == eff_from
+        assert (
+            current_price.effective_from.replace(tzinfo=timezone.utc)
+            if current_price.effective_from.tzinfo is None
+            else current_price.effective_from
+        ) == eff_from
         assert current_price.effective_to is None
         assert current_price.source_record_id == "HMI-CRETA-E-MT-V2"

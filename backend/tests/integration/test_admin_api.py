@@ -104,7 +104,11 @@ async def test_admin_review_queue_and_actions(async_client: AsyncClient, db_sess
     # 2. Approve review item
     approve_resp = await async_client.post(
         f"/api/v1/admin/review-queue/{review_item.id}/approve",
-        json={"action": "APPROVE", "reviewer_name": "Audit Lead", "reviewer_notes": "Verified against official gazette."},
+        json={
+            "action": "APPROVE",
+            "reviewer_name": "Audit Lead",
+            "reviewer_notes": "Verified against official gazette.",
+        },
     )
     assert approve_resp.status_code == 200
     app_data = approve_resp.json()["data"]
@@ -124,7 +128,11 @@ async def test_admin_review_queue_and_actions(async_client: AsyncClient, db_sess
 
     reject_resp = await async_client.post(
         f"/api/v1/admin/review-queue/{review_item2.id}/reject",
-        json={"action": "REJECT", "reviewer_name": "Audit Lead", "reviewer_notes": "Data is an erroneous outlier."},
+        json={
+            "action": "REJECT",
+            "reviewer_name": "Audit Lead",
+            "reviewer_notes": "Data is an erroneous outlier.",
+        },
     )
     assert reject_resp.status_code == 200
     assert reject_resp.json()["data"]["status"] == VerificationStatus.REJECTED.value
@@ -162,7 +170,10 @@ async def test_admin_conflicts_and_resolution(async_client: AsyncClient, db_sess
     # 2. Resolve conflict
     res_resp = await async_client.post(
         f"/api/v1/admin/conflicts/{conflict.id}/resolve",
-        json={"accepted_source_id": sources[0].id, "resolution_notes": "Accepted IOCL official rate."},
+        json={
+            "accepted_source_id": sources[0].id,
+            "resolution_notes": "Accepted IOCL official rate.",
+        },
     )
     assert res_resp.status_code == 200
     res_data = res_resp.json()["data"]
@@ -171,7 +182,9 @@ async def test_admin_conflicts_and_resolution(async_client: AsyncClient, db_sess
 
 
 @pytest.mark.asyncio
-async def test_admin_freshness_and_quality_reports(async_client: AsyncClient, db_session: AsyncSession):
+async def test_admin_freshness_and_quality_reports(
+    async_client: AsyncClient, db_session: AsyncSession
+):
     await seed_database(db_session)
 
     # Freshness report

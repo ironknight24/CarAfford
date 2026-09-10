@@ -49,8 +49,12 @@ async def create_base_test_data(db: AsyncSession):
     db.add_all([blr_city, delhi_city, mumbai_city])
     await db.flush()
 
-    ka01_rto = RtoOffice(state_id=ka_state.id, city_id=blr_city.id, code="KA01", name="Koramangala RTO")
-    dl01_rto = RtoOffice(state_id=dl_state.id, city_id=delhi_city.id, code="DL01", name="Mall Road RTO")
+    ka01_rto = RtoOffice(
+        state_id=ka_state.id, city_id=blr_city.id, code="KA01", name="Koramangala RTO"
+    )
+    dl01_rto = RtoOffice(
+        state_id=dl_state.id, city_id=delhi_city.id, code="DL01", name="Mall Road RTO"
+    )
     db.add_all([ka01_rto, dl01_rto])
     await db.flush()
 
@@ -114,7 +118,9 @@ async def create_base_test_data(db: AsyncSession):
     await db.flush()
 
     # Specs
-    spec_p = VariantSpecification(variant_id=var_petrol.id, engine_displacement_cc=1199, airbags_count=6)
+    spec_p = VariantSpecification(
+        variant_id=var_petrol.id, engine_displacement_cc=1199, airbags_count=6
+    )
     spec_ev = VariantSpecification(variant_id=var_ev.id, airbags_count=6)
     db.add_all([spec_p, spec_ev])
     await db.flush()
@@ -166,10 +172,34 @@ async def create_base_test_data(db: AsyncSession):
     db.add(ka_road_tax)
     await db.flush()
 
-    b1 = TaxRuleBracket(tax_rule_id=ka_road_tax.id, bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("13.00"))
-    b2 = TaxRuleBracket(tax_rule_id=ka_road_tax.id, bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("14.00"))
-    b3 = TaxRuleBracket(tax_rule_id=ka_road_tax.id, bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=Decimal("2000000"), rate=Decimal("17.00"))
-    b4 = TaxRuleBracket(tax_rule_id=ka_road_tax.id, bracket_order=4, minimum_value=Decimal("2000000"), maximum_value=None, rate=Decimal("18.00"))
+    b1 = TaxRuleBracket(
+        tax_rule_id=ka_road_tax.id,
+        bracket_order=1,
+        minimum_value=Decimal("0"),
+        maximum_value=Decimal("500000"),
+        rate=Decimal("13.00"),
+    )
+    b2 = TaxRuleBracket(
+        tax_rule_id=ka_road_tax.id,
+        bracket_order=2,
+        minimum_value=Decimal("500000"),
+        maximum_value=Decimal("1000000"),
+        rate=Decimal("14.00"),
+    )
+    b3 = TaxRuleBracket(
+        tax_rule_id=ka_road_tax.id,
+        bracket_order=3,
+        minimum_value=Decimal("1000000"),
+        maximum_value=Decimal("2000000"),
+        rate=Decimal("17.00"),
+    )
+    b4 = TaxRuleBracket(
+        tax_rule_id=ka_road_tax.id,
+        bracket_order=4,
+        minimum_value=Decimal("2000000"),
+        maximum_value=None,
+        rate=Decimal("18.00"),
+    )
     db.add_all([b1, b2, b3, b4])
 
     # 2. KA Infra Cess: 11% on Road Tax
@@ -448,7 +478,9 @@ async def test_bh_series_formula_calculation(db_session: AsyncSession):
     bh_item = next((item for item in res.breakdown if item.calculation_method == "FORMULA"), None)
     assert bh_item is not None
     # 11 Lakh price -> 10% rate for 10L-20L slab -> (1,100,000 * 10% * 1.25 * 2) / 15 = 18,333.33
-    expected_bh_tax = (Decimal("1100000.00") * Decimal("0.10") * Decimal("1.25") * Decimal("2.0")) / Decimal("15.0")
+    expected_bh_tax = (
+        Decimal("1100000.00") * Decimal("0.10") * Decimal("1.25") * Decimal("2.0")
+    ) / Decimal("15.0")
     assert bh_item.calculated_amount == expected_bh_tax.quantize(Decimal("0.01"))
 
 
@@ -473,7 +505,9 @@ async def test_location_differentiation_bengaluru_vs_delhi(db_session: AsyncSess
     )
 
     # Both have same base ex-showroom
-    assert res_ka.totals.ex_showroom_price == res_dl.totals.ex_showroom_price == Decimal("1100000.00")
+    assert (
+        res_ka.totals.ex_showroom_price == res_dl.totals.ex_showroom_price == Decimal("1100000.00")
+    )
 
     # Karnataka taxes are higher than Delhi taxes
     assert res_ka.totals.total_statutory_taxes > res_dl.totals.total_statutory_taxes

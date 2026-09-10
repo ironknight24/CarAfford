@@ -1,6 +1,12 @@
+from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from app.models.data_source import DataSource
+    from app.models.location import City, State
+    from app.models.vehicle import Variant
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -16,10 +22,14 @@ from app.models.base import AuditableMixin, Base, TimestampMixin, utc_now
 
 class VehiclePrice(Base):
     """Historical and currently effective ex-showroom pricing for vehicle variants."""
+
     __tablename__ = "vehicle_prices"
     __table_args__ = (
         CheckConstraint("ex_showroom_price > 0", name="chk_vehicle_prices_amount_positive"),
-        CheckConstraint("effective_to IS NULL OR effective_to >= effective_from", name="chk_vehicle_prices_period_valid"),
+        CheckConstraint(
+            "effective_to IS NULL OR effective_to >= effective_from",
+            name="chk_vehicle_prices_period_valid",
+        ),
     )
 
     variant_id: Mapped[int] = mapped_column(
@@ -54,11 +64,18 @@ class VehiclePrice(Base):
 
 class ExShowroomPrice(Base, TimestampMixin, AuditableMixin):
     """Legacy/location-specific ex-showroom price mapping."""
+
     __tablename__ = "ex_showroom_prices"
 
-    variant_id: Mapped[int] = mapped_column(ForeignKey("variants.id", ondelete="CASCADE"), nullable=False, index=True)
-    state_id: Mapped[Optional[int]] = mapped_column(ForeignKey("states.id", ondelete="CASCADE"), nullable=True, index=True)
-    city_id: Mapped[Optional[int]] = mapped_column(ForeignKey("cities.id", ondelete="SET NULL"), nullable=True, index=True)
+    variant_id: Mapped[int] = mapped_column(
+        ForeignKey("variants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    state_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("states.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    city_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("cities.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     price_inr: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -69,12 +86,19 @@ class ExShowroomPrice(Base, TimestampMixin, AuditableMixin):
 
 class PriceHistory(Base, TimestampMixin):
     """Audit log of price modifications."""
+
     __tablename__ = "price_histories"
 
-    variant_id: Mapped[int] = mapped_column(ForeignKey("variants.id", ondelete="CASCADE"), nullable=False, index=True)
-    state_id: Mapped[Optional[int]] = mapped_column(ForeignKey("states.id", ondelete="CASCADE"), nullable=True, index=True)
+    variant_id: Mapped[int] = mapped_column(
+        ForeignKey("variants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    state_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("states.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     price_inr: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
     change_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     source: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     source_url: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)

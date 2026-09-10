@@ -9,7 +9,7 @@ from app.services.finance_service import FinanceService
 
 class LoanRateResolverService:
     """Pure domain service for deterministic, location-independent, temporal interest rate resolution.
-    
+
     Precedence Order:
     1. Highest Specificity Match:
        Exact Credit Score + Tenure + Loan Amount + Employment Tier
@@ -33,7 +33,7 @@ class LoanRateResolverService:
         calculation_date: Optional[datetime] = None,
     ) -> Tuple[Decimal, str, Optional[InterestRate]]:
         """Resolves the best applicable interest rate for a given loan product.
-        
+
         Returns:
             Tuple of (annual_interest_rate: Decimal, rate_type: str, matched_rate_record: Optional[InterestRate])
         """
@@ -78,7 +78,9 @@ class LoanRateResolverService:
                 match_score += 500  # High specificity weight
 
             # 2.2 Tenure check
-            has_tenure_condition = r.min_tenure_months is not None or r.max_tenure_months is not None
+            has_tenure_condition = (
+                r.min_tenure_months is not None or r.max_tenure_months is not None
+            )
             if has_tenure_condition:
                 if r.min_tenure_months is not None and tenure_months < r.min_tenure_months:
                     continue
@@ -103,9 +105,13 @@ class LoanRateResolverService:
                     continue
 
             # 2.5 Priority weighting
-            match_score += ((r.priority if r.priority is not None else 100) * 10)
+            match_score += (r.priority if r.priority is not None else 100) * 10
 
-            eff_dt = r.effective_from if r.effective_from.tzinfo else r.effective_from.replace(tzinfo=timezone.utc)
+            eff_dt = (
+                r.effective_from
+                if r.effective_from.tzinfo
+                else r.effective_from.replace(tzinfo=timezone.utc)
+            )
             r_id = r.id if r.id is not None else 0
             scored_matches.append((match_score, r.annual_interest_rate, eff_dt, r_id, r))
 

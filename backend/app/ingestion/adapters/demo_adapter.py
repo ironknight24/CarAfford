@@ -21,10 +21,10 @@ from app.ingestion.validators.tax_validator import TaxRuleDataValidator
 from app.ingestion.validators.finance_validator import FinanceDataValidator
 from app.ingestion.validators.location_validator import LocationDataValidator
 
-
 # =============================================================================
 # DEMO VEHICLE ADAPTER
 # =============================================================================
+
 
 class DemoVehicleFetcher(DataFetcher):
     """Fetches seeded/demo vehicle entries for pipeline execution."""
@@ -140,7 +140,9 @@ class DemoVehicleNormalizer(DataNormalizer):
         }
 
         fuel = fuel_map.get(str(parsed_item.get("fuel_raw")).upper(), parsed_item.get("fuel_raw"))
-        trans = trans_map.get(str(parsed_item.get("transmission_raw")).upper(), parsed_item.get("transmission_raw"))
+        trans = trans_map.get(
+            str(parsed_item.get("transmission_raw")).upper(), parsed_item.get("transmission_raw")
+        )
         body = body_map.get(str(parsed_item.get("body_raw")).upper(), parsed_item.get("body_raw"))
 
         return {
@@ -153,7 +155,11 @@ class DemoVehicleNormalizer(DataNormalizer):
             "body_type": body,
             "seating_capacity": int(parsed_item.get("seating_raw", 5)),
             "arai_mileage_kmpl": Decimal(str(parsed_item.get("mileage_raw", "18.0"))),
-            "safety_rating_stars": int(parsed_item.get("safety_raw", 0)) if parsed_item.get("safety_raw") is not None else None,
+            "safety_rating_stars": (
+                int(parsed_item.get("safety_raw", 0))
+                if parsed_item.get("safety_raw") is not None
+                else None
+            ),
             "airbags_count": int(parsed_item.get("airbags_raw", 2)),
             "ex_showroom_price": Decimal(str(parsed_item.get("price_raw", "500000.00"))),
             "effective_from": parsed_item.get("effective_from_raw"),

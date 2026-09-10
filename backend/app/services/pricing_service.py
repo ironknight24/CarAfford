@@ -31,7 +31,9 @@ class PricingService:
             city_id=request.city_id,
             is_bh_series=request.is_bh_series,
             is_financed=request.is_financed,
-            insurance_option="ZERO_DEP" if request.include_zero_dep_insurance else "DEFAULT_ESTIMATE",
+            insurance_option=(
+                "ZERO_DEP" if request.include_zero_dep_insurance else "DEFAULT_ESTIMATE"
+            ),
         )
         res: OnRoadPriceResponse = await OnRoadPriceCalculationService.calculate_on_road_price(
             db=self.session,
@@ -93,4 +95,3 @@ class PricingService:
             is_bh_series=res.is_bh_series,
             calculated_at=res.calculation_date.isoformat(),
         )
-

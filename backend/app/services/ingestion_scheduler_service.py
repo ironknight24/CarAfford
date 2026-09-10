@@ -48,7 +48,11 @@ class IngestionSchedulerService:
             if not ds.last_synced_at:
                 is_stale = True
             else:
-                last_sync = ds.last_synced_at if ds.last_synced_at.tzinfo else ds.last_synced_at.replace(tzinfo=timezone.utc)
+                last_sync = (
+                    ds.last_synced_at
+                    if ds.last_synced_at.tzinfo
+                    else ds.last_synced_at.replace(tzinfo=timezone.utc)
+                )
                 age_days = (now - last_sync).days
                 if age_days >= sla_days:
                     is_stale = True
@@ -81,7 +85,11 @@ class IngestionSchedulerService:
         mode = (
             "LIVE"
             if data_source.source_type == DataSourceType.OFFICIAL_GOVERNMENT.value
-            else ("MANUAL_REVIEW" if data_source.source_type == DataSourceType.MANUAL_REVIEW.value else "FIXTURE_ONLY")
+            else (
+                "MANUAL_REVIEW"
+                if data_source.source_type == DataSourceType.MANUAL_REVIEW.value
+                else "FIXTURE_ONLY"
+            )
         )
 
         logger.info(f"[INGESTION_JOB] Initiating run for source '{data_source.name}' (mode={mode})")
@@ -109,7 +117,9 @@ class IngestionSchedulerService:
         if mode == "MANUAL_REVIEW":
             run.status = IngestionRunStatus.COMPLETED.value
             run.completed_at = datetime.now(timezone.utc)
-            run.notes = "Skipped automated live fetch: Source requires manual operator verification."
+            run.notes = (
+                "Skipped automated live fetch: Source requires manual operator verification."
+            )
             await db.commit()
             return {
                 "run_id": run.id,
@@ -146,7 +156,7 @@ class IngestionSchedulerService:
                 logger.error(f"[INGESTION_JOB_ERROR] dataset={dataset_name} exc={e}")
 
             if not success and attempt <= max_retries:
-                backoff_delay = 2 ** attempt
+                backoff_delay = 2**attempt
                 await asyncio.sleep(backoff_delay)
 
         if not success:

@@ -37,7 +37,9 @@ async def get_manufacturers(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
-    search: Optional[str] = Query(default=None, description="Search by manufacturer name, slug, or country"),
+    search: Optional[str] = Query(
+        default=None, description="Search by manufacturer name, slug, or country"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     repo = VehicleRepository(db)
@@ -103,7 +105,9 @@ async def get_models(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     manufacturer_id: Optional[int] = Query(default=None, description="Filter by Manufacturer ID"),
-    body_type: Optional[str] = Query(default=None, description="Filter by body type (e.g. SUV, Hatchback, Sedan)"),
+    body_type: Optional[str] = Query(
+        default=None, description="Filter by body type (e.g. SUV, Hatchback, Sedan)"
+    ),
     segment: Optional[str] = Query(default=None, description="Filter by automotive segment"),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
     search: Optional[str] = Query(default=None, description="Search by model or manufacturer name"),
@@ -215,11 +219,17 @@ async def get_variants(
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     model_id: Optional[int] = Query(default=None, description="Filter by Car Model ID"),
     manufacturer_id: Optional[int] = Query(default=None, description="Filter by Manufacturer ID"),
-    fuel_type: Optional[str] = Query(default=None, description="Petrol, Diesel, CNG, Electric, Hybrid"),
-    transmission: Optional[str] = Query(default=None, description="Manual, Automatic, AMT, CVT, DCT"),
+    fuel_type: Optional[str] = Query(
+        default=None, description="Petrol, Diesel, CNG, Electric, Hybrid"
+    ),
+    transmission: Optional[str] = Query(
+        default=None, description="Manual, Automatic, AMT, CVT, DCT"
+    ),
     drivetrain: Optional[str] = Query(default=None, description="FWD, RWD, AWD, 4WD"),
     active: Optional[bool] = Query(default=None, description="Filter by active status"),
-    search: Optional[str] = Query(default=None, description="Search term across variant, model, and manufacturer"),
+    search: Optional[str] = Query(
+        default=None, description="Search term across variant, model, and manufacturer"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     repo = VehicleRepository(db)
@@ -335,17 +345,33 @@ async def get_variant_by_id(
     description="Multi-factor vehicle search filtered by brand, model, fuel type, transmission, body type, segment, price range, and seating capacity.",
 )
 async def search_vehicles(
-    manufacturer: Optional[str] = Query(default=None, description="Manufacturer name or slug (e.g. Tata, Hyundai)"),
+    manufacturer: Optional[str] = Query(
+        default=None, description="Manufacturer name or slug (e.g. Tata, Hyundai)"
+    ),
     manufacturer_id: Optional[int] = Query(default=None, description="Manufacturer ID"),
-    model: Optional[str] = Query(default=None, description="Model name or slug (e.g. Nexon, Creta)"),
+    model: Optional[str] = Query(
+        default=None, description="Model name or slug (e.g. Nexon, Creta)"
+    ),
     model_id: Optional[int] = Query(default=None, description="Model ID"),
-    fuel_type: Optional[str] = Query(default=None, description="Petrol, Diesel, CNG, Electric, Hybrid"),
-    transmission: Optional[str] = Query(default=None, description="Manual, Automatic, AMT, CVT, DCT"),
+    fuel_type: Optional[str] = Query(
+        default=None, description="Petrol, Diesel, CNG, Electric, Hybrid"
+    ),
+    transmission: Optional[str] = Query(
+        default=None, description="Manual, Automatic, AMT, CVT, DCT"
+    ),
     body_type: Optional[str] = Query(default=None, description="SUV, Hatchback, Sedan, MUV"),
-    segment: Optional[str] = Query(default=None, description="Segment (e.g. Compact SUV, B-Segment)"),
-    minimum_price: Optional[Decimal] = Query(default=None, ge=0, description="Minimum ex-showroom price in INR"),
-    maximum_price: Optional[Decimal] = Query(default=None, ge=0, description="Maximum ex-showroom price in INR"),
-    minimum_seating_capacity: Optional[int] = Query(default=None, ge=1, description="Minimum seating capacity"),
+    segment: Optional[str] = Query(
+        default=None, description="Segment (e.g. Compact SUV, B-Segment)"
+    ),
+    minimum_price: Optional[Decimal] = Query(
+        default=None, ge=0, description="Minimum ex-showroom price in INR"
+    ),
+    maximum_price: Optional[Decimal] = Query(
+        default=None, ge=0, description="Maximum ex-showroom price in INR"
+    ),
+    minimum_seating_capacity: Optional[int] = Query(
+        default=None, ge=1, description="Minimum seating capacity"
+    ),
     active: Optional[bool] = Query(default=True, description="Filter by active status"),
     search: Optional[str] = Query(default=None, description="General search query"),
     page: int = Query(default=1, ge=1, description="Page number"),

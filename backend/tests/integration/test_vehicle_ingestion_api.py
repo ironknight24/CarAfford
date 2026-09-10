@@ -40,7 +40,9 @@ class TestVehicleIngestionApiAndDownstreamFlow:
         m_data = maruti_resp.json()["data"]
         assert m_data["status"] == "COMPLETED"
 
-    async def test_vehicle_api_backward_compatibility_with_authoritative_data(self, async_client: AsyncClient):
+    async def test_vehicle_api_backward_compatibility_with_authoritative_data(
+        self, async_client: AsyncClient
+    ):
         # 1. First trigger ingestion
         await async_client.post(
             "/api/v1/ingestion/runs",
@@ -77,7 +79,9 @@ class TestVehicleIngestionApiAndDownstreamFlow:
         search_results = search_resp.json()["items"]
         assert len(search_results) > 0
 
-    async def test_downstream_on_road_calculation_compatibility(self, async_client: AsyncClient, db_session):
+    async def test_downstream_on_road_calculation_compatibility(
+        self, async_client: AsyncClient, db_session
+    ):
         # 1. Ingest Tata vehicles
         await async_client.post(
             "/api/v1/ingestion/runs",
@@ -94,24 +98,47 @@ class TestVehicleIngestionApiAndDownstreamFlow:
         # 3. Ensure test State and City exist for location pricing
         st = (await db_session.execute(select(State).where(State.code == "DL"))).scalars().first()
         if not st:
-            st = State(name="Delhi", code="DL", region_type="UNION_TERRITORY", active=True, country_id=1)
+            st = State(
+                name="Delhi", code="DL", region_type="UNION_TERRITORY", active=True, country_id=1
+            )
             db_session.add(st)
             await db_session.flush()
 
-        ct = (await db_session.execute(select(City).where(City.name == "New Delhi"))).scalars().first()
+        ct = (
+            (await db_session.execute(select(City).where(City.name == "New Delhi")))
+            .scalars()
+            .first()
+        )
         if not ct:
-            ct = City(state_id=st.id, name="New Delhi", slug="new-delhi", tier="Tier 1", active=True)
+            ct = City(
+                state_id=st.id, name="New Delhi", slug="new-delhi", tier="Tier 1", active=True
+            )
             db_session.add(ct)
             await db_session.flush()
 
-        rto = (await db_session.execute(select(RtoOffice).where(RtoOffice.code == "DL-01"))).scalars().first()
+        rto = (
+            (await db_session.execute(select(RtoOffice).where(RtoOffice.code == "DL-01")))
+            .scalars()
+            .first()
+        )
         if not rto:
-            rto = RtoOffice(state_id=st.id, city_id=ct.id, code="DL-01", name="Mall Road", jurisdiction="North Delhi", active=True)
+            rto = RtoOffice(
+                state_id=st.id,
+                city_id=ct.id,
+                code="DL-01",
+                name="Mall Road",
+                jurisdiction="North Delhi",
+                active=True,
+            )
             db_session.add(rto)
             await db_session.flush()
 
         # Add basic road tax rule if not present
-        tax_rule = (await db_session.execute(select(TaxRule).where(TaxRule.state_id == st.id))).scalars().first()
+        tax_rule = (
+            (await db_session.execute(select(TaxRule).where(TaxRule.state_id == st.id)))
+            .scalars()
+            .first()
+        )
         if not tax_rule:
             tax_rule = TaxRule(
                 name="Delhi Standard Road Tax",

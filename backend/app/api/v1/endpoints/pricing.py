@@ -57,8 +57,13 @@ async def get_on_road_price_by_variant(
     city_id: Optional[int] = Query(None, description="Optional ID of the City"),
     rto_id: Optional[int] = Query(None, description="Optional ID of the RTO"),
     calculation_date: Optional[datetime] = Query(None, description="Target calculation date"),
-    insurance_option: str = Query("DEFAULT_ESTIMATE", description="DEFAULT_ESTIMATE, USER_PROVIDED, ZERO_DEP, THIRD_PARTY_ONLY"),
-    insurance_amount: Optional[Decimal] = Query(None, description="Custom insurance quote if USER_PROVIDED"),
+    insurance_option: str = Query(
+        "DEFAULT_ESTIMATE",
+        description="DEFAULT_ESTIMATE, USER_PROVIDED, ZERO_DEP, THIRD_PARTY_ONLY",
+    ),
+    insurance_amount: Optional[Decimal] = Query(
+        None, description="Custom insurance quote if USER_PROVIDED"
+    ),
     is_bh_series: bool = Query(False, description="Apply BH-series calculation"),
     is_financed: bool = Query(True, description="Vehicle is financed (affects hypothecation fees)"),
     db: AsyncSession = Depends(get_db),
@@ -121,4 +126,3 @@ async def get_price_history(
     repo = PricingRepository(db)
     history = await repo.get_price_history(variant_id)
     return BaseResponse(data=history)
-

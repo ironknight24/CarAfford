@@ -55,7 +55,7 @@ def round_score(score: Decimal) -> Decimal:
 
 class RecommendationService:
     """Pure domain recommendation engine for CarAfford.
-    
+
     Orchestrates:
     - Vehicle Catalogue & Candidate Filtering
     - Affordability Engine (On-Road Price & Banking Eligibility)
@@ -165,7 +165,8 @@ class RecommendationService:
                     rto_id=rto.id if rto else None,
                     credit_score=request.credit_score or 750,
                     preferred_loan_tenure_months=request.preferred_loan_tenure_months or 60,
-                    affordability_profile=request.affordability_profile or AffordabilityProfile.BALANCED,
+                    affordability_profile=request.affordability_profile
+                    or AffordabilityProfile.BALANCED,
                     calculation_date=calc_date,
                 )
                 afford_eval = await AffordabilityService.evaluate_vehicle_affordability(
@@ -177,25 +178,38 @@ class RecommendationService:
                 continue
 
             # Price bounds filter if user specified
-            if request.minimum_price is not None and afford_eval.on_road_price < request.minimum_price:
+            if (
+                request.minimum_price is not None
+                and afford_eval.on_road_price < request.minimum_price
+            ):
                 excluded_count += 1
                 continue
-            if request.maximum_price is not None and afford_eval.on_road_price > request.maximum_price:
+            if (
+                request.maximum_price is not None
+                and afford_eval.on_road_price > request.maximum_price
+            ):
                 excluded_count += 1
                 continue
 
             # Safety rating filter if user specified
             spec = variant.specification
             safety_stars = spec.safety_rating_stars if spec and spec.safety_rating_stars else 3
-            if request.minimum_safety_rating is not None and safety_stars < request.minimum_safety_rating:
+            if (
+                request.minimum_safety_rating is not None
+                and safety_stars < request.minimum_safety_rating
+            ):
                 excluded_count += 1
                 continue
 
             # Exclude non-viable options
-            if afford_eval.affordability_status in [
-                AffordabilityStatus.NOT_AFFORDABLE,
-                AffordabilityStatus.NO_FINANCING_OPTION,
-            ] or not afford_eval.affordable:
+            if (
+                afford_eval.affordability_status
+                in [
+                    AffordabilityStatus.NOT_AFFORDABLE,
+                    AffordabilityStatus.NO_FINANCING_OPTION,
+                ]
+                or not afford_eval.affordable
+            ):
                 excluded_count += 1
                 continue
 
@@ -238,9 +252,14 @@ class RecommendationService:
         scored_stretch = cls._score_candidate_pool(stretch_items, request, budget_summary)
 
         # 6. Categorize and Rank Top Recommendations
-        limit = min(MAX_RECOMMENDATION_LIMIT, max(MIN_RECOMMENDATION_LIMIT, request.limit or DEFAULT_RECOMMENDATION_LIMIT))
+        limit = min(
+            MAX_RECOMMENDATION_LIMIT,
+            max(MIN_RECOMMENDATION_LIMIT, request.limit or DEFAULT_RECOMMENDATION_LIMIT),
+        )
         recommendations = cls._build_recommended_items(
-            scored_affordable[:limit], is_stretch=False, monthly_income=request.monthly_take_home_income
+            scored_affordable[:limit],
+            is_stretch=False,
+            monthly_income=request.monthly_take_home_income,
         )
         stretch_recommendations = cls._build_recommended_items(
             scored_stretch[:limit], is_stretch=True, monthly_income=request.monthly_take_home_income
@@ -308,7 +327,11 @@ class RecommendationService:
 
         summary_notes = [
             f"Compared {len(all_recs)} vehicle variants against your monthly income of ₹{request.monthly_take_home_income:,.2f}.",
-            f"Rank #1: {all_recs[0].variant_name} with overall score {all_recs[0].score}/100." if all_recs else "No vehicles matched your criteria.",
+            (
+                f"Rank #1: {all_recs[0].variant_name} with overall score {all_recs[0].score}/100."
+                if all_recs
+                else "No vehicles matched your criteria."
+            ),
         ]
 
         return RecommendationCompareResponse(
@@ -336,20 +359,23 @@ class RecommendationService:
             return []
 
         # Extract range boundaries for relative normalization
-        tco_5yr_values = [
-            float(c["tco"].periods["5_years"].total_cash_outflow) for c in candidates
-        ]
+        tco_5yr_values = [float(c["tco"].periods["5_years"].total_cash_outflow) for c in candidates]
         min_tco = min(tco_5yr_values)
         max_tco = max(tco_5yr_values)
 
         monthly_burdens = [
-            float(c["affordability"].estimated_emi + c["tco"].operating_costs.annual_fuel_cost / Decimal("12.0"))
+            float(
+                c["affordability"].estimated_emi
+                + c["tco"].operating_costs.annual_fuel_cost / Decimal("12.0")
+            )
             for c in candidates
         ]
         min_monthly = min(monthly_burdens)
         max_monthly = max(monthly_burdens)
 
-        avail_car_emi = float(budget.available_car_emi) if float(budget.available_car_emi) > 0 else 1.0
+        avail_car_emi = (
+            float(budget.available_car_emi) if float(budget.available_car_emi) > 0 else 1.0
+        )
 
         for idx, item in enumerate(candidates):
             afford = item["affordability"]
@@ -362,7 +388,9 @@ class RecommendationService:
             base_afford = (
                 100.0
                 if afford.affordability_status == AffordabilityStatus.COMFORTABLE
-                else (80.0 if afford.affordability_status == AffordabilityStatus.AFFORDABLE else 50.0)
+                else (
+                    80.0 if afford.affordability_status == AffordabilityStatus.AFFORDABLE else 50.0
+                )
             )
             headroom_ratio = max(0.0, min(1.0, float(afford.emi_headroom) / avail_car_emi))
             afford_score = round(0.70 * base_afford + 0.30 * (base_afford * headroom_ratio))
@@ -385,9 +413,18 @@ class RecommendationService:
             # Transmission (25 pts)
             if not request.transmission and request.automatic_required is None:
                 pref_points += 25
-            elif request.automatic_required and variant.transmission.upper() in ["AUTOMATIC", "AMT", "CVT", "DCT", "AT"]:
+            elif request.automatic_required and variant.transmission.upper() in [
+                "AUTOMATIC",
+                "AMT",
+                "CVT",
+                "DCT",
+                "AT",
+            ]:
                 pref_points += 25
-            elif request.transmission and request.transmission.strip().upper() in variant.transmission.upper():
+            elif (
+                request.transmission
+                and request.transmission.strip().upper() in variant.transmission.upper()
+            ):
                 pref_points += 25
             # Body Type (25 pts)
             if not request.body_type:
@@ -403,18 +440,22 @@ class RecommendationService:
             pref_score = pref_points  # Max 100
 
             # 4. Monthly Burden Dimension (15%)
-            cur_monthly = float(afford.estimated_emi + tco.operating_costs.annual_fuel_cost / Decimal("12.0"))
+            cur_monthly = float(
+                afford.estimated_emi + tco.operating_costs.annual_fuel_cost / Decimal("12.0")
+            )
             if max_monthly == min_monthly:
                 monthly_score = 100.0
             else:
-                monthly_score = 100.0 - ((cur_monthly - min_monthly) / (max_monthly - min_monthly) * 100.0)
+                monthly_score = 100.0 - (
+                    (cur_monthly - min_monthly) / (max_monthly - min_monthly) * 100.0
+                )
             monthly_score = round(max(0.0, min(100.0, monthly_score)))
 
             # 5. Vehicle Value & Safety Dimension (10%)
             val_points = 0.0
             val_points += min(50.0, float(item["safety_stars"]) * 10.0)  # Max 50
-            val_points += min(25.0, float(item["airbags"]) * 4.0)        # Max 25
-            val_points += min(25.0, float(item["arai_mileage"]) * 1.0)   # Max 25
+            val_points += min(25.0, float(item["airbags"]) * 4.0)  # Max 25
+            val_points += min(25.0, float(item["arai_mileage"]) * 1.0)  # Max 25
             val_score = round(val_points)
 
             # Composite Score calculation
@@ -480,7 +521,9 @@ class RecommendationService:
                 category = RecommendationCategory.STRETCH_OPTIONS.value
             elif rank == 1:
                 category = RecommendationCategory.BEST_OVERALL.value
-            elif rank == 2 or (rank <= 3 and float(afford.emi_headroom) > float(afford.available_car_emi) * 0.25):
+            elif rank == 2 or (
+                rank <= 3 and float(afford.emi_headroom) > float(afford.available_car_emi) * 0.25
+            ):
                 category = RecommendationCategory.BEST_VALUE.value
             elif rank - 1 == best_tco_idx:
                 category = RecommendationCategory.LOWEST_5_YEAR_TCO.value
@@ -506,15 +549,21 @@ class RecommendationService:
             )
 
             if item["safety_stars"] >= 4:
-                reasons.append(f"{item['safety_stars']}-Star Safety rating with {item['airbags']} airbags standard.")
+                reasons.append(
+                    f"{item['safety_stars']}-Star Safety rating with {item['airbags']} airbags standard."
+                )
             if variant.arai_mileage_kmpl:
-                reasons.append(f"Fuel efficient: {variant.arai_mileage_kmpl} km/l claimed efficiency.")
+                reasons.append(
+                    f"Fuel efficient: {variant.arai_mileage_kmpl} km/l claimed efficiency."
+                )
 
             warnings: List[str] = [
                 "Fuel prices, insurance renewals, and bank loan rates are calculated using demo baseline data.",
             ]
             if is_stretch:
-                warnings.append("This vehicle utilizes your stretch budget capacity; consider conservative financing.")
+                warnings.append(
+                    "This vehicle utilizes your stretch budget capacity; consider conservative financing."
+                )
 
             # Best loan offer
             fin_opt: Optional[RecommendationFinancingOption] = None
@@ -526,7 +575,11 @@ class RecommendationService:
                     interest_rate=top_offer.annual_interest_rate,
                     tenure_months=top_offer.tenure_months,
                     monthly_emi=top_offer.monthly_emi,
-                    processing_fee=getattr(top_offer, "total_fees", getattr(top_offer, "processing_fee", Decimal("0.00"))),
+                    processing_fee=getattr(
+                        top_offer,
+                        "total_fees",
+                        getattr(top_offer, "processing_fee", Decimal("0.00")),
+                    ),
                     total_interest=top_offer.total_interest,
                 )
             elif afford.all_eligible_loan_offers and len(afford.all_eligible_loan_offers) > 0:
@@ -537,7 +590,11 @@ class RecommendationService:
                     interest_rate=top_offer.annual_interest_rate,
                     tenure_months=top_offer.tenure_months,
                     monthly_emi=top_offer.monthly_emi,
-                    processing_fee=getattr(top_offer, "total_fees", getattr(top_offer, "processing_fee", Decimal("0.00"))),
+                    processing_fee=getattr(
+                        top_offer,
+                        "total_fees",
+                        getattr(top_offer, "processing_fee", Decimal("0.00")),
+                    ),
                     total_interest=top_offer.total_interest,
                 )
 
@@ -548,7 +605,11 @@ class RecommendationService:
             m_ins = round_inr(tco.operating_costs.annual_insurance_cost / Decimal("12.0"))
             m_maint = round_inr(tco.operating_costs.annual_maintenance_cost / Decimal("12.0"))
             m_tco = p5.average_monthly_cost
-            tco_pct = round_inr((m_tco / monthly_income) * Decimal("100.0")) if monthly_income and monthly_income > 0 else Decimal("0.00")
+            tco_pct = (
+                round_inr((m_tco / monthly_income) * Decimal("100.0"))
+                if monthly_income and monthly_income > 0
+                else Decimal("0.00")
+            )
             legacy_ownership_cost = OwnershipCostBreakdown(
                 monthly_emi=m_emi,
                 monthly_fuel_cost=m_fuel,
@@ -582,7 +643,11 @@ class RecommendationService:
                     on_road_price=afford.on_road_price,
                 ),
                 affordability=RecommendationAffordabilitySummary(
-                    status=afford.affordability_status.value if hasattr(afford.affordability_status, "value") else str(afford.affordability_status),
+                    status=(
+                        afford.affordability_status.value
+                        if hasattr(afford.affordability_status, "value")
+                        else str(afford.affordability_status)
+                    ),
                     available_car_emi=afford.available_car_emi,
                     estimated_emi=afford.estimated_emi,
                     emi_headroom=afford.emi_headroom,
@@ -624,7 +689,15 @@ class RecommendationService:
                 tenure_months=fin_opt.tenure_months if fin_opt else 60,
                 ownership_cost=legacy_ownership_cost,
                 affordability_score=scores["affordability_score"],
-                affordability_category=AffordabilityCategory.COMFORTABLE if afford.affordability_status == AffordabilityStatus.COMFORTABLE else (AffordabilityCategory.MODERATE if afford.affordability_status == AffordabilityStatus.AFFORDABLE else AffordabilityCategory.STRETCH),
+                affordability_category=(
+                    AffordabilityCategory.COMFORTABLE
+                    if afford.affordability_status == AffordabilityStatus.COMFORTABLE
+                    else (
+                        AffordabilityCategory.MODERATE
+                        if afford.affordability_status == AffordabilityStatus.AFFORDABLE
+                        else AffordabilityCategory.STRETCH
+                    )
+                ),
                 affordability_rationale=afford.affordability_rationale,
                 on_road_breakdown=None,
             )

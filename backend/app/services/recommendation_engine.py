@@ -22,7 +22,9 @@ class RecommendationEngine:
         elif isinstance(request, AffordabilityAnalysisRequest):
             fuel_pref = request.preferred_fuel_types[0] if request.preferred_fuel_types else None
             body_pref = request.preferred_body_types[0] if request.preferred_body_types else None
-            trans_pref = request.preferred_transmission[0] if request.preferred_transmission else None
+            trans_pref = (
+                request.preferred_transmission[0] if request.preferred_transmission else None
+            )
 
             rec_req = RecommendationRequest(
                 monthly_take_home_income=request.monthly_take_home_income,

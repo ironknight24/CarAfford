@@ -5,6 +5,7 @@ import re
 
 EMAIL_REGEX = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
+
 class UserBase(BaseModel):
     email: str = Field(..., description="User email address")
     full_name: Optional[str] = None

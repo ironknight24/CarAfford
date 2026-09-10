@@ -15,6 +15,7 @@ from app.schemas.ingestion import (
 
 class AdminOverviewResponse(BaseModel):
     """Aggregated administrative overview of data sources, ingestion status, and quality metrics."""
+
     total_data_sources: int
     active_sources: int
     live_sources: int
@@ -30,11 +31,14 @@ class AdminOverviewResponse(BaseModel):
     overall_quality_score: Decimal
     quality_rating: str
     datasets_freshness_summary: List[FreshnessReportItem]
-    admin_auth_notice: str = "Administrative operations isolated. Production authentication/RBAC is scheduled for Domain 17."
+    admin_auth_notice: str = (
+        "Administrative operations isolated. Production authentication/RBAC is scheduled for Domain 17."
+    )
 
 
 class AdminDataSourceItem(BaseModel):
     """Enhanced data source representation for governance UI."""
+
     id: int
     name: str
     slug: str
@@ -57,6 +61,7 @@ class AdminDataSourceItem(BaseModel):
 
 class AdminIngestionRunDetail(BaseModel):
     """Full audit detail for a specific ingestion run."""
+
     run: IngestionRunRead
     raw_records_count: int
     raw_samples: List[Dict[str, Any]] = Field(default_factory=list)
@@ -67,6 +72,7 @@ class AdminIngestionRunDetail(BaseModel):
 
 class FreshnessDomainGroup(BaseModel):
     """Freshness status grouped by domain category."""
+
     domain_name: str
     domain_key: str
     total_datasets: int
@@ -78,6 +84,7 @@ class FreshnessDomainGroup(BaseModel):
 
 class AdminFreshnessResponse(BaseModel):
     """Grouped data freshness report across all functional domains."""
+
     domains: List[FreshnessDomainGroup]
     overall_freshness_pct: Decimal
     stale_datasets_count: int
@@ -86,6 +93,7 @@ class AdminFreshnessResponse(BaseModel):
 
 class QualityScorePillar(BaseModel):
     """Single pillar contributing to the composite data quality score."""
+
     pillar_name: str
     pillar_key: str
     weight_pct: Decimal
@@ -96,6 +104,7 @@ class QualityScorePillar(BaseModel):
 
 class AdminQualityResponse(BaseModel):
     """Comprehensive data quality scorecard and explanations."""
+
     overall_score: Decimal
     rating: str
     pillars: List[QualityScorePillar]

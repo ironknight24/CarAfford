@@ -35,7 +35,7 @@ class TestAffordabilityMathAndProfiles:
         await seed_database(db_session)
         state = (await db_session.execute(select(State))).scalars().first()
         assert state is not None
-        
+
         req = AffordabilityCalculateRequest(
             monthly_take_home_income=Decimal("100000.00"),
             existing_monthly_emi=Decimal("10000.00"),
@@ -53,7 +53,9 @@ class TestAffordabilityMathAndProfiles:
         assert res.available_car_emi == Decimal("25000.00")
         assert res.available_down_payment == Decimal("200000.00")
         assert res.maximum_affordable_loan > Decimal("1000000.00")
-        assert res.maximum_affordable_on_road_price == res.maximum_affordable_loan + Decimal("200000.00")
+        assert res.maximum_affordable_on_road_price == res.maximum_affordable_loan + Decimal(
+            "200000.00"
+        )
         assert res.recommended_safe_budget < res.maximum_affordable_on_road_price
         assert res.stretch_budget > res.maximum_affordable_on_road_price
         assert res.limiting_factor in (LimitingFactor.EMI_CAP, LimitingFactor.LOAN_MAXIMUM)
@@ -120,15 +122,21 @@ class TestAffordabilityMathAndProfiles:
 
         res_cons = await AffordabilityService.calculate_capacity(
             db_session,
-            AffordabilityCalculateRequest(**base_kwargs, affordability_profile=AffordabilityProfile.CONSERVATIVE),
+            AffordabilityCalculateRequest(
+                **base_kwargs, affordability_profile=AffordabilityProfile.CONSERVATIVE
+            ),
         )
         res_bal = await AffordabilityService.calculate_capacity(
             db_session,
-            AffordabilityCalculateRequest(**base_kwargs, affordability_profile=AffordabilityProfile.BALANCED),
+            AffordabilityCalculateRequest(
+                **base_kwargs, affordability_profile=AffordabilityProfile.BALANCED
+            ),
         )
         res_str = await AffordabilityService.calculate_capacity(
             db_session,
-            AffordabilityCalculateRequest(**base_kwargs, affordability_profile=AffordabilityProfile.STRETCH),
+            AffordabilityCalculateRequest(
+                **base_kwargs, affordability_profile=AffordabilityProfile.STRETCH
+            ),
         )
 
         assert res_cons.maximum_total_emi == Decimal("30000.00")
@@ -140,8 +148,16 @@ class TestAffordabilityMathAndProfiles:
         assert res_str.maximum_total_emi == Decimal("40000.00")
         assert res_str.available_car_emi == Decimal("30000.00")
 
-        assert res_cons.maximum_affordable_loan < res_bal.maximum_affordable_loan < res_str.maximum_affordable_loan
-        assert res_cons.maximum_affordable_on_road_price < res_bal.maximum_affordable_on_road_price < res_str.maximum_affordable_on_road_price
+        assert (
+            res_cons.maximum_affordable_loan
+            < res_bal.maximum_affordable_loan
+            < res_str.maximum_affordable_loan
+        )
+        assert (
+            res_cons.maximum_affordable_on_road_price
+            < res_bal.maximum_affordable_on_road_price
+            < res_str.maximum_affordable_on_road_price
+        )
 
     async def test_down_payment_variations(self, db_session: AsyncSession):
         """Tests zero down payment, normal down payment, and large down payment."""
@@ -164,18 +180,26 @@ class TestAffordabilityMathAndProfiles:
         )
         res_normal = await AffordabilityService.calculate_capacity(
             db_session,
-            AffordabilityCalculateRequest(**base_kwargs, available_down_payment=Decimal("200000.00")),
+            AffordabilityCalculateRequest(
+                **base_kwargs, available_down_payment=Decimal("200000.00")
+            ),
         )
         res_large = await AffordabilityService.calculate_capacity(
             db_session,
-            AffordabilityCalculateRequest(**base_kwargs, available_down_payment=Decimal("1000000.00")),
+            AffordabilityCalculateRequest(
+                **base_kwargs, available_down_payment=Decimal("1000000.00")
+            ),
         )
 
         assert res_zero.available_down_payment == Decimal("0.00")
         assert res_normal.available_down_payment == Decimal("200000.00")
         assert res_large.available_down_payment == Decimal("1000000.00")
-        assert res_normal.maximum_affordable_on_road_price > res_zero.maximum_affordable_on_road_price
-        assert res_large.maximum_affordable_on_road_price > res_normal.maximum_affordable_on_road_price
+        assert (
+            res_normal.maximum_affordable_on_road_price > res_zero.maximum_affordable_on_road_price
+        )
+        assert (
+            res_large.maximum_affordable_on_road_price > res_normal.maximum_affordable_on_road_price
+        )
 
     async def test_credit_score_rate_and_capacity_sensitivity(self, db_session: AsyncSession):
         """Higher credit scores should resolve more favorable interest rates."""
@@ -201,7 +225,10 @@ class TestAffordabilityMathAndProfiles:
             AffordabilityCalculateRequest(**base_kwargs, credit_score=620),
         )
 
-        assert res_prime.applicable_financing_assumptions.interest_rate <= res_subprime.applicable_financing_assumptions.interest_rate
+        assert (
+            res_prime.applicable_financing_assumptions.interest_rate
+            <= res_subprime.applicable_financing_assumptions.interest_rate
+        )
         assert res_prime.maximum_affordable_loan >= res_subprime.maximum_affordable_loan
 
 
@@ -224,7 +251,11 @@ class TestLocationHierarchyValidation:
         assert len(states) >= 2
         state1 = states[0]
         state2 = states[1]
-        city2 = (await db_session.execute(select(City).where(City.state_id == state2.id))).scalars().first()
+        city2 = (
+            (await db_session.execute(select(City).where(City.state_id == state2.id)))
+            .scalars()
+            .first()
+        )
         if city2:
             req = AffordabilityCalculateRequest(
                 monthly_take_home_income=Decimal("100000.00"),
@@ -243,7 +274,11 @@ class TestVehicleAffordabilityEvaluation:
     async def test_evaluate_affordable_vs_unaffordable_vehicles(self, db_session: AsyncSession):
         await seed_database(db_session)
         state = (await db_session.execute(select(State))).scalars().first()
-        variants = (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().all()
+        variants = (
+            (await db_session.execute(select(Variant).where(Variant.active == True)))
+            .scalars()
+            .all()
+        )
         assert len(variants) > 0
 
         # High income user evaluating an entry level variant
@@ -257,10 +292,15 @@ class TestVehicleAffordabilityEvaluation:
             preferred_loan_tenure_months=60,
             affordability_profile=AffordabilityProfile.BALANCED,
         )
-        res_affordable = await AffordabilityService.evaluate_vehicle_affordability(db_session, req_affordable)
+        res_affordable = await AffordabilityService.evaluate_vehicle_affordability(
+            db_session, req_affordable
+        )
         assert res_affordable.variant_id == variants[0].id
         assert res_affordable.on_road_price > Decimal("0.00")
-        assert res_affordable.affordability_status in (AffordabilityStatus.COMFORTABLE, AffordabilityStatus.AFFORDABLE)
+        assert res_affordable.affordability_status in (
+            AffordabilityStatus.COMFORTABLE,
+            AffordabilityStatus.AFFORDABLE,
+        )
         assert res_affordable.affordable is True
         assert res_affordable.emi_headroom >= Decimal("0.00")
 
@@ -275,9 +315,14 @@ class TestVehicleAffordabilityEvaluation:
             preferred_loan_tenure_months=60,
             affordability_profile=AffordabilityProfile.BALANCED,
         )
-        res_unaffordable = await AffordabilityService.evaluate_vehicle_affordability(db_session, req_unaffordable)
+        res_unaffordable = await AffordabilityService.evaluate_vehicle_affordability(
+            db_session, req_unaffordable
+        )
         assert res_unaffordable.affordable is False
-        assert res_unaffordable.affordability_status in (AffordabilityStatus.NOT_AFFORDABLE, AffordabilityStatus.STRETCH)
+        assert res_unaffordable.affordability_status in (
+            AffordabilityStatus.NOT_AFFORDABLE,
+            AffordabilityStatus.STRETCH,
+        )
 
         # Ineligible applicant with low income
         req_ineligible = VehicleAffordabilityRequest(
@@ -290,14 +335,23 @@ class TestVehicleAffordabilityEvaluation:
             preferred_loan_tenure_months=60,
             affordability_profile=AffordabilityProfile.BALANCED,
         )
-        res_ineligible = await AffordabilityService.evaluate_vehicle_affordability(db_session, req_ineligible)
+        res_ineligible = await AffordabilityService.evaluate_vehicle_affordability(
+            db_session, req_ineligible
+        )
         assert res_ineligible.affordable is False
-        assert res_ineligible.affordability_status in (AffordabilityStatus.NO_FINANCING_OPTION, AffordabilityStatus.NOT_AFFORDABLE)
+        assert res_ineligible.affordability_status in (
+            AffordabilityStatus.NO_FINANCING_OPTION,
+            AffordabilityStatus.NOT_AFFORDABLE,
+        )
 
     async def test_100_percent_cash_down_payment_is_comfortable(self, db_session: AsyncSession):
         await seed_database(db_session)
         state = (await db_session.execute(select(State))).scalars().first()
-        variant = (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().first()
+        variant = (
+            (await db_session.execute(select(Variant).where(Variant.active == True)))
+            .scalars()
+            .first()
+        )
 
         req = VehicleAffordabilityRequest(
             variant_id=variant.id,
@@ -317,7 +371,11 @@ class TestVehicleAffordabilityEvaluation:
     async def test_compare_vehicles_affordability(self, db_session: AsyncSession):
         await seed_database(db_session)
         state = (await db_session.execute(select(State))).scalars().first()
-        variants = (await db_session.execute(select(Variant).where(Variant.active == True))).scalars().all()
+        variants = (
+            (await db_session.execute(select(Variant).where(Variant.active == True)))
+            .scalars()
+            .all()
+        )
         assert len(variants) >= 2
 
         comp_req = AffordabilityComparisonRequest(
@@ -333,5 +391,7 @@ class TestVehicleAffordabilityEvaluation:
         comp_res = await AffordabilityService.compare_vehicles(db_session, comp_req)
 
         assert len(comp_res.vehicles) == 2
-        assert comp_res.user_budget_summary.available_car_emi == Decimal("42500.00")  # (150k * 0.35) - 10k = 52.5k - 10k = 42.5k
+        assert comp_res.user_budget_summary.available_car_emi == Decimal(
+            "42500.00"
+        )  # (150k * 0.35) - 10k = 52.5k - 10k = 42.5k
         assert len(comp_res.comparison_notes) >= 2

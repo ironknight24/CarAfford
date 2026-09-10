@@ -35,6 +35,7 @@ router = APIRouter()
 # 1. HIGH-LEVEL VEHICLE FINANCING & BANK COMPARISON APIs
 # =============================================================================
 
+
 @router.post(
     "/calculate",
     response_model=BaseResponse[FinanceCalculationResponse],
@@ -67,7 +68,9 @@ async def compare_bank_financing_offers(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        response = await FinancingEngineService.compare_bank_financing_offers(db=db, request=request)
+        response = await FinancingEngineService.compare_bank_financing_offers(
+            db=db, request=request
+        )
         return BaseResponse(data=response)
     except ResourceNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -80,6 +83,7 @@ async def compare_bank_financing_offers(
 # =============================================================================
 # 2. STANDALONE MATHEMATICAL FINANCIAL CALCULATION UTILITIES
 # =============================================================================
+
 
 @router.post(
     "/emi",
@@ -173,6 +177,7 @@ async def generate_amortization_schedule(request: AmortizationScheduleRequest):
 # 3. BANKS, LOAN PRODUCTS & RATES CATALOG APIs (Paginated)
 # =============================================================================
 
+
 @router.get(
     "/banks",
     response_model=PaginatedResponse[BankRead],
@@ -186,9 +191,13 @@ async def get_banks(
     db: AsyncSession = Depends(get_db),
 ):
     repo = FinanceRepository(db)
-    items, total = await repo.get_banks(page=page, page_size=page_size, active=active, search=search)
+    items, total = await repo.get_banks(
+        page=page, page_size=page_size, active=active, search=search
+    )
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
-    return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, total_pages=total_pages)
+    return PaginatedResponse(
+        items=items, total=total, page=page, page_size=page_size, total_pages=total_pages
+    )
 
 
 @router.get(
@@ -203,7 +212,9 @@ async def get_bank_by_id(
     repo = FinanceRepository(db)
     bank = await repo.get_bank_by_id(bank_id)
     if not bank:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Bank with ID {bank_id} not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Bank with ID {bank_id} not found."
+        )
     return BaseResponse(data=bank)
 
 
@@ -235,7 +246,9 @@ async def get_loan_products(
         search=search,
     )
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
-    return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, total_pages=total_pages)
+    return PaginatedResponse(
+        items=items, total=total, page=page, page_size=page_size, total_pages=total_pages
+    )
 
 
 @router.get(
@@ -250,7 +263,10 @@ async def get_loan_product_by_id(
     repo = FinanceRepository(db)
     product = await repo.get_loan_product_by_id(product_id)
     if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Loan product with ID {product_id} not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Loan product with ID {product_id} not found.",
+        )
     return BaseResponse(data=product)
 
 
@@ -274,7 +290,9 @@ async def get_interest_rates(
         active=active,
     )
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
-    return PaginatedResponse(items=items, total=total, page=page, page_size=page_size, total_pages=total_pages)
+    return PaginatedResponse(
+        items=items, total=total, page=page, page_size=page_size, total_pages=total_pages
+    )
 
 
 @router.get(
@@ -289,13 +307,17 @@ async def get_interest_rate_by_id(
     repo = FinanceRepository(db)
     rate = await repo.get_interest_rate_by_id(rate_id)
     if not rate:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Interest rate with ID {rate_id} not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Interest rate with ID {rate_id} not found.",
+        )
     return BaseResponse(data=rate)
 
 
 # =============================================================================
 # 4. LEGACY BACKWARDS-COMPATIBILITY ENDPOINTS
 # =============================================================================
+
 
 @router.post(
     "/calculate-emi",
@@ -304,7 +326,9 @@ async def get_interest_rate_by_id(
 )
 async def calculate_emi_legacy(
     request: EmiCalculationRequest,
-    generate_schedule: bool = Query(False, description="Whether to include month-by-month amortization schedule"),
+    generate_schedule: bool = Query(
+        False, description="Whether to include month-by-month amortization schedule"
+    ),
 ):
     try:
         response = FinanceService.calculate_full_loan_summary(
@@ -330,7 +354,9 @@ async def calculate_loan_eligibility_legacy(
     db: AsyncSession = Depends(get_db),
 ):
     cibil = request.cibil_score or 750
-    interest_rate = request.annual_interest_rate or FinanceService.resolve_interest_rate_by_cibil(cibil)
+    interest_rate = request.annual_interest_rate or FinanceService.resolve_interest_rate_by_cibil(
+        cibil
+    )
     foir_ratio = (request.foir_limit_percent or Decimal("40.0")) / Decimal("100.0")
 
     summary = AffordabilityEngine.calculate_budget_summary(

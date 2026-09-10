@@ -10,8 +10,12 @@ from app.schemas.common import AuditSchemaMixin
 # ==========================================
 class CountryBase(BaseModel):
     name: str = Field(..., max_length=100, description="Country official name (e.g., India)")
-    iso_code: str = Field(..., min_length=2, max_length=2, description="2-letter ISO 3166-1 alpha-2 code (e.g., IN)")
-    iso3_code: str = Field(..., min_length=3, max_length=3, description="3-letter ISO 3166-1 alpha-3 code (e.g., IND)")
+    iso_code: str = Field(
+        ..., min_length=2, max_length=2, description="2-letter ISO 3166-1 alpha-2 code (e.g., IN)"
+    )
+    iso3_code: str = Field(
+        ..., min_length=3, max_length=3, description="3-letter ISO 3166-1 alpha-3 code (e.g., IND)"
+    )
     active: bool = Field(default=True, description="Whether country is active for vehicle pricing")
 
 
@@ -44,7 +48,9 @@ class StateBase(BaseModel):
     country_id: int = Field(default=1, description="Country identifier")
     name: str = Field(..., max_length=100, description="State/UT name (e.g., Karnataka, Delhi)")
     code: str = Field(..., max_length=10, description="State abbreviation/code (e.g., KA, DL, MH)")
-    region_type: str = Field(default="STATE", description="Administrative region type: STATE or UNION_TERRITORY")
+    region_type: str = Field(
+        default="STATE", description="Administrative region type: STATE or UNION_TERRITORY"
+    )
     active: bool = Field(default=True, description="Whether state/UT is active")
     source_id: Optional[int] = Field(default=None, description="Provenance data source identifier")
     source_record_id: Optional[str] = None
@@ -90,9 +96,13 @@ class StateRead(BaseModel):
 # ==========================================
 class CityBase(BaseModel):
     state_id: int = Field(..., description="State identifier")
-    name: str = Field(..., max_length=100, description="City official name (e.g., Bengaluru, Mumbai)")
+    name: str = Field(
+        ..., max_length=100, description="City official name (e.g., Bengaluru, Mumbai)"
+    )
     slug: str = Field(..., max_length=100, description="Unique slug (e.g., bengaluru, mumbai)")
-    tier: str = Field(default="Tier 1", max_length=10, description="City classification (Tier 1, Tier 2, Tier 3)")
+    tier: str = Field(
+        default="Tier 1", max_length=10, description="City classification (Tier 1, Tier 2, Tier 3)"
+    )
     active: bool = Field(default=True, description="Whether city is active")
     source_id: Optional[int] = Field(default=None, description="Provenance data source identifier")
     source_record_id: Optional[str] = None
@@ -137,9 +147,13 @@ class CityRead(BaseModel):
 class RtoOfficeBase(BaseModel):
     state_id: int = Field(..., description="State identifier")
     city_id: Optional[int] = Field(default=None, description="Optional city identifier")
-    code: str = Field(..., max_length=20, description="RTO registration series code (e.g., KA-01, MH-01, DL-01)")
+    code: str = Field(
+        ..., max_length=20, description="RTO registration series code (e.g., KA-01, MH-01, DL-01)"
+    )
     name: str = Field(..., max_length=150, description="RTO official name / office designation")
-    jurisdiction: Optional[str] = Field(default=None, max_length=255, description="Jurisdiction area / boundaries")
+    jurisdiction: Optional[str] = Field(
+        default=None, max_length=255, description="Jurisdiction area / boundaries"
+    )
     active: bool = Field(default=True, description="Whether RTO office is active")
     source_id: Optional[int] = Field(default=None, description="Provenance data source identifier")
     source_record_id: Optional[str] = None

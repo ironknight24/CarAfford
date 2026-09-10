@@ -13,7 +13,6 @@ from app.ingestion.base import (
 )
 from app.ingestion.validators.tco_validator import TCOValidator
 
-
 # =============================================================================
 # 1. FUEL PRICE DATA FIXTURES & ADAPTER (PPAC / IOCL / BPCL / HPCL)
 # =============================================================================
@@ -72,7 +71,6 @@ PPAC_FUEL_PRICE_FIXTURES: List[Dict[str, Any]] = [
         "source_record_id": "GAIL-BLR-CNG-202603",
         "verification_status": "VERIFIED",
     },
-
     # --- Delhi (DL) ---
     {
         "tco_category": "fuel_price",
@@ -113,7 +111,6 @@ PPAC_FUEL_PRICE_FIXTURES: List[Dict[str, Any]] = [
         "source_record_id": "IGL-DEL-CNG-202603",
         "verification_status": "VERIFIED",
     },
-
     # --- Mumbai (MH) ---
     {
         "tco_category": "fuel_price",
@@ -154,7 +151,6 @@ PPAC_FUEL_PRICE_FIXTURES: List[Dict[str, Any]] = [
         "source_record_id": "MGL-MUM-CNG-202603",
         "verification_status": "VERIFIED",
     },
-
     # --- Chennai (TN) ---
     {
         "tco_category": "fuel_price",
@@ -182,7 +178,6 @@ PPAC_FUEL_PRICE_FIXTURES: List[Dict[str, Any]] = [
         "source_record_id": "PPAC-CHE-DIESEL-202603",
         "verification_status": "VERIFIED",
     },
-
     # --- Hyderabad (TS) ---
     {
         "tco_category": "fuel_price",
@@ -223,7 +218,6 @@ PPAC_FUEL_PRICE_FIXTURES: List[Dict[str, Any]] = [
         "source_record_id": "BGL-HYD-CNG-202603",
         "verification_status": "VERIFIED",
     },
-
     # --- National Baseline Fallback ---
     {
         "tco_category": "fuel_price",
@@ -286,13 +280,34 @@ class TCONormalizer(DataNormalizer):
     def normalize(self, parsed_item: Dict[str, Any]) -> Dict[str, Any]:
         norm = dict(parsed_item)
         if "observed_date" in norm and isinstance(norm["observed_date"], str):
-            norm["observed_date"] = datetime.fromisoformat(norm["observed_date"].replace("Z", "+00:00"))
+            norm["observed_date"] = datetime.fromisoformat(
+                norm["observed_date"].replace("Z", "+00:00")
+            )
         if "effective_from" in norm and isinstance(norm["effective_from"], str):
-            norm["effective_from"] = datetime.fromisoformat(norm["effective_from"].replace("Z", "+00:00"))
+            norm["effective_from"] = datetime.fromisoformat(
+                norm["effective_from"].replace("Z", "+00:00")
+            )
         if "effective_to" in norm and isinstance(norm["effective_to"], str):
-            norm["effective_to"] = datetime.fromisoformat(norm["effective_to"].replace("Z", "+00:00"))
+            norm["effective_to"] = datetime.fromisoformat(
+                norm["effective_to"].replace("Z", "+00:00")
+            )
 
-        for dec_field in ["price_per_unit", "rate_per_kwh", "fixed_charge_per_month", "annual_base_cost", "cost_per_km", "year_2_factor", "year_3_factor", "year_4_factor", "year_5_factor", "year_1_depreciation_pct", "year_2_depreciation_pct", "year_3_depreciation_pct", "year_4_depreciation_pct", "year_5_depreciation_pct"]:
+        for dec_field in [
+            "price_per_unit",
+            "rate_per_kwh",
+            "fixed_charge_per_month",
+            "annual_base_cost",
+            "cost_per_km",
+            "year_2_factor",
+            "year_3_factor",
+            "year_4_factor",
+            "year_5_factor",
+            "year_1_depreciation_pct",
+            "year_2_depreciation_pct",
+            "year_3_depreciation_pct",
+            "year_4_depreciation_pct",
+            "year_5_depreciation_pct",
+        ]:
             if dec_field in norm and norm[dec_field] is not None:
                 norm[dec_field] = Decimal(str(norm[dec_field]))
 
@@ -340,7 +355,10 @@ class PPACFuelPriceAdapter(DataSourceAdapter):
         return self.mapper
 
     def get_source_record_id(self, item: Dict[str, Any]) -> str:
-        return item.get("source_record_id") or f"PPAC-{item.get('state_code', 'NAT')}-{item.get('fuel_type')}"
+        return (
+            item.get("source_record_id")
+            or f"PPAC-{item.get('state_code', 'NAT')}-{item.get('fuel_type')}"
+        )
 
 
 # =============================================================================
@@ -475,7 +493,10 @@ class StateDiscomTariffAdapter(DataSourceAdapter):
         return self.mapper
 
     def get_source_record_id(self, item: Dict[str, Any]) -> str:
-        return item.get("source_record_id") or f"SERC-{item.get('state_code')}-{item.get('tariff_type')}"
+        return (
+            item.get("source_record_id")
+            or f"SERC-{item.get('state_code')}-{item.get('tariff_type')}"
+        )
 
 
 # =============================================================================
@@ -599,7 +620,10 @@ class IndustryMaintenanceBenchmarkAdapter(DataSourceAdapter):
         return self.mapper
 
     def get_source_record_id(self, item: Dict[str, Any]) -> str:
-        return item.get("source_record_id") or f"MAINT-{item.get('powertrain')}-{item.get('segment', 'ALL')}"
+        return (
+            item.get("source_record_id")
+            or f"MAINT-{item.get('powertrain')}-{item.get('segment', 'ALL')}"
+        )
 
 
 # =============================================================================
@@ -685,7 +709,9 @@ class FADADepreciationBenchmarkAdapter(DataSourceAdapter):
     """Adapter for Federation of Automobile Dealers Associations (FADA) used vehicle valuation curves."""
 
     def __init__(self):
-        self.source_name = "Federation of Automobile Dealers Associations (FADA) Used Vehicle Valuation Index"
+        self.source_name = (
+            "Federation of Automobile Dealers Associations (FADA) Used Vehicle Valuation Index"
+        )
         self.source_slug = "depreciation_data"
         self.source_type = DataSourceType.MANUAL_REVIEW
         self.dataset_name = "depreciation_data"

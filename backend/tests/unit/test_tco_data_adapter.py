@@ -120,7 +120,7 @@ def test_tco_validator_error_cases():
 
 def test_tco_economic_cost_mathematical_integrity_and_negative_tco_prevention():
     """Verifies that 1-year, 3-year, and 5-year economic costs are strictly positive and accurate.
-    
+
     Tests that:
     Economic Cost = (Total Initial On-Road Price - Resale Value) + Interest Paid + Fees + Operating Costs
     And Net Equity upon sale = max(0, Resale Value - Outstanding Principal)
@@ -137,6 +137,7 @@ def test_tco_economic_cost_mathematical_integrity_and_negative_tco_prevention():
 
     # Mock Amortization items for 60 months at ~8.75%
     from app.schemas.finance import AmortizationScheduleItem
+
     amort_items = []
     current_bal = loan_principal
     monthly_emi = Decimal("19000.00")
@@ -155,7 +156,13 @@ def test_tco_economic_cost_mathematical_integrity_and_negative_tco_prevention():
         )
 
     ins_factors = (Decimal("0.65"), Decimal("0.60"), Decimal("0.75"), Decimal("0.70"))
-    dep_percentages = (Decimal("15.00"), Decimal("25.00"), Decimal("35.00"), Decimal("43.00"), Decimal("50.00"))
+    dep_percentages = (
+        Decimal("15.00"),
+        Decimal("25.00"),
+        Decimal("35.00"),
+        Decimal("43.00"),
+        Decimal("50.00"),
+    )
 
     # Evaluate 1-Year Period Breakdown
     pb_1yr = TCOService.build_period_breakdown(
@@ -178,16 +185,22 @@ def test_tco_economic_cost_mathematical_integrity_and_negative_tco_prevention():
     )
 
     # 1. Economic cost MUST be positive!
-    assert pb_1yr.estimated_economic_cost > Decimal("0.00"), f"1-Year economic cost must be positive, got {pb_1yr.estimated_economic_cost}"
+    assert pb_1yr.estimated_economic_cost > Decimal(
+        "0.00"
+    ), f"1-Year economic cost must be positive, got {pb_1yr.estimated_economic_cost}"
     # 2. Resale value at Year 1 is 85% of ex-showroom (15% dep)
     assert pb_1yr.estimated_resale_value == Decimal("850000.00")
     # 3. Outstanding loan principal exists at month 12 (~₹7.67L)
     assert pb_1yr.loan_outstanding_principal > Decimal("700000.00")
     # 4. Net equity on liquidation = Resale Value - Outstanding Principal (~₹83K)
-    assert pb_1yr.net_equity_on_resale == (pb_1yr.estimated_resale_value - pb_1yr.loan_outstanding_principal)
+    assert pb_1yr.net_equity_on_resale == (
+        pb_1yr.estimated_resale_value - pb_1yr.loan_outstanding_principal
+    )
     # 5. Economic cost == Total Cash Outflow - Net Equity
     expected_economic_via_liquidation = pb_1yr.total_cash_outflow - pb_1yr.net_equity_on_resale
-    assert abs(pb_1yr.estimated_economic_cost - expected_economic_via_liquidation) <= Decimal("0.05")
+    assert abs(pb_1yr.estimated_economic_cost - expected_economic_via_liquidation) <= Decimal(
+        "0.05"
+    )
 
     # Evaluate 5-Year Period Breakdown
     pb_5yr = TCOService.build_period_breakdown(

@@ -64,11 +64,15 @@ async def test_manufacturer_creation_and_retrieval(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_manufacturer_slug_and_name_uniqueness(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg1 = ManufacturerCreate(name="Hyundai India", slug="hyundai", country="South Korea", active=True)
+    mfg1 = ManufacturerCreate(
+        name="Hyundai India", slug="hyundai", country="South Korea", active=True
+    )
     await repo.create_manufacturer(mfg1)
 
     # Duplicate name should raise IntegrityError
-    mfg2 = Manufacturer(name="Hyundai India", slug="hyundai-alt", country="South Korea", active=True)
+    mfg2 = Manufacturer(
+        name="Hyundai India", slug="hyundai-alt", country="South Korea", active=True
+    )
     db_session.add(mfg2)
     with pytest.raises(IntegrityError):
         await db_session.commit()
@@ -78,7 +82,9 @@ async def test_manufacturer_slug_and_name_uniqueness(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_model_manufacturer_relationship(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="Mahindra", slug="mahindra", country="India"))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="Mahindra", slug="mahindra", country="India")
+    )
 
     model_in = CarModelCreate(
         manufacturer_id=mfg.id,
@@ -102,7 +108,9 @@ async def test_model_manufacturer_relationship(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_discontinued_model_handling(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="Ford", slug="ford", country="USA", active=False))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="Ford", slug="ford", country="USA", active=False)
+    )
     model = await repo.create_model(
         CarModelCreate(
             manufacturer_id=mfg.id,
@@ -126,8 +134,14 @@ async def test_discontinued_model_handling(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_variant_model_relationship_ice(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="Maruti Suzuki", slug="maruti-suzuki", country="India"))
-    model = await repo.create_model(CarModelCreate(manufacturer_id=mfg.id, name="Swift", slug="maruti-swift", body_type="Hatchback"))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="Maruti Suzuki", slug="maruti-suzuki", country="India")
+    )
+    model = await repo.create_model(
+        CarModelCreate(
+            manufacturer_id=mfg.id, name="Swift", slug="maruti-swift", body_type="Hatchback"
+        )
+    )
 
     # Petrol variant (battery fields NULL)
     variant_in = VariantCreate(
@@ -159,8 +173,12 @@ async def test_variant_model_relationship_ice(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_ev_variant_with_null_engine_fields(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="MG Motor", slug="mg-motor", country="UK"))
-    model = await repo.create_model(CarModelCreate(manufacturer_id=mfg.id, name="ZS EV", slug="mg-zs-ev", body_type="SUV"))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="MG Motor", slug="mg-motor", country="UK")
+    )
+    model = await repo.create_model(
+        CarModelCreate(manufacturer_id=mfg.id, name="ZS EV", slug="mg-zs-ev", body_type="SUV")
+    )
 
     # EV variant (engine fields NULL, battery fields present)
     variant_in = VariantCreate(
@@ -189,8 +207,12 @@ async def test_ev_variant_with_null_engine_fields(db_session: AsyncSession):
 @pytest.mark.asyncio
 async def test_multiple_historical_prices_and_active_price_resolution(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="Kia", slug="kia", country="South Korea"))
-    model = await repo.create_model(CarModelCreate(manufacturer_id=mfg.id, name="Seltos", slug="kia-seltos", body_type="SUV"))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="Kia", slug="kia", country="South Korea")
+    )
+    model = await repo.create_model(
+        CarModelCreate(manufacturer_id=mfg.id, name="Seltos", slug="kia-seltos", body_type="SUV")
+    )
     variant = await repo.create_variant(
         VariantCreate(
             model_id=model.id,
@@ -251,8 +273,12 @@ async def test_multiple_historical_prices_and_active_price_resolution(db_session
 @pytest.mark.asyncio
 async def test_price_period_overlap_prevention(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
-    mfg = await repo.create_manufacturer(ManufacturerCreate(name="Honda", slug="honda", country="Japan"))
-    model = await repo.create_model(CarModelCreate(manufacturer_id=mfg.id, name="City", slug="honda-city", body_type="Sedan"))
+    mfg = await repo.create_manufacturer(
+        ManufacturerCreate(name="Honda", slug="honda", country="Japan")
+    )
+    model = await repo.create_model(
+        CarModelCreate(manufacturer_id=mfg.id, name="City", slug="honda-city", body_type="Sedan")
+    )
     variant = await repo.create_variant(
         VariantCreate(
             model_id=model.id,
@@ -300,26 +326,119 @@ async def test_price_period_overlap_prevention(db_session: AsyncSession):
 async def test_vehicle_search_and_multi_filtering(db_session: AsyncSession):
     repo = VehicleRepository(db_session)
     # Setup manufacturers
-    tata = await repo.create_manufacturer(ManufacturerCreate(name="Tata", slug="tata", country="India"))
-    hyundai = await repo.create_manufacturer(ManufacturerCreate(name="Hyundai", slug="hyundai", country="South Korea"))
+    tata = await repo.create_manufacturer(
+        ManufacturerCreate(name="Tata", slug="tata", country="India")
+    )
+    hyundai = await repo.create_manufacturer(
+        ManufacturerCreate(name="Hyundai", slug="hyundai", country="South Korea")
+    )
 
     # Setup Models
-    nexon = await repo.create_model(CarModelCreate(manufacturer_id=tata.id, name="Nexon", slug="tata-nexon", body_type="SUV", segment="Compact SUV"))
-    creta = await repo.create_model(CarModelCreate(manufacturer_id=hyundai.id, name="Creta", slug="hyundai-creta", body_type="SUV", segment="Mid-Size SUV"))
-    i20 = await repo.create_model(CarModelCreate(manufacturer_id=hyundai.id, name="i20", slug="hyundai-i20", body_type="Hatchback", segment="Premium Hatchback"))
+    nexon = await repo.create_model(
+        CarModelCreate(
+            manufacturer_id=tata.id,
+            name="Nexon",
+            slug="tata-nexon",
+            body_type="SUV",
+            segment="Compact SUV",
+        )
+    )
+    creta = await repo.create_model(
+        CarModelCreate(
+            manufacturer_id=hyundai.id,
+            name="Creta",
+            slug="hyundai-creta",
+            body_type="SUV",
+            segment="Mid-Size SUV",
+        )
+    )
+    i20 = await repo.create_model(
+        CarModelCreate(
+            manufacturer_id=hyundai.id,
+            name="i20",
+            slug="hyundai-i20",
+            body_type="Hatchback",
+            segment="Premium Hatchback",
+        )
+    )
 
     # Setup Variants & Active Prices
-    v_nexon_ev = await repo.create_variant(VariantCreate(model_id=nexon.id, name="EV Fearless", slug="nexon-ev-fearless", fuel_type="Electric", transmission="Automatic", battery_capacity_kwh=Decimal("40.5"), range_km=465, seating_capacity=5))
-    await repo.add_vehicle_price(VehiclePriceCreate(variant_id=v_nexon_ev.id, ex_showroom_price=Decimal("1700000.00"), effective_from=datetime.now(timezone.utc) - timedelta(days=10)))
+    v_nexon_ev = await repo.create_variant(
+        VariantCreate(
+            model_id=nexon.id,
+            name="EV Fearless",
+            slug="nexon-ev-fearless",
+            fuel_type="Electric",
+            transmission="Automatic",
+            battery_capacity_kwh=Decimal("40.5"),
+            range_km=465,
+            seating_capacity=5,
+        )
+    )
+    await repo.add_vehicle_price(
+        VehiclePriceCreate(
+            variant_id=v_nexon_ev.id,
+            ex_showroom_price=Decimal("1700000.00"),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=10),
+        )
+    )
 
-    v_nexon_petrol = await repo.create_variant(VariantCreate(model_id=nexon.id, name="Creative DCA", slug="nexon-creative-dca", fuel_type="Petrol", transmission="DCT", engine_cc=1199, seating_capacity=5))
-    await repo.add_vehicle_price(VehiclePriceCreate(variant_id=v_nexon_petrol.id, ex_showroom_price=Decimal("1250000.00"), effective_from=datetime.now(timezone.utc) - timedelta(days=10)))
+    v_nexon_petrol = await repo.create_variant(
+        VariantCreate(
+            model_id=nexon.id,
+            name="Creative DCA",
+            slug="nexon-creative-dca",
+            fuel_type="Petrol",
+            transmission="DCT",
+            engine_cc=1199,
+            seating_capacity=5,
+        )
+    )
+    await repo.add_vehicle_price(
+        VehiclePriceCreate(
+            variant_id=v_nexon_petrol.id,
+            ex_showroom_price=Decimal("1250000.00"),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=10),
+        )
+    )
 
-    v_creta_diesel = await repo.create_variant(VariantCreate(model_id=creta.id, name="SX (O) Diesel AT", slug="creta-sx-o-diesel-at", fuel_type="Diesel", transmission="Torque Converter", engine_cc=1493, seating_capacity=5))
-    await repo.add_vehicle_price(VehiclePriceCreate(variant_id=v_creta_diesel.id, ex_showroom_price=Decimal("1900000.00"), effective_from=datetime.now(timezone.utc) - timedelta(days=10)))
+    v_creta_diesel = await repo.create_variant(
+        VariantCreate(
+            model_id=creta.id,
+            name="SX (O) Diesel AT",
+            slug="creta-sx-o-diesel-at",
+            fuel_type="Diesel",
+            transmission="Torque Converter",
+            engine_cc=1493,
+            seating_capacity=5,
+        )
+    )
+    await repo.add_vehicle_price(
+        VehiclePriceCreate(
+            variant_id=v_creta_diesel.id,
+            ex_showroom_price=Decimal("1900000.00"),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=10),
+        )
+    )
 
-    v_i20_petrol = await repo.create_variant(VariantCreate(model_id=i20.id, name="Asta (O) IVT", slug="i20-asta-ivt", fuel_type="Petrol", transmission="CVT", engine_cc=1197, seating_capacity=5))
-    await repo.add_vehicle_price(VehiclePriceCreate(variant_id=v_i20_petrol.id, ex_showroom_price=Decimal("980000.00"), effective_from=datetime.now(timezone.utc) - timedelta(days=10)))
+    v_i20_petrol = await repo.create_variant(
+        VariantCreate(
+            model_id=i20.id,
+            name="Asta (O) IVT",
+            slug="i20-asta-ivt",
+            fuel_type="Petrol",
+            transmission="CVT",
+            engine_cc=1197,
+            seating_capacity=5,
+        )
+    )
+    await repo.add_vehicle_price(
+        VehiclePriceCreate(
+            variant_id=v_i20_petrol.id,
+            ex_showroom_price=Decimal("980000.00"),
+            effective_from=datetime.now(timezone.utc) - timedelta(days=10),
+        )
+    )
 
     # 1. Filter by manufacturer (Tata)
     items_tata, total_tata = await repo.search_vehicles(VehicleFilterParams(manufacturer="Tata"))
@@ -341,10 +460,12 @@ async def test_vehicle_search_and_multi_filtering(db_session: AsyncSession):
     assert total_suv == 3
 
     # 5. Price range filter (10,00,000 to 15,00,000)
-    items_price, total_price = await repo.search_vehicles(VehicleFilterParams(
-        minimum_price=Decimal("1000000.00"),
-        maximum_price=Decimal("1500000.00"),
-    ))
+    items_price, total_price = await repo.search_vehicles(
+        VehicleFilterParams(
+            minimum_price=Decimal("1000000.00"),
+            maximum_price=Decimal("1500000.00"),
+        )
+    )
     assert total_price == 1
     assert items_price[0].variant_name == "Creative DCA"
 

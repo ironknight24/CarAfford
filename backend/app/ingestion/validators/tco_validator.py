@@ -20,7 +20,9 @@ class TCOValidator(DataValidator):
             try:
                 price = Decimal(str(raw_price))
                 if price < Decimal("20.00") or price > Decimal("250.00"):
-                    errors.append(f"price_per_unit {price} out of realistic bounds [20.00, 250.00].")
+                    errors.append(
+                        f"price_per_unit {price} out of realistic bounds [20.00, 250.00]."
+                    )
             except Exception:
                 errors.append(f"Invalid price_per_unit '{raw_price}'.")
 
@@ -67,7 +69,9 @@ class TCOValidator(DataValidator):
             try:
                 base = Decimal(str(raw_base))
                 if base < Decimal("500.00") or base > Decimal("50000.00"):
-                    errors.append(f"annual_base_cost {base} out of realistic bounds [500.00, 50000.00].")
+                    errors.append(
+                        f"annual_base_cost {base} out of realistic bounds [500.00, 50000.00]."
+                    )
             except Exception:
                 errors.append(f"Invalid annual_base_cost '{raw_base}'.")
 
@@ -117,7 +121,9 @@ class TCOValidator(DataValidator):
                     if pct < Decimal("1.00") or pct > Decimal("95.00"):
                         errors.append(f"{key} {pct} out of realistic bounds [1.00, 95.00].")
                     if pct <= prev_pct:
-                        errors.append(f"{key} ({pct}%) must be greater than previous year ({prev_pct}%).")
+                        errors.append(
+                            f"{key} ({pct}%) must be greater than previous year ({prev_pct}%)."
+                        )
                     prev_pct = pct
                 except Exception:
                     errors.append(f"Invalid {key} '{raw_pct}'.")

@@ -49,7 +49,9 @@ class ManufacturerBase(BaseModel):
     slug: str = Field(..., max_length=100, description="URL-friendly unique slug")
     country: str = Field(default="India", max_length=50, description="Country of origin")
     active: bool = Field(default=True, description="Whether the manufacturer is currently active")
-    logo_url: Optional[str] = Field(default=None, max_length=500, description="Manufacturer logo URL")
+    logo_url: Optional[str] = Field(
+        default=None, max_length=500, description="Manufacturer logo URL"
+    )
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
@@ -87,14 +89,22 @@ class CarModelBase(BaseModel):
     name: str = Field(..., max_length=100, description="Model commercial name")
     slug: str = Field(..., max_length=100, description="Unique model slug")
     manufacturer_id: int = Field(..., description="Foreign key to manufacturer")
-    body_type: str = Field(..., max_length=50, description="Body type (e.g. SUV, Hatchback, Sedan, MUV, Coupe)")
-    segment: Optional[str] = Field(default=None, max_length=50, description="Automotive segment (e.g. Compact SUV, B-Segment)")
+    body_type: str = Field(
+        ..., max_length=50, description="Body type (e.g. SUV, Hatchback, Sedan, MUV, Coupe)"
+    )
+    segment: Optional[str] = Field(
+        default=None, max_length=50, description="Automotive segment (e.g. Compact SUV, B-Segment)"
+    )
     active: bool = Field(default=True, description="Whether currently on sale")
     launch_date: Optional[date] = Field(default=None, description="Original launch date")
-    discontinued_date: Optional[date] = Field(default=None, description="Discontinuation date if discontinued")
+    discontinued_date: Optional[date] = Field(
+        default=None, description="Discontinuation date if discontinued"
+    )
     launch_year: int = Field(default=2024, description="Launch year")
     description: Optional[str] = Field(default=None, description="Model overview")
-    image_url: Optional[str] = Field(default=None, max_length=500, description="Primary model image URL")
+    image_url: Optional[str] = Field(
+        default=None, max_length=500, description="Primary model image URL"
+    )
     source_id: Optional[int] = None
     source_record_id: Optional[str] = None
     retrieved_at: Optional[datetime] = None
@@ -153,15 +163,27 @@ class VariantBase(BaseModel):
     name: str = Field(..., max_length=150, description="Variant name")
     slug: str = Field(..., max_length=150, description="Unique variant slug")
     trim_level: str = Field(default="Base", max_length=50)
-    fuel_type: str = Field(..., max_length=30, description="Petrol, Diesel, CNG, Electric, Hybrid, etc.")
-    transmission: str = Field(..., max_length=50, description="Manual, Automatic, AMT, CVT, DCT, etc.")
-    drivetrain: Optional[str] = Field(default="FWD", max_length=20, description="FWD, RWD, AWD, 4WD")
-    engine_cc: Optional[int] = Field(default=None, description="Engine displacement in CC (NULL for EV)")
+    fuel_type: str = Field(
+        ..., max_length=30, description="Petrol, Diesel, CNG, Electric, Hybrid, etc."
+    )
+    transmission: str = Field(
+        ..., max_length=50, description="Manual, Automatic, AMT, CVT, DCT, etc."
+    )
+    drivetrain: Optional[str] = Field(
+        default="FWD", max_length=20, description="FWD, RWD, AWD, 4WD"
+    )
+    engine_cc: Optional[int] = Field(
+        default=None, description="Engine displacement in CC (NULL for EV)"
+    )
     engine_power_bhp: Optional[Decimal] = Field(default=None, description="Power in BHP")
     torque_nm: Optional[Decimal] = Field(default=None, description="Torque in Nm")
     seating_capacity: int = Field(default=5, ge=1, le=15, description="Number of passenger seats")
-    mileage_claimed: Optional[Decimal] = Field(default=None, description="Claimed mileage (km/l or km/kg or km/kWh)")
-    battery_capacity_kwh: Optional[Decimal] = Field(default=None, description="Battery pack size in kWh (EV/Hybrid)")
+    mileage_claimed: Optional[Decimal] = Field(
+        default=None, description="Claimed mileage (km/l or km/kg or km/kWh)"
+    )
+    battery_capacity_kwh: Optional[Decimal] = Field(
+        default=None, description="Battery pack size in kWh (EV/Hybrid)"
+    )
     range_km: Optional[Decimal] = Field(default=None, description="Driving range in km (EV/Hybrid)")
     active: bool = Field(default=True, description="Whether variant is active")
     source_id: Optional[int] = None

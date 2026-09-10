@@ -114,7 +114,10 @@ async def test_location_domain_api_flow(db_session: AsyncSession, async_client: 
     assert search_resp.status_code == 200
     search_data = search_resp.json()["data"]
     assert len(search_data) >= 1
-    assert any(item["city_name"] == "Bengaluru" or (item["rto_name"] and "Bengaluru" in item["rto_name"]) for item in search_data)
+    assert any(
+        item["city_name"] == "Bengaluru" or (item["rto_name"] and "Bengaluru" in item["rto_name"])
+        for item in search_data
+    )
 
     # Search by state code e.g. "MH"
     search_mh = await async_client.get("/api/v1/locations/search?q=MH")
@@ -132,7 +135,9 @@ async def test_location_domain_api_flow(db_session: AsyncSession, async_client: 
 
 
 @pytest.mark.asyncio
-async def test_location_selector_cascade_contract(db_session: AsyncSession, async_client: AsyncClient):
+async def test_location_selector_cascade_contract(
+    db_session: AsyncSession, async_client: AsyncClient
+):
     """Verifies that the API supports the frontend State -> City -> RTO selection cascade
 
     without assuming any hardcoded state ID:

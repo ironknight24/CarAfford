@@ -24,21 +24,29 @@ class VehicleDataValidator(DataValidator):
         # Enums
         fuel = item.get("fuel_type")
         if fuel and fuel not in self.VALID_FUEL_TYPES:
-            errors.append(f"Invalid fuel_type '{fuel}'. Must be one of {sorted(self.VALID_FUEL_TYPES)}")
+            errors.append(
+                f"Invalid fuel_type '{fuel}'. Must be one of {sorted(self.VALID_FUEL_TYPES)}"
+            )
 
         trans = item.get("transmission")
         if trans and trans not in self.VALID_TRANSMISSIONS:
-            errors.append(f"Invalid transmission '{trans}'. Must be one of {sorted(self.VALID_TRANSMISSIONS)}")
+            errors.append(
+                f"Invalid transmission '{trans}'. Must be one of {sorted(self.VALID_TRANSMISSIONS)}"
+            )
 
         body = item.get("body_type")
         if body and body not in self.VALID_BODY_TYPES:
-            errors.append(f"Invalid body_type '{body}'. Must be one of {sorted(self.VALID_BODY_TYPES)}")
+            errors.append(
+                f"Invalid body_type '{body}'. Must be one of {sorted(self.VALID_BODY_TYPES)}"
+            )
 
         # Numeric ranges
         seating = item.get("seating_capacity")
         if seating is not None:
             if not isinstance(seating, int) or seating < 2 or seating > 12:
-                errors.append(f"Invalid seating_capacity '{seating}'. Must be an integer between 2 and 12")
+                errors.append(
+                    f"Invalid seating_capacity '{seating}'. Must be an integer between 2 and 12"
+                )
 
         mileage = item.get("arai_mileage_kmpl")
         if mileage is not None:
@@ -54,7 +62,9 @@ class VehicleDataValidator(DataValidator):
         engine_cc = item.get("engine_cc") or item.get("engine_displacement_cc")
         if engine_cc is not None:
             if not isinstance(engine_cc, int) or engine_cc < 500 or engine_cc > 8000:
-                errors.append(f"Invalid engine displacement '{engine_cc}'. Must be between 500cc and 8000cc")
+                errors.append(
+                    f"Invalid engine displacement '{engine_cc}'. Must be between 500cc and 8000cc"
+                )
             if fuel_val == "Electric":
                 errors.append("Pure electric vehicles cannot have engine_cc displacement")
 
@@ -63,7 +73,9 @@ class VehicleDataValidator(DataValidator):
             try:
                 dec_battery = Decimal(str(battery_kwh))
                 if dec_battery <= Decimal("0.0") or dec_battery > Decimal("300.0"):
-                    errors.append(f"Invalid battery_capacity_kwh '{dec_battery}'. Must be between 0.1 and 300 kWh")
+                    errors.append(
+                        f"Invalid battery_capacity_kwh '{dec_battery}'. Must be between 0.1 and 300 kWh"
+                    )
             except Exception:
                 errors.append(f"Invalid decimal format for battery_capacity_kwh: {battery_kwh}")
 

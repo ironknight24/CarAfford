@@ -33,7 +33,7 @@ def round_inr(amount: Decimal) -> Decimal:
 
 class FinancingEngineService:
     """Orchestrates vehicle financing calculations, bank product comparison, and on-road price integration.
-    
+
     Responsibilities:
     - Authoritative on-road price lookup via OnRoadPriceCalculationService when vehicle is supplied.
     - Rate resolution across multiple commercial banks.
@@ -70,7 +70,9 @@ class FinancingEngineService:
                 is_bh_series=False,
                 is_financed=True,
             )
-            pricing_res = await OnRoadPriceCalculationService.calculate_on_road_price(db, pricing_req)
+            pricing_res = await OnRoadPriceCalculationService.calculate_on_road_price(
+                db, pricing_req
+            )
             on_road = pricing_res.totals.on_road_price
             v_name = pricing_res.vehicle.variant_name
             m_name = pricing_res.vehicle.model_name
@@ -101,13 +103,15 @@ class FinancingEngineService:
     ) -> LoanOfferItem:
         """Evaluates interest rate, fees, EMI, and eligibility for a single bank loan product."""
         # 1. Rate Resolution
-        rate, rate_type, matched_rate_record = LoanRateResolverService.resolve_product_interest_rate(
-            loan_product=loan_product,
-            loan_amount=loan_amount,
-            tenure_months=tenure_months,
-            credit_score=credit_score,
-            employment_type=employment_type,
-            calculation_date=calculation_date,
+        rate, rate_type, matched_rate_record = (
+            LoanRateResolverService.resolve_product_interest_rate(
+                loan_product=loan_product,
+                loan_amount=loan_amount,
+                tenure_months=tenure_months,
+                credit_score=credit_score,
+                employment_type=employment_type,
+                calculation_date=calculation_date,
+            )
         )
 
         # 2. Fee Calculation
@@ -122,16 +126,18 @@ class FinancingEngineService:
         )
 
         # 3. Eligibility Check
-        is_eligible, elig_status, reasons = LoanEligibilityEvaluatorService.evaluate_product_eligibility(
-            loan_product=loan_product,
-            loan_amount=loan_amount,
-            on_road_price=on_road_price,
-            tenure_months=tenure_months,
-            credit_score=credit_score,
-            monthly_income=monthly_income,
-            applicant_age=applicant_age,
-            employment_type=employment_type,
-            calculation_date=calculation_date,
+        is_eligible, elig_status, reasons = (
+            LoanEligibilityEvaluatorService.evaluate_product_eligibility(
+                loan_product=loan_product,
+                loan_amount=loan_amount,
+                on_road_price=on_road_price,
+                tenure_months=tenure_months,
+                credit_score=credit_score,
+                monthly_income=monthly_income,
+                applicant_age=applicant_age,
+                employment_type=employment_type,
+                calculation_date=calculation_date,
+            )
         )
 
         # 4. EMI & Totals Calculation
@@ -236,7 +242,9 @@ class FinancingEngineService:
         if request.loan_product_id:
             target_product = await repo.get_loan_product_by_id(request.loan_product_id)
             if not target_product:
-                raise ResourceNotFoundException(f"Loan product with ID {request.loan_product_id} not found.")
+                raise ResourceNotFoundException(
+                    f"Loan product with ID {request.loan_product_id} not found."
+                )
         elif request.bank_id:
             bank = await repo.get_bank_by_id(request.bank_id)
             if not bank:
@@ -245,7 +253,9 @@ class FinancingEngineService:
             products = bank.loan_products or []
             target_product = next((p for p in products if p.active), None)
             if not target_product:
-                raise ResourceNotFoundException(f"No active loan product found for Bank {bank.name}.")
+                raise ResourceNotFoundException(
+                    f"No active loan product found for Bank {bank.name}."
+                )
         else:
             # Query all active products and select the best offer
             active_products = await repo.get_active_loan_products_for_comparison(
@@ -253,8 +263,10 @@ class FinancingEngineService:
                 is_ev=is_ev,
             )
             if not active_products:
-                raise ResourceNotFoundException("No active loan products available for financing calculation.")
-            
+                raise ResourceNotFoundException(
+                    "No active loan products available for financing calculation."
+                )
+
             # Evaluate all and choose the one with lowest EMI / lowest rate
             offers = [
                 cls._evaluate_single_product_offer(
@@ -270,9 +282,13 @@ class FinancingEngineService:
                 )
                 for p in active_products
             ]
-            offers.sort(key=lambda o: (not o.estimated_eligibility, o.monthly_emi, o.annual_interest_rate))
+            offers.sort(
+                key=lambda o: (not o.estimated_eligibility, o.monthly_emi, o.annual_interest_rate)
+            )
             selected_offer = offers[0]
-            target_product = next(p for p in active_products if p.id == selected_offer.loan_product_id)
+            target_product = next(
+                p for p in active_products if p.id == selected_offer.loan_product_id
+            )
 
         # 3. Generate offer for target product
         offer = cls._evaluate_single_product_offer(
@@ -378,7 +394,11 @@ class FinancingEngineService:
         # - Processing Fee ASC
         offers.sort(
             key=lambda o: (
-                0 if o.eligibility_status == "ESTIMATED_ELIGIBLE" else (1 if o.eligibility_status == "MARGINAL" else 2),
+                (
+                    0
+                    if o.eligibility_status == "ESTIMATED_ELIGIBLE"
+                    else (1 if o.eligibility_status == "MARGINAL" else 2)
+                ),
                 o.monthly_emi,
                 o.total_fees,
             )

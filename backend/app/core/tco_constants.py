@@ -17,15 +17,18 @@ class FuelPriceConfig(BaseModel):
 class MaintenanceConfig(BaseModel):
     fuel_type: str
     annual_base_cost: Decimal  # Annual scheduled service & fluids
-    cost_per_km: Decimal       # Per-km tyre, brake pads, consumables wear
+    cost_per_km: Decimal  # Per-km tyre, brake pads, consumables wear
     service_interval_km: int = 10000
     service_interval_months: int = 12
     data_status: str = "DEMO"
-    source: str = "Industry Standard Service Cost Benchmark (Automotive Research Association of India & OEM Manuals)"
+    source: str = (
+        "Industry Standard Service Cost Benchmark (Automotive Research Association of India & OEM Manuals)"
+    )
 
 
 class InsuranceRenewalConfig(BaseModel):
     """Annual insurance renewal multipliers relative to Year 1 insurance or IDV deprecation."""
+
     year_2_factor: Decimal = Decimal("0.65")  # OD only (3-Yr TP already covered in Year 1)
     year_3_factor: Decimal = Decimal("0.60")  # OD only
     year_4_factor: Decimal = Decimal("0.75")  # OD + 1-Yr TP Renewal
@@ -36,13 +39,16 @@ class InsuranceRenewalConfig(BaseModel):
 
 class DepreciationConfig(BaseModel):
     """Cumulative depreciation schedule on vehicle Ex-Showroom price for economic cost estimation."""
+
     year_1_depreciation_pct: Decimal = Decimal("15.00")
     year_2_depreciation_pct: Decimal = Decimal("25.00")
     year_3_depreciation_pct: Decimal = Decimal("35.00")
     year_4_depreciation_pct: Decimal = Decimal("43.00")
     year_5_depreciation_pct: Decimal = Decimal("50.00")
     data_status: str = "DEMO"
-    source: str = "Federation of Automobile Dealers Associations (FADA) Used Vehicle Valuation Index"
+    source: str = (
+        "Federation of Automobile Dealers Associations (FADA) Used Vehicle Valuation Index"
+    )
 
 
 # =============================================================================

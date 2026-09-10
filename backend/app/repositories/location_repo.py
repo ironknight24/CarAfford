@@ -53,11 +53,7 @@ class LocationRepository:
         return list(result.scalars().all()), total
 
     async def get_country_by_id(self, country_id: int) -> Optional[Country]:
-        stmt = (
-            select(Country)
-            .options(selectinload(Country.states))
-            .where(Country.id == country_id)
-        )
+        stmt = select(Country).options(selectinload(Country.states)).where(Country.id == country_id)
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
@@ -147,12 +143,10 @@ class LocationRepository:
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def get_state_by_code(self, code: str, country_id: Optional[int] = None) -> Optional[State]:
-        stmt = (
-            select(State)
-            .options(selectinload(State.country))
-            .where(State.code == code.upper())
-        )
+    async def get_state_by_code(
+        self, code: str, country_id: Optional[int] = None
+    ) -> Optional[State]:
+        stmt = select(State).options(selectinload(State.country)).where(State.code == code.upper())
         if country_id is not None:
             stmt = stmt.where(State.country_id == country_id)
         result = await self.session.execute(stmt)
@@ -235,11 +229,7 @@ class LocationRepository:
         return result.scalars().first()
 
     async def get_city_by_slug(self, slug: str, state_id: Optional[int] = None) -> Optional[City]:
-        stmt = (
-            select(City)
-            .options(selectinload(City.state))
-            .where(City.slug == slug.lower())
-        )
+        stmt = select(City).options(selectinload(City.state)).where(City.slug == slug.lower())
         if state_id is not None:
             stmt = stmt.where(City.state_id == state_id)
         result = await self.session.execute(stmt)
@@ -342,7 +332,9 @@ class LocationRepository:
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def get_rto_by_code(self, code: str, state_id: Optional[int] = None) -> Optional[RtoOffice]:
+    async def get_rto_by_code(
+        self, code: str, state_id: Optional[int] = None
+    ) -> Optional[RtoOffice]:
         stmt = (
             select(RtoOffice)
             .options(

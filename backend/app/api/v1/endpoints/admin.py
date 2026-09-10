@@ -48,10 +48,10 @@ from app.services.ingestion_service import IngestionService
 router = APIRouter(dependencies=[Depends(require_admin)])
 
 
-
 # =============================================================================
 # 1. ADMIN OVERVIEW & HEALTH METRICS
 # =============================================================================
+
 
 @router.get(
     "/overview",
@@ -66,10 +66,15 @@ async def get_admin_overview(db: AsyncSession = Depends(get_db)):
     total_sources = len(data_sources)
     active_sources = sum(1 for ds in data_sources if ds.is_active)
     live_sources = sum(
-        1 for ds in data_sources if ds.source_type == DataSourceType.OFFICIAL_GOVERNMENT.value or ds.provider_type in ["direct", "live"]
+        1
+        for ds in data_sources
+        if ds.source_type == DataSourceType.OFFICIAL_GOVERNMENT.value
+        or ds.provider_type in ["direct", "live"]
     )
     fixture_sources = sum(
-        1 for ds in data_sources if ds.source_type in [DataSourceType.DEMO_SEED.value, DataSourceType.FIXTURE_ONLY.value]
+        1
+        for ds in data_sources
+        if ds.source_type in [DataSourceType.DEMO_SEED.value, DataSourceType.FIXTURE_ONLY.value]
     )
     manual_sources = sum(
         1 for ds in data_sources if ds.source_type == DataSourceType.MANUAL_REVIEW.value
@@ -79,12 +84,16 @@ async def get_admin_overview(db: AsyncSession = Depends(get_db)):
     runs_total = (await db.execute(select(func.count(IngestionRun.id)))).scalar() or 0
     runs_active = (
         await db.execute(
-            select(func.count(IngestionRun.id)).where(IngestionRun.status == IngestionRunStatus.RUNNING.value)
+            select(func.count(IngestionRun.id)).where(
+                IngestionRun.status == IngestionRunStatus.RUNNING.value
+            )
         )
     ).scalar() or 0
     runs_failed = (
         await db.execute(
-            select(func.count(IngestionRun.id)).where(IngestionRun.status == IngestionRunStatus.FAILED.value)
+            select(func.count(IngestionRun.id)).where(
+                IngestionRun.status == IngestionRunStatus.FAILED.value
+            )
         )
     ).scalar() or 0
 
@@ -108,8 +117,16 @@ async def get_admin_overview(db: AsyncSession = Depends(get_db)):
     # Freshness & Quality Overview
     quality_overview = await IngestionService.get_data_quality_overview(db)
 
-    stale_count = sum(1 for f in quality_overview.freshness_report if (getattr(f.status, "value", f.status) == DataFreshnessStatus.STALE.value))
-    expired_count = sum(1 for f in quality_overview.freshness_report if (getattr(f.status, "value", f.status) == DataFreshnessStatus.EXPIRED.value))
+    stale_count = sum(
+        1
+        for f in quality_overview.freshness_report
+        if (getattr(f.status, "value", f.status) == DataFreshnessStatus.STALE.value)
+    )
+    expired_count = sum(
+        1
+        for f in quality_overview.freshness_report
+        if (getattr(f.status, "value", f.status) == DataFreshnessStatus.EXPIRED.value)
+    )
 
     q_score = quality_overview.overall_quality_score
     if q_score >= Decimal("80.00"):
@@ -144,6 +161,7 @@ async def get_admin_overview(db: AsyncSession = Depends(get_db)):
 # =============================================================================
 # 2. DATA SOURCE MANAGEMENT
 # =============================================================================
+
 
 @router.get(
     "/data-sources",
@@ -239,7 +257,11 @@ async def toggle_data_source_active(id: int, db: AsyncSession = Depends(get_db))
     access_mode = (
         "LIVE"
         if ds.source_type == DataSourceType.OFFICIAL_GOVERNMENT.value
-        else ("MANUAL_REVIEW" if ds.source_type == DataSourceType.MANUAL_REVIEW.value else "FIXTURE_ONLY")
+        else (
+            "MANUAL_REVIEW"
+            if ds.source_type == DataSourceType.MANUAL_REVIEW.value
+            else "FIXTURE_ONLY"
+        )
     )
 
     item = AdminDataSourceItem(
@@ -255,7 +277,11 @@ async def toggle_data_source_active(id: int, db: AsyncSession = Depends(get_db))
         trust_level=ds.trust_level,
         freshness_sla_days=sla_days,
         last_retrieved_at=ds.last_synced_at,
-        freshness_status=DataFreshnessStatus.CURRENT.value if ds.last_synced_at else DataFreshnessStatus.UNKNOWN.value,
+        freshness_status=(
+            DataFreshnessStatus.CURRENT.value
+            if ds.last_synced_at
+            else DataFreshnessStatus.UNKNOWN.value
+        ),
         age_days=0 if ds.last_synced_at else None,
         is_active=ds.is_active,
         quality_score=Decimal(str(ds.trust_level * 10)),
@@ -269,13 +295,16 @@ async def toggle_data_source_active(id: int, db: AsyncSession = Depends(get_db))
 # 3. INGESTION RUNS & AUDIT LOGS
 # =============================================================================
 
+
 @router.get(
     "/ingestion-runs",
     response_model=BaseResponse[List[IngestionRunRead]],
     summary="List Ingestion Runs with Status and Counts",
 )
 async def list_admin_ingestion_runs(
-    status_filter: Optional[str] = Query(None, alias="status", description="Filter by status (e.g. COMPLETED, FAILED)"),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Filter by status (e.g. COMPLETED, FAILED)"
+    ),
     dataset: Optional[str] = Query(None, description="Filter by dataset name"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -316,7 +345,9 @@ async def get_admin_ingestion_run_detail(id: int, db: AsyncSession = Depends(get
     raw_records = list(raw_res.scalars().all())
     raw_count = (
         await db.execute(
-            select(func.count(RawIngestionRecord.id)).where(RawIngestionRecord.ingestion_run_id == id)
+            select(func.count(RawIngestionRecord.id)).where(
+                RawIngestionRecord.ingestion_run_id == id
+            )
         )
     ).scalar() or 0
 
@@ -335,13 +366,17 @@ async def get_admin_ingestion_run_detail(id: int, db: AsyncSession = Depends(get
 
     # Conflicts detected during or related to run
     conf_res = await db.execute(
-        select(DataConflictRecord).where(DataConflictRecord.dataset_name == run.dataset_name).limit(10)
+        select(DataConflictRecord)
+        .where(DataConflictRecord.dataset_name == run.dataset_name)
+        .limit(10)
     )
     conflicts = list(conf_res.scalars().all())
 
     # Quality review items
     review_res = await db.execute(
-        select(DataQualityReviewItem).where(DataQualityReviewItem.raw_record_id.is_not(None)).limit(10)
+        select(DataQualityReviewItem)
+        .where(DataQualityReviewItem.raw_record_id.is_not(None))
+        .limit(10)
     )
     reviews = list(review_res.scalars().all())
 
@@ -360,13 +395,16 @@ async def get_admin_ingestion_run_detail(id: int, db: AsyncSession = Depends(get
 # 4. REVIEW QUEUE
 # =============================================================================
 
+
 @router.get(
     "/review-queue",
     response_model=BaseResponse[List[DataQualityReviewItemRead]],
     summary="Get Data Quality Review Queue Items",
 )
 async def list_admin_review_queue(
-    status_filter: Optional[str] = Query(None, alias="status", description="Status filter (PENDING_REVIEW, VERIFIED, REJECTED)"),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Status filter (PENDING_REVIEW, VERIFIED, REJECTED)"
+    ),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
@@ -429,13 +467,16 @@ async def reject_admin_review_item(
 # 5. CONFLICT RESOLUTION
 # =============================================================================
 
+
 @router.get(
     "/conflicts",
     response_model=BaseResponse[List[DataConflictRead]],
     summary="List Cross-Source Data Conflicts",
 )
 async def list_admin_conflicts(
-    status_filter: Optional[str] = Query(None, alias="status", description="Conflict status (DETECTED, RESOLVED, IGNORED)"),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Conflict status (DETECTED, RESOLVED, IGNORED)"
+    ),
     limit: int = Query(50, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
@@ -475,6 +516,7 @@ async def resolve_admin_conflict(
 # 6. FRESHNESS DASHBOARD
 # =============================================================================
 
+
 @router.get(
     "/freshness",
     response_model=BaseResponse[AdminFreshnessResponse],
@@ -489,10 +531,31 @@ async def get_admin_freshness_report(db: AsyncSession = Depends(get_db)):
     domain_mapping = {
         "vehicles": ["tata_vehicles", "maruti_vehicles", "hyundai_vehicles", "vehicle_catalogues"],
         "prices": ["ex_showroom_prices", "on_road_prices", "price_reconciliation"],
-        "finance": ["sbi_car_loans", "hdfc_car_loans", "icici_car_loans", "axis_car_loans", "bank_of_baroda_car_loans", "kotak_car_loans", "bank_interest_rates"],
-        "taxes": ["karnataka_tax_rules", "maharashtra_tax_rules", "delhi_tax_rules", "tamilnadu_tax_rules", "telangana_tax_rules", "state_motor_vehicle_taxes"],
+        "finance": [
+            "sbi_car_loans",
+            "hdfc_car_loans",
+            "icici_car_loans",
+            "axis_car_loans",
+            "bank_of_baroda_car_loans",
+            "kotak_car_loans",
+            "bank_interest_rates",
+        ],
+        "taxes": [
+            "karnataka_tax_rules",
+            "maharashtra_tax_rules",
+            "delhi_tax_rules",
+            "tamilnadu_tax_rules",
+            "telangana_tax_rules",
+            "state_motor_vehicle_taxes",
+        ],
         "locations": ["locations_rto_directory", "states_cities_directory"],
-        "tco": ["fuel_prices", "electricity_tariffs", "maintenance_costs", "insurance_data", "depreciation_data"],
+        "tco": [
+            "fuel_prices",
+            "electricity_tariffs",
+            "maintenance_costs",
+            "insurance_data",
+            "depreciation_data",
+        ],
     }
 
     domains: List[FreshnessDomainGroup] = []
@@ -513,12 +576,26 @@ async def get_admin_freshness_report(db: AsyncSession = Depends(get_db)):
 
     for d_key, dataset_slugs in domain_mapping.items():
         matched_items = [
-            item for item in all_fresh
-            if item.dataset_name in dataset_slugs or any(s in item.dataset_name for s in dataset_slugs)
+            item
+            for item in all_fresh
+            if item.dataset_name in dataset_slugs
+            or any(s in item.dataset_name for s in dataset_slugs)
         ]
-        c_count = sum(1 for m in matched_items if getattr(m.status, "value", m.status) == DataFreshnessStatus.CURRENT.value)
-        s_count = sum(1 for m in matched_items if getattr(m.status, "value", m.status) == DataFreshnessStatus.STALE.value)
-        e_count = sum(1 for m in matched_items if getattr(m.status, "value", m.status) == DataFreshnessStatus.EXPIRED.value)
+        c_count = sum(
+            1
+            for m in matched_items
+            if getattr(m.status, "value", m.status) == DataFreshnessStatus.CURRENT.value
+        )
+        s_count = sum(
+            1
+            for m in matched_items
+            if getattr(m.status, "value", m.status) == DataFreshnessStatus.STALE.value
+        )
+        e_count = sum(
+            1
+            for m in matched_items
+            if getattr(m.status, "value", m.status) == DataFreshnessStatus.EXPIRED.value
+        )
 
         total_current += c_count
         total_stale += s_count
@@ -555,6 +632,7 @@ async def get_admin_freshness_report(db: AsyncSession = Depends(get_db)):
 # 7. QUALITY SCORE DASHBOARD
 # =============================================================================
 
+
 @router.get(
     "/quality",
     response_model=BaseResponse[AdminQualityResponse],
@@ -580,7 +658,11 @@ async def get_admin_quality_breakdown(db: AsyncSession = Depends(get_db)):
             weight_pct=Decimal("30.00"),
             score=breakdown.freshness_score,
             description="Percentage of datasets meeting observation freshness SLAs without entering stale or expired states (30% weight).",
-            status="EXCELLENT" if breakdown.freshness_score >= Decimal("85.00") else ("GOOD" if breakdown.freshness_score >= Decimal("70.00") else "POOR"),
+            status=(
+                "EXCELLENT"
+                if breakdown.freshness_score >= Decimal("85.00")
+                else ("GOOD" if breakdown.freshness_score >= Decimal("70.00") else "POOR")
+            ),
         ),
         QualityScorePillar(
             pillar_name="Data Completeness",
@@ -619,11 +701,20 @@ async def get_admin_quality_breakdown(db: AsyncSession = Depends(get_db)):
 
     recommendations = []
     if overview.unresolved_conflicts_count > 0:
-        recommendations.append(f"Review and resolve {overview.unresolved_conflicts_count} cross-source value discrepancies in the Conflicts tab.")
+        recommendations.append(
+            f"Review and resolve {overview.unresolved_conflicts_count} cross-source value discrepancies in the Conflicts tab."
+        )
     if overview.pending_review_items_count > 0:
-        recommendations.append(f"Verify {overview.pending_review_items_count} items awaiting human review in the Review Queue.")
-    if any(getattr(f.status, "value", f.status) == DataFreshnessStatus.STALE.value for f in overview.freshness_report):
-        recommendations.append("Trigger ingestion runs for stale datasets to refresh prevailing tariffs and fuel prices.")
+        recommendations.append(
+            f"Verify {overview.pending_review_items_count} items awaiting human review in the Review Queue."
+        )
+    if any(
+        getattr(f.status, "value", f.status) == DataFreshnessStatus.STALE.value
+        for f in overview.freshness_report
+    ):
+        recommendations.append(
+            "Trigger ingestion runs for stale datasets to refresh prevailing tariffs and fuel prices."
+        )
     if not recommendations:
         recommendations.append("All datasets are healthy, active, and meeting freshness SLAs.")
 

@@ -50,14 +50,19 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Identify client by IP (with X-Forwarded-For reverse-proxy support) or auth header
-        client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or (request.client.host if request.client else "unknown")
+        client_ip = request.headers.get("X-Forwarded-For", "").split(",")[0].strip() or (
+            request.client.host if request.client else "unknown"
+        )
         auth_header = request.headers.get("Authorization", "")
         client_key = f"rl:{client_ip}:{auth_header[:20]}"
 
-
         # Rate limit thresholds
         is_auth_route = "/auth/" in request.url.path
-        limit = settings.RATE_LIMIT_AUTH_PER_MIN if is_auth_route else settings.RATE_LIMIT_DEFAULT_PER_MIN
+        limit = (
+            settings.RATE_LIMIT_AUTH_PER_MIN
+            if is_auth_route
+            else settings.RATE_LIMIT_DEFAULT_PER_MIN
+        )
         window_seconds = 60
 
         # Try Redis rate limit first
@@ -78,7 +83,6 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                 rate_limited = self._check_in_memory_limit(client_key, limit, window_seconds)
         else:
             rate_limited = self._check_in_memory_limit(client_key, limit, window_seconds)
-
 
         if rate_limited:
             request_id = getattr(request.state, "request_id", str(uuid.uuid4()))

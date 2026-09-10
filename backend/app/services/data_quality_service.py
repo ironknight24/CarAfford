@@ -45,7 +45,9 @@ class DataQualityService:
         notes: Optional[str] = None,
     ) -> Optional[DataQualityReviewItem]:
         """Approves a review item, promoting its status to VERIFIED."""
-        res = await db.execute(select(DataQualityReviewItem).where(DataQualityReviewItem.id == item_id))
+        res = await db.execute(
+            select(DataQualityReviewItem).where(DataQualityReviewItem.id == item_id)
+        )
         item = res.scalars().first()
         if not item:
             return None
@@ -67,7 +69,9 @@ class DataQualityService:
         notes: Optional[str] = None,
     ) -> Optional[DataQualityReviewItem]:
         """Rejects a review item, marking its status as REJECTED."""
-        res = await db.execute(select(DataQualityReviewItem).where(DataQualityReviewItem.id == item_id))
+        res = await db.execute(
+            select(DataQualityReviewItem).where(DataQualityReviewItem.id == item_id)
+        )
         item = res.scalars().first()
         if not item:
             return None
@@ -106,7 +110,9 @@ class DataQualityService:
         notes: str,
     ) -> Optional[DataConflictRecord]:
         """Resolves a conflict by adopting one source's value."""
-        res = await db.execute(select(DataConflictRecord).where(DataConflictRecord.id == conflict_id))
+        res = await db.execute(
+            select(DataConflictRecord).where(DataConflictRecord.id == conflict_id)
+        )
         conflict = res.scalars().first()
         if not conflict:
             return None

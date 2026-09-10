@@ -74,29 +74,33 @@ class TestIngestionValidators:
         v = VehicleDataValidator()
 
         # Valid payload
-        is_valid, errors = v.validate({
-            "manufacturer_name": "Tata Motors",
-            "model_name": "Punch",
-            "variant_name": "Pure 1.2 MT",
-            "fuel_type": "Petrol",
-            "transmission": "Manual",
-            "body_type": "SUV",
-            "seating_capacity": 5,
-            "arai_mileage_kmpl": Decimal("20.09"),
-            "safety_rating_stars": 5,
-            "airbags_count": 2,
-        })
+        is_valid, errors = v.validate(
+            {
+                "manufacturer_name": "Tata Motors",
+                "model_name": "Punch",
+                "variant_name": "Pure 1.2 MT",
+                "fuel_type": "Petrol",
+                "transmission": "Manual",
+                "body_type": "SUV",
+                "seating_capacity": 5,
+                "arai_mileage_kmpl": Decimal("20.09"),
+                "safety_rating_stars": 5,
+                "airbags_count": 2,
+            }
+        )
         assert is_valid is True
         assert len(errors) == 0
 
         # Invalid fuel and negative seating
-        is_valid, errors = v.validate({
-            "manufacturer_name": "Tata Motors",
-            "model_name": "Punch",
-            "variant_name": "Pure 1.2 MT",
-            "fuel_type": "Kerosene",  # Invalid
-            "seating_capacity": 0,    # Invalid
-        })
+        is_valid, errors = v.validate(
+            {
+                "manufacturer_name": "Tata Motors",
+                "model_name": "Punch",
+                "variant_name": "Pure 1.2 MT",
+                "fuel_type": "Kerosene",  # Invalid
+                "seating_capacity": 0,  # Invalid
+            }
+        )
         assert is_valid is False
         assert any("fuel_type" in e for e in errors)
         assert any("seating_capacity" in e for e in errors)
@@ -106,27 +110,33 @@ class TestIngestionValidators:
         pv = PriceDataValidator()
 
         # Valid price and date span
-        is_valid, errors = pv.validate({
-            "ex_showroom_price": Decimal("850000.00"),
-            "effective_from": datetime(2026, 1, 1, tzinfo=timezone.utc),
-            "effective_to": datetime(2026, 6, 30, tzinfo=timezone.utc),
-        })
+        is_valid, errors = pv.validate(
+            {
+                "ex_showroom_price": Decimal("850000.00"),
+                "effective_from": datetime(2026, 1, 1, tzinfo=timezone.utc),
+                "effective_to": datetime(2026, 6, 30, tzinfo=timezone.utc),
+            }
+        )
         assert is_valid is True
 
         # Inverted effective dates
-        is_valid, errors = pv.validate({
-            "ex_showroom_price": Decimal("850000.00"),
-            "effective_from": datetime(2026, 7, 1, tzinfo=timezone.utc),
-            "effective_to": datetime(2026, 1, 1, tzinfo=timezone.utc),
-        })
+        is_valid, errors = pv.validate(
+            {
+                "ex_showroom_price": Decimal("850000.00"),
+                "effective_from": datetime(2026, 7, 1, tzinfo=timezone.utc),
+                "effective_to": datetime(2026, 1, 1, tzinfo=timezone.utc),
+            }
+        )
         assert is_valid is False
         assert any("earlier" in e for e in errors)
 
         # Unrealistic zero / extreme prices
-        is_valid, errors = pv.validate({
-            "ex_showroom_price": Decimal("0.00"),
-            "effective_from": "2026-01-01T00:00:00Z",
-        })
+        is_valid, errors = pv.validate(
+            {
+                "ex_showroom_price": Decimal("0.00"),
+                "effective_from": "2026-01-01T00:00:00Z",
+            }
+        )
         assert is_valid is False
 
     def test_tax_and_finance_validators(self):
@@ -135,22 +145,26 @@ class TestIngestionValidators:
         fv = FinanceDataValidator()
 
         # Tax out of bounds
-        is_valid, errors = tv.validate({
-            "state_code": "KA",
-            "tax_type": "ROAD_TAX",
-            "calculation_type": "PERCENTAGE",
-            "base_rate_percent": Decimal("99.0"),  # Implausible 99%
-        })
+        is_valid, errors = tv.validate(
+            {
+                "state_code": "KA",
+                "tax_type": "ROAD_TAX",
+                "calculation_type": "PERCENTAGE",
+                "base_rate_percent": Decimal("99.0"),  # Implausible 99%
+            }
+        )
         assert is_valid is False
 
         # Inverted CIBIL bounds
-        is_valid, errors = fv.validate({
-            "bank_name": "SBI",
-            "product_name": "Auto Loan",
-            "annual_interest_rate": Decimal("8.5"),
-            "min_cibil_score": 850,
-            "max_cibil_score": 600,  # Inverted
-        })
+        is_valid, errors = fv.validate(
+            {
+                "bank_name": "SBI",
+                "product_name": "Auto Loan",
+                "annual_interest_rate": Decimal("8.5"),
+                "min_cibil_score": 850,
+                "max_cibil_score": 600,  # Inverted
+            }
+        )
         assert is_valid is False
         assert any("cannot exceed" in e for e in errors)
 
@@ -176,10 +190,14 @@ class TestIngestionPipelineAndEffectiveDates:
 
         # Verify raw records were staged
         raw_recs = (
-            await db_session.execute(
-                select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run.id)
+            (
+                await db_session.execute(
+                    select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run.id)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(raw_recs) == run.records_seen
         assert all(r.validation_status == "VALID" for r in raw_recs)
 
@@ -190,9 +208,7 @@ class TestIngestionPipelineAndEffectiveDates:
         ds = (await db_session.execute(select(DataSource).limit(1))).scalars().first()
         variant_res = await db_session.execute(
             select(Variant)
-            .options(
-                joinedload(Variant.model).joinedload(CarModel.manufacturer)
-            )
+            .options(joinedload(Variant.model).joinedload(CarModel.manufacturer))
             .limit(1)
         )
         variant = variant_res.scalars().first()
@@ -221,12 +237,16 @@ class TestIngestionPipelineAndEffectiveDates:
 
         # Verify historical records in DB
         prices = (
-            await db_session.execute(
-                select(VehiclePrice)
-                .where(VehiclePrice.variant_id == variant.id)
-                .order_by(VehiclePrice.effective_from.asc())
+            (
+                await db_session.execute(
+                    select(VehiclePrice)
+                    .where(VehiclePrice.variant_id == variant.id)
+                    .order_by(VehiclePrice.effective_from.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         assert len(prices) >= 2
         # Previous price closed
@@ -234,7 +254,9 @@ class TestIngestionPipelineAndEffectiveDates:
         new_price = [p for p in prices if p.ex_showroom_price == Decimal("670000.00")][0]
 
         assert old_price.effective_to is not None
-        assert old_price.effective_to.replace(tzinfo=timezone.utc) == datetime(2026, 7, 1, tzinfo=timezone.utc)
+        assert old_price.effective_to.replace(tzinfo=timezone.utc) == datetime(
+            2026, 7, 1, tzinfo=timezone.utc
+        )
         assert new_price.effective_to is None  # Active currently
 
 

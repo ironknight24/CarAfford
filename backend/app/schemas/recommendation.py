@@ -11,13 +11,17 @@ from app.core.recommendation_constants import (
     RecommendationCategory,
     ScoringWeights,
 )
-from app.schemas.affordability import AffordabilityBudgetBreakdown, AffordabilityCategory, OwnershipCostBreakdown
+from app.schemas.affordability import (
+    AffordabilityBudgetBreakdown,
+    AffordabilityCategory,
+    OwnershipCostBreakdown,
+)
 from app.schemas.pricing import OnRoadPriceBreakdown
-
 
 # =============================================================================
 # SCORING CONFIG SCHEMAS
 # =============================================================================
+
 
 class ScoringConfigResponse(BaseModel):
     weights: ScoringWeights
@@ -32,16 +36,25 @@ class ScoringConfigResponse(BaseModel):
 # REQUEST SCHEMAS
 # =============================================================================
 
+
 class RecommendationRequest(BaseModel):
     # Required Financial Profile
-    monthly_take_home_income: Decimal = Field(..., gt=0, description="Net monthly take-home income in INR")
-    existing_monthly_emi: Decimal = Field(Decimal("0.00"), ge=0, description="Existing monthly debt obligations in INR")
-    available_down_payment: Decimal = Field(Decimal("0.00"), ge=0, description="Available upfront down payment in INR")
+    monthly_take_home_income: Decimal = Field(
+        ..., gt=0, description="Net monthly take-home income in INR"
+    )
+    existing_monthly_emi: Decimal = Field(
+        Decimal("0.00"), ge=0, description="Existing monthly debt obligations in INR"
+    )
+    available_down_payment: Decimal = Field(
+        Decimal("0.00"), ge=0, description="Available upfront down payment in INR"
+    )
     state_id: int = Field(..., description="Target State/UT ID for on-road pricing and taxes")
     city_id: Optional[int] = Field(None, description="Optional target City ID")
     rto_id: Optional[int] = Field(None, description="Optional target RTO ID")
     credit_score: Optional[int] = Field(750, ge=300, le=900, description="CIBIL / Credit Score")
-    preferred_loan_tenure_months: Optional[int] = Field(60, ge=12, le=84, description="Preferred loan tenure in months")
+    preferred_loan_tenure_months: Optional[int] = Field(
+        60, ge=12, le=84, description="Preferred loan tenure in months"
+    )
     affordability_profile: Optional[AffordabilityProfile] = Field(
         AffordabilityProfile.BALANCED,
         description="Affordability profile heuristic (CONSERVATIVE, BALANCED, STRETCH)",
@@ -50,8 +63,10 @@ class RecommendationRequest(BaseModel):
     # Driving & Energy Preferences
     monthly_driving_distance_km: Optional[Decimal] = Field(None, ge=0, le=20000)
     annual_driving_distance_km: Optional[Decimal] = Field(None, ge=0, le=200000)
-    fuel_preference: Optional[str] = Field(None, description="Petrol, Diesel, CNG, Electric, Hybrid")
-    
+    fuel_preference: Optional[str] = Field(
+        None, description="Petrol, Diesel, CNG, Electric, Hybrid"
+    )
+
     # Vehicle Spec Preferences
     body_type: Optional[str] = Field(None, description="Hatchback, Sedan, SUV, MUV, etc.")
     transmission: Optional[str] = Field(None, description="Manual, Automatic, AMT, CVT, DCT")
@@ -64,8 +79,12 @@ class RecommendationRequest(BaseModel):
     maximum_price: Optional[Decimal] = Field(None, ge=0)
 
     # Result limits and targets
-    variant_ids: Optional[List[int]] = Field(None, description="Optional target variant IDs to evaluate")
-    limit: Optional[int] = Field(DEFAULT_RECOMMENDATION_LIMIT, ge=MIN_RECOMMENDATION_LIMIT, le=MAX_RECOMMENDATION_LIMIT)
+    variant_ids: Optional[List[int]] = Field(
+        None, description="Optional target variant IDs to evaluate"
+    )
+    limit: Optional[int] = Field(
+        DEFAULT_RECOMMENDATION_LIMIT, ge=MIN_RECOMMENDATION_LIMIT, le=MAX_RECOMMENDATION_LIMIT
+    )
     calculation_date: Optional[datetime] = None
 
     # Backward compatibility aliases
@@ -86,17 +105,35 @@ class RecommendationRequest(BaseModel):
             if "monthly_commute_km" in data and "monthly_driving_distance_km" not in data:
                 data["monthly_driving_distance_km"] = data["monthly_commute_km"]
             # Map legacy preferred_fuel_types list to fuel_preference
-            if "preferred_fuel_types" in data and data["preferred_fuel_types"] and "fuel_preference" not in data:
+            if (
+                "preferred_fuel_types" in data
+                and data["preferred_fuel_types"]
+                and "fuel_preference" not in data
+            ):
                 fuels = data["preferred_fuel_types"]
-                data["fuel_preference"] = fuels[0] if isinstance(fuels, list) and len(fuels) > 0 else str(fuels)
+                data["fuel_preference"] = (
+                    fuels[0] if isinstance(fuels, list) and len(fuels) > 0 else str(fuels)
+                )
             # Map legacy preferred_body_types list to body_type
-            if "preferred_body_types" in data and data["preferred_body_types"] and "body_type" not in data:
+            if (
+                "preferred_body_types" in data
+                and data["preferred_body_types"]
+                and "body_type" not in data
+            ):
                 btypes = data["preferred_body_types"]
-                data["body_type"] = btypes[0] if isinstance(btypes, list) and len(btypes) > 0 else str(btypes)
+                data["body_type"] = (
+                    btypes[0] if isinstance(btypes, list) and len(btypes) > 0 else str(btypes)
+                )
             # Map legacy preferred_transmission list to transmission
-            if "preferred_transmission" in data and data["preferred_transmission"] and "transmission" not in data:
+            if (
+                "preferred_transmission" in data
+                and data["preferred_transmission"]
+                and "transmission" not in data
+            ):
                 trans = data["preferred_transmission"]
-                data["transmission"] = trans[0] if isinstance(trans, list) and len(trans) > 0 else str(trans)
+                data["transmission"] = (
+                    trans[0] if isinstance(trans, list) and len(trans) > 0 else str(trans)
+                )
         return data
 
     @model_validator(mode="after")
@@ -104,10 +141,18 @@ class RecommendationRequest(BaseModel):
         if self.monthly_driving_distance_km is None and self.annual_driving_distance_km is None:
             self.monthly_driving_distance_km = Decimal("1000.00")
             self.annual_driving_distance_km = Decimal("12000.00")
-        elif self.annual_driving_distance_km is not None and self.monthly_driving_distance_km is None:
-            self.monthly_driving_distance_km = (self.annual_driving_distance_km / Decimal("12.0")).quantize(Decimal("0.01"))
-        elif self.monthly_driving_distance_km is not None and self.annual_driving_distance_km is None:
-            self.annual_driving_distance_km = (self.monthly_driving_distance_km * Decimal("12.0")).quantize(Decimal("0.01"))
+        elif (
+            self.annual_driving_distance_km is not None and self.monthly_driving_distance_km is None
+        ):
+            self.monthly_driving_distance_km = (
+                self.annual_driving_distance_km / Decimal("12.0")
+            ).quantize(Decimal("0.01"))
+        elif (
+            self.monthly_driving_distance_km is not None and self.annual_driving_distance_km is None
+        ):
+            self.annual_driving_distance_km = (
+                self.monthly_driving_distance_km * Decimal("12.0")
+            ).quantize(Decimal("0.01"))
         return self
 
 
@@ -138,6 +183,7 @@ class RecommendationCompareRequest(BaseModel):
 # =============================================================================
 # OUTPUT ITEM SCHEMAS
 # =============================================================================
+
 
 class RecommendationVehicleSummary(BaseModel):
     variant_id: int
@@ -187,7 +233,10 @@ class RecommendationTCOSummary(BaseModel):
 
 
 class RecommendedVehicleItem(BaseModel):
-    category: str = Field(..., description="BEST_OVERALL, BEST_VALUE, LOWEST_MONTHLY_COST, LOWEST_5_YEAR_TCO, BEST_FIT, STRETCH_OPTIONS")
+    category: str = Field(
+        ...,
+        description="BEST_OVERALL, BEST_VALUE, LOWEST_MONTHLY_COST, LOWEST_5_YEAR_TCO, BEST_FIT, STRETCH_OPTIONS",
+    )
     rank: int
     score: Decimal = Field(..., description="Composite recommendation score (0 to 100)")
     variant_id: int
@@ -200,8 +249,12 @@ class RecommendedVehicleItem(BaseModel):
     preference_match_score: int = Field(..., description="Preference alignment score (0 to 100)")
 
     # Explanations & Provenance
-    reasons: List[str] = Field(default_factory=list, description="Transparent human-readable reasons for recommendation")
-    warnings: List[str] = Field(default_factory=list, description="Financial or data status warnings")
+    reasons: List[str] = Field(
+        default_factory=list, description="Transparent human-readable reasons for recommendation"
+    )
+    warnings: List[str] = Field(
+        default_factory=list, description="Financial or data status warnings"
+    )
 
     # Backward-compatibility flat fields for existing frontend cards and legacy tests
     variant_name: str

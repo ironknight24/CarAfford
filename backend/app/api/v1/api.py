@@ -43,7 +43,9 @@ api_router.include_router(pricing.router, prefix="/pricing", tags=["Pricing"])
 api_router.include_router(finance.router, prefix="/finance", tags=["Finance"])
 api_router.include_router(affordability.router, prefix="/affordability", tags=["Affordability"])
 api_router.include_router(tco.router, prefix="/tco", tags=["TCO"])
-api_router.include_router(recommendations.router, prefix="/recommendations", tags=["Recommendations"])
+api_router.include_router(
+    recommendations.router, prefix="/recommendations", tags=["Recommendations"]
+)
 
 # Data Ingestion, Provenance & Quality Governance
 api_router.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sources"])
@@ -51,5 +53,3 @@ api_router.include_router(ingestion.router, prefix="/ingestion", tags=["Data Ing
 
 # Operational Admin & Governance Layer (Domain 16)
 api_router.include_router(admin.router, prefix="/admin", tags=["Admin Operations"])
-
-

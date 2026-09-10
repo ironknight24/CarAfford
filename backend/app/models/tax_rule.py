@@ -21,12 +21,11 @@ from app.models.base import AuditableMixin, Base, TimestampMixin, utc_now
 
 class TaxRule(Base, TimestampMixin):
     """Statutory vehicle taxation and registration charge rule with temporal and location scoping."""
+
     __tablename__ = "tax_rules"
     __table_args__ = (
         CheckConstraint("priority >= 0", name="chk_tax_rules_priority_non_negative"),
-        CheckConstraint(
-            "rate IS NULL OR rate >= 0", name="chk_tax_rules_rate_non_negative"
-        ),
+        CheckConstraint("rate IS NULL OR rate >= 0", name="chk_tax_rules_rate_non_negative"),
         CheckConstraint(
             "fixed_amount IS NULL OR fixed_amount >= 0",
             name="chk_tax_rules_fixed_amount_non_negative",
@@ -95,7 +94,9 @@ class TaxRule(Base, TimestampMixin):
     max_seating_capacity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Calculation Values (for FIXED and PERCENTAGE methods)
-    rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(8, 4), nullable=True)  # e.g., 14.0000 for 14%
+    rate: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(8, 4), nullable=True
+    )  # e.g., 14.0000 for 14%
     fixed_amount: Mapped[Optional[Decimal]] = mapped_column(
         Numeric(12, 2), default=Decimal("0.00"), nullable=True
     )  # e.g., ₹600.00
@@ -145,6 +146,7 @@ class TaxRule(Base, TimestampMixin):
 
 class TaxRuleBracket(Base, TimestampMixin):
     """Tiered slab bracket for bracketed vehicle tax or fee rules."""
+
     __tablename__ = "tax_rule_brackets"
     __table_args__ = (
         CheckConstraint("minimum_value >= 0", name="chk_tax_brackets_min_non_negative"),
@@ -152,9 +154,7 @@ class TaxRuleBracket(Base, TimestampMixin):
             "maximum_value IS NULL OR maximum_value > minimum_value",
             name="chk_tax_brackets_max_greater_than_min",
         ),
-        CheckConstraint(
-            "rate IS NULL OR rate >= 0", name="chk_tax_brackets_rate_non_negative"
-        ),
+        CheckConstraint("rate IS NULL OR rate >= 0", name="chk_tax_brackets_rate_non_negative"),
         CheckConstraint(
             "fixed_amount IS NULL OR fixed_amount >= 0",
             name="chk_tax_brackets_fixed_non_negative",

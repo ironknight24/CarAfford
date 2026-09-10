@@ -54,9 +54,7 @@ class TaxRuleResolverService:
             if not city:
                 raise ValueError(f"City with ID={city_id} not found.")
             if city.state_id != state.id:
-                raise ValueError(
-                    f"City '{city.name}' does not belong to State '{state.name}'."
-                )
+                raise ValueError(f"City '{city.name}' does not belong to State '{state.name}'.")
 
         rto: Optional[RtoOffice] = None
         if rto_id is not None:
@@ -64,9 +62,7 @@ class TaxRuleResolverService:
             if not rto:
                 raise ValueError(f"RTO with ID={rto_id} not found.")
             if rto.state_id != state.id:
-                raise ValueError(
-                    f"RTO '{rto.code}' does not belong to State '{state.name}'."
-                )
+                raise ValueError(f"RTO '{rto.code}' does not belong to State '{state.name}'.")
 
         location_ctx = LocationResolutionContext(
             state_id=state.id,
@@ -102,13 +98,18 @@ class TaxRuleResolverService:
             )
             v_fuel = variant.fuel_type
             v_cc = variant.engine_cc
-            v_is_ev = variant.fuel_type.upper() in ["ELECTRIC", "EV"] or variant.battery_capacity_kwh is not None
+            v_is_ev = (
+                variant.fuel_type.upper() in ["ELECTRIC", "EV"]
+                or variant.battery_capacity_kwh is not None
+            )
             if is_ev is not None:
                 v_is_ev = is_ev
 
             # Get active price for calculation date
             if ex_showroom_price is None:
-                active_price = await vehicle_repo.get_current_price(variant.id, as_of_date=calc_date)
+                active_price = await vehicle_repo.get_current_price(
+                    variant.id, as_of_date=calc_date
+                )
                 if active_price:
                     v_price = active_price.ex_showroom_price
 
@@ -152,7 +153,10 @@ class TaxRuleResolverService:
 
             # Check Fuel condition
             if rule.fuel_type and rule.fuel_type.upper() != "ANY":
-                if rule.fuel_type.upper() not in v_fuel.upper() and v_fuel.upper() not in rule.fuel_type.upper():
+                if (
+                    rule.fuel_type.upper() not in v_fuel.upper()
+                    and v_fuel.upper() not in rule.fuel_type.upper()
+                ):
                     continue
 
             # Check Price bounds
@@ -233,9 +237,9 @@ class TaxRuleResolverService:
 
         ordered_tax_types = sorted(
             matched_by_tax_type.keys(),
-            key=lambda t: preferred_tax_type_order.index(t)
-            if t in preferred_tax_type_order
-            else 99,
+            key=lambda t: (
+                preferred_tax_type_order.index(t) if t in preferred_tax_type_order else 99
+            ),
         )
 
         for t_type in ordered_tax_types:
@@ -244,9 +248,7 @@ class TaxRuleResolverService:
             candidates_list.sort(key=lambda item: (item[0], item[1].priority), reverse=True)
             best_score, best_rule, tier, tier_label = candidates_list[0]
 
-            brackets_dto = [
-                TaxRuleBracketRead.model_validate(b) for b in best_rule.brackets
-            ]
+            brackets_dto = [TaxRuleBracketRead.model_validate(b) for b in best_rule.brackets]
 
             resolved_items.append(
                 ResolvedTaxRuleItem(

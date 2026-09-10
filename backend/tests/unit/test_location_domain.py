@@ -70,7 +70,9 @@ async def test_state_country_relationship_and_region_types(db_session: AsyncSess
 
     # State
     ka = await repo.create_state(
-        StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE", active=True)
+        StateCreate(
+            country_id=india.id, name="Karnataka", code="KA", region_type="STATE", active=True
+        )
     )
     assert ka.id is not None
     assert ka.country_id == india.id
@@ -79,7 +81,9 @@ async def test_state_country_relationship_and_region_types(db_session: AsyncSess
 
     # Union Territory
     dl = await repo.create_state(
-        StateCreate(country_id=india.id, name="Delhi", code="DL", region_type="UNION_TERRITORY", active=True)
+        StateCreate(
+            country_id=india.id, name="Delhi", code="DL", region_type="UNION_TERRITORY", active=True
+        )
     )
     assert dl.id is not None
     assert dl.region_type == "UNION_TERRITORY"
@@ -94,7 +98,9 @@ async def test_state_country_relationship_and_region_types(db_session: AsyncSess
 async def test_state_code_uniqueness_within_country(db_session: AsyncSession):
     repo = LocationRepository(db_session)
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    await repo.create_state(StateCreate(country_id=india.id, name="Maharashtra", code="MH", region_type="STATE"))
+    await repo.create_state(
+        StateCreate(country_id=india.id, name="Maharashtra", code="MH", region_type="STATE")
+    )
 
     # Duplicate state code under same country
     dup_st = State(country_id=india.id, name="Maharashtra Alt", code="MH", region_type="STATE")
@@ -108,7 +114,9 @@ async def test_state_code_uniqueness_within_country(db_session: AsyncSession):
 async def test_city_state_relationship_and_slug_uniqueness(db_session: AsyncSession):
     repo = LocationRepository(db_session)
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    ka = await repo.create_state(StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE"))
+    ka = await repo.create_state(
+        StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE")
+    )
 
     blr = await repo.create_city(
         CityCreate(state_id=ka.id, name="Bengaluru", slug="bengaluru", tier="Tier 1", active=True)
@@ -131,8 +139,12 @@ async def test_city_state_relationship_and_slug_uniqueness(db_session: AsyncSess
 async def test_rto_city_and_state_relationship(db_session: AsyncSession):
     repo = LocationRepository(db_session)
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    ka = await repo.create_state(StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE"))
-    blr = await repo.create_city(CityCreate(state_id=ka.id, name="Bengaluru", slug="bengaluru", tier="Tier 1"))
+    ka = await repo.create_state(
+        StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE")
+    )
+    blr = await repo.create_city(
+        CityCreate(state_id=ka.id, name="Bengaluru", slug="bengaluru", tier="Tier 1")
+    )
 
     # 1. RTO associated with Bengaluru City
     rto_ka01 = await repo.create_rto(
@@ -187,10 +199,14 @@ async def test_rto_city_and_state_relationship(db_session: AsyncSession):
 async def test_rto_code_uniqueness_within_state(db_session: AsyncSession):
     repo = LocationRepository(db_session)
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    mh = await repo.create_state(StateCreate(country_id=india.id, name="Maharashtra", code="MH", region_type="STATE"))
+    mh = await repo.create_state(
+        StateCreate(country_id=india.id, name="Maharashtra", code="MH", region_type="STATE")
+    )
 
     await repo.create_rto(
-        RtoOfficeCreate(state_id=mh.id, code="MH-01", name="RTO Tardeo", jurisdiction="Mumbai South")
+        RtoOfficeCreate(
+            state_id=mh.id, code="MH-01", name="RTO Tardeo", jurisdiction="Mumbai South"
+        )
     )
 
     # Duplicate RTO code in same state
@@ -205,16 +221,36 @@ async def test_rto_code_uniqueness_within_state(db_session: AsyncSession):
 async def test_location_search_hierarchical(db_session: AsyncSession):
     repo = LocationRepository(db_session)
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    ka = await repo.create_state(StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE"))
-    blr = await repo.create_city(CityCreate(state_id=ka.id, name="Bengaluru", slug="bengaluru", tier="Tier 1"))
+    ka = await repo.create_state(
+        StateCreate(country_id=india.id, name="Karnataka", code="KA", region_type="STATE")
+    )
+    blr = await repo.create_city(
+        CityCreate(state_id=ka.id, name="Bengaluru", slug="bengaluru", tier="Tier 1")
+    )
     await repo.create_rto(
-        RtoOfficeCreate(state_id=ka.id, city_id=blr.id, code="KA-01", name="RTO Koramangala", jurisdiction="Koramangala, HSR")
+        RtoOfficeCreate(
+            state_id=ka.id,
+            city_id=blr.id,
+            code="KA-01",
+            name="RTO Koramangala",
+            jurisdiction="Koramangala, HSR",
+        )
     )
 
-    dl = await repo.create_state(StateCreate(country_id=india.id, name="Delhi", code="DL", region_type="UNION_TERRITORY"))
-    nd = await repo.create_city(CityCreate(state_id=dl.id, name="New Delhi", slug="new-delhi", tier="Tier 1"))
+    dl = await repo.create_state(
+        StateCreate(country_id=india.id, name="Delhi", code="DL", region_type="UNION_TERRITORY")
+    )
+    nd = await repo.create_city(
+        CityCreate(state_id=dl.id, name="New Delhi", slug="new-delhi", tier="Tier 1")
+    )
     await repo.create_rto(
-        RtoOfficeCreate(state_id=dl.id, city_id=nd.id, code="DL-01", name="RTO Mall Road", jurisdiction="North Delhi")
+        RtoOfficeCreate(
+            state_id=dl.id,
+            city_id=nd.id,
+            code="DL-01",
+            name="RTO Mall Road",
+            jurisdiction="North Delhi",
+        )
     )
 
     # 1. Search for "Bengaluru" (should find city and RTO with Bengaluru in name/jurisdiction)
@@ -247,7 +283,9 @@ async def test_rto_data_source_provenance(db_session: AsyncSession):
     await db_session.flush()
 
     india = await repo.create_country(CountryCreate(name="India", iso_code="IN", iso3_code="IND"))
-    ts = await repo.create_state(StateCreate(country_id=india.id, name="Telangana", code="TS", region_type="STATE"))
+    ts = await repo.create_state(
+        StateCreate(country_id=india.id, name="Telangana", code="TS", region_type="STATE")
+    )
     hyd = await repo.create_city(CityCreate(state_id=ts.id, name="Hyderabad", slug="hyderabad"))
 
     rto = await repo.create_rto(

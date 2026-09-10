@@ -7,7 +7,7 @@ from app.models.finance import LoanEligibilityRule, LoanProduct
 
 class LoanEligibilityEvaluatorService:
     """Evaluates applicant financing parameters against bank pre-qualification criteria.
-    
+
     IMPORTANT: This evaluates estimated pre-qualification parameters (income, credit score, LTV, tenure),
     and strictly labels results as 'ESTIMATED_ELIGIBLE' rather than official loan approval.
     """
@@ -26,7 +26,7 @@ class LoanEligibilityEvaluatorService:
         calculation_date: Optional[datetime] = None,
     ) -> Tuple[bool, str, List[str]]:
         """Evaluates eligibility for a loan product.
-        
+
         Returns:
             Tuple of (is_eligible: bool, status: str, reasons: List[str])
             Status values: 'ESTIMATED_ELIGIBLE', 'MARGINAL', 'ESTIMATED_INELIGIBLE'
@@ -79,11 +79,19 @@ class LoanEligibilityEvaluatorService:
         for rule in rules:
             if not rule.active:
                 continue
-            eff_from = rule.effective_from.replace(tzinfo=timezone.utc) if rule.effective_from.tzinfo is None else rule.effective_from
+            eff_from = (
+                rule.effective_from.replace(tzinfo=timezone.utc)
+                if rule.effective_from.tzinfo is None
+                else rule.effective_from
+            )
             if eff_from > calc_date:
                 continue
             if rule.effective_to is not None:
-                eff_to = rule.effective_to.replace(tzinfo=timezone.utc) if rule.effective_to.tzinfo is None else rule.effective_to
+                eff_to = (
+                    rule.effective_to.replace(tzinfo=timezone.utc)
+                    if rule.effective_to.tzinfo is None
+                    else rule.effective_to
+                )
                 if eff_to < calc_date:
                     continue
 
@@ -105,10 +113,14 @@ class LoanEligibilityEvaluatorService:
             # Age Rule
             if rule.min_age_years is not None and user_age < rule.min_age_years:
                 is_eligible = False
-                reasons.append(f"Applicant age ({user_age}) is below minimum requirement ({rule.min_age_years} years)")
+                reasons.append(
+                    f"Applicant age ({user_age}) is below minimum requirement ({rule.min_age_years} years)"
+                )
             if rule.max_age_years is not None and user_age > rule.max_age_years:
                 is_eligible = False
-                reasons.append(f"Applicant age ({user_age}) exceeds maximum maturity cap ({rule.max_age_years} years)")
+                reasons.append(
+                    f"Applicant age ({user_age}) exceeds maximum maturity cap ({rule.max_age_years} years)"
+                )
 
             # Employment Type Rule
             if rule.allowed_employment_types:
@@ -122,6 +134,8 @@ class LoanEligibilityEvaluatorService:
             status = "ESTIMATED_INELIGIBLE"
         elif user_cibil < 700:
             status = "MARGINAL"
-            reasons.append("Credit score is in fair band (650-699); additional documentation or guarantor may be requested")
+            reasons.append(
+                "Credit score is in fair band (650-699); additional documentation or guarantor may be requested"
+            )
 
         return is_eligible, status, reasons

@@ -36,7 +36,9 @@ def test_fuel_cost_estimation_petrol():
     fuel_type = "Petrol"
     arai_mileage = Decimal("20.0")  # Real world = 16 km/l
 
-    monthly_fuel = AffordabilityEngine.estimate_monthly_fuel_cost(commute_km, fuel_type, arai_mileage)
+    monthly_fuel = AffordabilityEngine.estimate_monthly_fuel_cost(
+        commute_km, fuel_type, arai_mileage
+    )
     # 1000 / 16 = 62.5 liters * ₹96.50 = ₹6031.25
     assert monthly_fuel == Decimal("6031.25")
 
@@ -46,7 +48,9 @@ def test_fuel_cost_estimation_ev():
     fuel_type = "Electric"
     arai_mileage = Decimal("15.0")
 
-    monthly_fuel = AffordabilityEngine.estimate_monthly_fuel_cost(commute_km, fuel_type, arai_mileage)
+    monthly_fuel = AffordabilityEngine.estimate_monthly_fuel_cost(
+        commute_km, fuel_type, arai_mileage
+    )
     # EV driving 1000 km is approx ₹1105
     assert monthly_fuel == Decimal("1105.00")
 
@@ -65,7 +69,9 @@ def test_affordability_scoring_categories():
         arai_mileage_kmpl=Decimal("20.0"),
         monthly_income=income,
     )
-    score, category, rationale = AffordabilityEngine.score_affordability(tco_breakdown, income, existing_emis)
+    score, category, rationale = AffordabilityEngine.score_affordability(
+        tco_breakdown, income, existing_emis
+    )
     assert category == AffordabilityCategory.COMFORTABLE
     assert score >= 80
 
@@ -79,6 +85,8 @@ def test_affordability_scoring_categories():
         arai_mileage_kmpl=Decimal("12.0"),
         monthly_income=income,
     )
-    score_risky, category_risky, _ = AffordabilityEngine.score_affordability(tco_risky, income, existing_emis)
+    score_risky, category_risky, _ = AffordabilityEngine.score_affordability(
+        tco_risky, income, existing_emis
+    )
     assert category_risky == AffordabilityCategory.RISKY
     assert score_risky < 40

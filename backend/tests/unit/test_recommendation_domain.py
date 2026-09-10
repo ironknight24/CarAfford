@@ -65,10 +65,13 @@ class TestRecommendationCandidateFiltering:
         res = await RecommendationService.get_car_recommendations(db_session, req)
         assert len(res.recommendations) > 0
         for item in res.recommendations:
-            is_auto = (
-                item.vehicle.transmission.upper() in ["AUTOMATIC", "AMT", "CVT", "DCT", "AT"]
-                or item.vehicle.fuel_type.upper() in ["ELECTRIC", "EV"]
-            )
+            is_auto = item.vehicle.transmission.upper() in [
+                "AUTOMATIC",
+                "AMT",
+                "CVT",
+                "DCT",
+                "AT",
+            ] or item.vehicle.fuel_type.upper() in ["ELECTRIC", "EV"]
             assert is_auto
 
 

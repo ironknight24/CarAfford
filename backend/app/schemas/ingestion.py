@@ -14,10 +14,10 @@ from app.core.ingestion_constants import (
     INGESTION_DISCLAIMER,
 )
 
-
 # =============================================================================
 # DATA SOURCE SCHEMAS
 # =============================================================================
+
 
 class DataSourceBase(BaseModel):
     name: str = Field(..., max_length=150)
@@ -63,6 +63,7 @@ class DataSourceRead(DataSourceBase):
 # INGESTION RUN SCHEMAS
 # =============================================================================
 
+
 class IngestionRunCreate(BaseModel):
     data_source_id: Optional[int] = None
     dataset_name: str = Field(..., max_length=100)
@@ -95,6 +96,7 @@ class IngestionRunRead(BaseModel):
 # RAW INGESTION RECORD SCHEMAS
 # =============================================================================
 
+
 class RawIngestionRecordRead(BaseModel):
     id: int
     ingestion_run_id: int
@@ -116,6 +118,7 @@ class RawIngestionRecordRead(BaseModel):
 # =============================================================================
 # CONFLICT RESOLUTION SCHEMAS
 # =============================================================================
+
 
 class DataConflictRead(BaseModel):
     id: int
@@ -146,6 +149,7 @@ class DataConflictResolutionRequest(BaseModel):
 # MANUAL REVIEW QUEUE SCHEMAS
 # =============================================================================
 
+
 class DataQualityReviewItemRead(BaseModel):
     id: int
     raw_record_id: Optional[int] = None
@@ -172,6 +176,7 @@ class DataQualityReviewAction(BaseModel):
 # =============================================================================
 # DATA QUALITY & FRESHNESS SCHEMAS
 # =============================================================================
+
 
 class DataQualityScoreBreakdown(BaseModel):
     overall_quality_score: Decimal

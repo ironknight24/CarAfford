@@ -65,15 +65,22 @@ jobs:
           pip install -r backend/requirements.txt
           pip install pytest pytest-asyncio httpx flake8 black
 
-      - name: Code Quality & Linting
+      - name: Code Formatting Check (Black)
         run: |
-          black --check backend/app backend/tests || true
+          black --check backend/app backend/tests
+
+      - name: Code Quality & Syntax Check (Flake8)
+        run: |
           flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Run Alembic Database Migrations & Seed
+      - name: Run Alembic Database Migrations
         run: |
           cd backend
           alembic upgrade head
+
+      - name: Run Database Seeding
+        run: |
+          cd backend
           python -m app.db.seed
 
       - name: Run Pytest Suite

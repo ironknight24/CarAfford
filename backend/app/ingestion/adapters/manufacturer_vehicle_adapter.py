@@ -29,10 +29,16 @@ logger = logging.getLogger(__name__)
 # FETCHER
 # =============================================================================
 
+
 class ManufacturerVehicleFetcher(DataFetcher):
     """Fetches official vehicle catalog and pricing records from configured feed, API, or fixture."""
 
-    def __init__(self, mode: str = "FIXTURE_ONLY", fixture_data: Optional[List[Dict[str, Any]]] = None, api_url: Optional[str] = None):
+    def __init__(
+        self,
+        mode: str = "FIXTURE_ONLY",
+        fixture_data: Optional[List[Dict[str, Any]]] = None,
+        api_url: Optional[str] = None,
+    ):
         self.mode = mode
         self.fixture_data = fixture_data or []
         self.api_url = api_url
@@ -50,6 +56,7 @@ class ManufacturerVehicleFetcher(DataFetcher):
 # PARSER
 # =============================================================================
 
+
 class ManufacturerVehicleParser(DataParser):
     """Parses raw OEM vehicle payloads into structured intermediate dictionaries."""
 
@@ -62,7 +69,9 @@ class ManufacturerVehicleParser(DataParser):
             raise ValueError(f"Unsupported payload type: {type(raw_payload)}")
 
         return {
-            "source_record_id": str(payload_dict.get("source_record_id") or payload_dict.get("variant_id") or ""),
+            "source_record_id": str(
+                payload_dict.get("source_record_id") or payload_dict.get("variant_id") or ""
+            ),
             "manufacturer_name": str(payload_dict.get("manufacturer_name", "")).strip(),
             "model_name": str(payload_dict.get("model_name", "")).strip(),
             "variant_name": str(payload_dict.get("variant_name", "")).strip(),
@@ -97,6 +106,7 @@ class ManufacturerVehicleParser(DataParser):
 # =============================================================================
 # NORMALIZER
 # =============================================================================
+
 
 class ManufacturerVehicleNormalizer(DataNormalizer):
     """Standardizes enums, decimal values, and automotive specifications."""
@@ -232,6 +242,7 @@ class ManufacturerVehicleNormalizer(DataNormalizer):
 # MAPPER
 # =============================================================================
 
+
 class ManufacturerVehicleMapper(CanonicalMapper):
     """Maps normalized OEM payload into canonical database models and specifications."""
 
@@ -273,6 +284,7 @@ class ManufacturerVehicleMapper(CanonicalMapper):
 # BASE MANUFACTURER ADAPTER
 # =============================================================================
 
+
 class BaseManufacturerVehicleAdapter(DataSourceAdapter, ABC):
     """Base class for authoritative OEM vehicle catalogue and price adapters."""
 
@@ -304,6 +316,7 @@ class BaseManufacturerVehicleAdapter(DataSourceAdapter, ABC):
 # =============================================================================
 # TATA MOTORS ADAPTER
 # =============================================================================
+
 
 class TataMotorsVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     """Authoritative vehicle catalogue & ex-showroom price adapter for Tata Motors."""
@@ -490,12 +503,15 @@ class TataMotorsVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     ]
 
     def get_fetcher(self) -> DataFetcher:
-        return ManufacturerVehicleFetcher(mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url)
+        return ManufacturerVehicleFetcher(
+            mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url
+        )
 
 
 # =============================================================================
 # MARUTI SUZUKI ADAPTER
 # =============================================================================
+
 
 class MarutiSuzukiVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     """Authoritative vehicle catalogue & ex-showroom price adapter for Maruti Suzuki."""
@@ -640,12 +656,15 @@ class MarutiSuzukiVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     ]
 
     def get_fetcher(self) -> DataFetcher:
-        return ManufacturerVehicleFetcher(mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url)
+        return ManufacturerVehicleFetcher(
+            mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url
+        )
 
 
 # =============================================================================
 # HYUNDAI MOTOR INDIA ADAPTER
 # =============================================================================
+
 
 class HyundaiVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     """Authoritative vehicle catalogue & ex-showroom price adapter for Hyundai Motor India."""
@@ -769,4 +788,6 @@ class HyundaiVehicleDataSourceAdapter(BaseManufacturerVehicleAdapter):
     ]
 
     def get_fetcher(self) -> DataFetcher:
-        return ManufacturerVehicleFetcher(mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url)
+        return ManufacturerVehicleFetcher(
+            mode=self.mode, fixture_data=self.FIXTURE_DATA, api_url=self.base_url
+        )

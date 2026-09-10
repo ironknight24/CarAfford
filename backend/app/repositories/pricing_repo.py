@@ -39,14 +39,22 @@ class PricingRepository:
                 return price
 
         # Fallback to any current price for this variant
-        stmt = select(ExShowroomPrice).where(
-            ExShowroomPrice.variant_id == variant_id,
-            ExShowroomPrice.is_current == True,
-        ).order_by(ExShowroomPrice.id.desc())
+        stmt = (
+            select(ExShowroomPrice)
+            .where(
+                ExShowroomPrice.variant_id == variant_id,
+                ExShowroomPrice.is_current == True,
+            )
+            .order_by(ExShowroomPrice.id.desc())
+        )
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
     async def get_price_history(self, variant_id: int) -> List[PriceHistory]:
-        stmt = select(PriceHistory).where(PriceHistory.variant_id == variant_id).order_by(PriceHistory.recorded_at.desc())
+        stmt = (
+            select(PriceHistory)
+            .where(PriceHistory.variant_id == variant_id)
+            .order_by(PriceHistory.recorded_at.desc())
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())

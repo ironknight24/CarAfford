@@ -21,7 +21,9 @@ async def test_calculate_emi_endpoint(async_client: AsyncClient):
         "annual_interest_rate": "8.75",
         "tenure_months": 60,
     }
-    response = await async_client.post("/api/v1/finance/calculate-emi?generate_schedule=true", json=payload)
+    response = await async_client.post(
+        "/api/v1/finance/calculate-emi?generate_schedule=true", json=payload
+    )
     assert response.status_code == 200
     res = response.json()
     assert res["success"] is True
@@ -46,7 +48,9 @@ async def test_loan_eligibility_endpoint(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_full_seed_and_recommendations_flow(db_session: AsyncSession, async_client: AsyncClient):
+async def test_full_seed_and_recommendations_flow(
+    db_session: AsyncSession, async_client: AsyncClient
+):
     # Seed data using in-memory test database session
     await seed_database(db_session)
 
@@ -75,7 +79,9 @@ async def test_full_seed_and_recommendations_flow(db_session: AsyncSession, asyn
     on_road_resp = await async_client.post("/api/v1/pricing/on-road-breakdown", json=on_road_req)
     assert on_road_resp.status_code == 200
     on_road_data = on_road_resp.json()["data"]
-    assert Decimal(str(on_road_data["on_road_price"])) > Decimal(str(on_road_data["ex_showroom_price"]))
+    assert Decimal(str(on_road_data["on_road_price"])) > Decimal(
+        str(on_road_data["ex_showroom_price"])
+    )
 
     # 4. Test Car Recommendations Endpoint
     afford_req = {

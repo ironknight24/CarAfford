@@ -89,21 +89,29 @@ class TaxCalculator:
         tcs = cls.calculate_tcs(ex_showroom_price)
 
         # 2. Registration and Fastag
-        reg_fee = Decimal(str(tax_slab.flat_registration_fee if tax_slab else settings.REGISTRATION_BASE_FEE_INR))
+        reg_fee = Decimal(
+            str(tax_slab.flat_registration_fee if tax_slab else settings.REGISTRATION_BASE_FEE_INR)
+        )
         fastag_fee = Decimal(str(tax_slab.fastag_fee if tax_slab else settings.FASTAG_FEE_INR))
-        hypothecation_fee = Decimal(str(settings.HYPOTHECATION_FEE_INR)) if is_financed else Decimal("0.00")
+        hypothecation_fee = (
+            Decimal(str(settings.HYPOTHECATION_FEE_INR)) if is_financed else Decimal("0.00")
+        )
         green_cess = Decimal(str(tax_slab.green_cess_amount if tax_slab else "0.00"))
 
         # 3. RTO Road Tax & Cess
         if is_bh_series:
             rto_tax = cls.calculate_bh_series_tax(ex_showroom_price, fuel_type)
-            tax_percent = round_inr((rto_tax / ex_showroom_price) * Decimal("100.0")) if ex_showroom_price > 0 else Decimal("0.00")
+            tax_percent = (
+                round_inr((rto_tax / ex_showroom_price) * Decimal("100.0"))
+                if ex_showroom_price > 0
+                else Decimal("0.00")
+            )
             cess_amount = Decimal("0.00")
         elif tax_slab:
             tax_percent = tax_slab.tax_percent
-            rto_tax = (ex_showroom_price * (tax_percent / Decimal("100.0")))
+            rto_tax = ex_showroom_price * (tax_percent / Decimal("100.0"))
             cess_percent = tax_slab.cess_percent
-            cess_amount = (rto_tax * (cess_percent / Decimal("100.0")))
+            cess_amount = rto_tax * (cess_percent / Decimal("100.0"))
         else:
             # Fallback standard Delhi/Central average rate (approx 10% petrol, 12% diesel, 0% EV)
             fuel_upper = fuel_type.upper()
@@ -114,10 +122,12 @@ class TaxCalculator:
             else:
                 tax_percent = Decimal("10.00")
 
-            rto_tax = (ex_showroom_price * (tax_percent / Decimal("100.0")))
+            rto_tax = ex_showroom_price * (tax_percent / Decimal("100.0"))
             cess_amount = Decimal("0.00")
 
-        total_govt = rto_tax + cess_amount + reg_fee + fastag_fee + green_cess + hypothecation_fee + tcs
+        total_govt = (
+            rto_tax + cess_amount + reg_fee + fastag_fee + green_cess + hypothecation_fee + tcs
+        )
 
         return TaxCalculationResult(
             ex_showroom_price=ex_showroom_price,

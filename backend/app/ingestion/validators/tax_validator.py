@@ -69,17 +69,23 @@ class TaxRuleDataValidator(DataValidator):
 
         rule_cat = item.get("rule_category", "TAX")
         if rule_cat not in self.VALID_RULE_CATEGORIES:
-            errors.append(f"Invalid rule_category '{rule_cat}'. Must be one of {sorted(self.VALID_RULE_CATEGORIES)}")
+            errors.append(
+                f"Invalid rule_category '{rule_cat}'. Must be one of {sorted(self.VALID_RULE_CATEGORIES)}"
+            )
 
         # 3. Tax Type Validation
         tax_type = item.get("tax_type")
         if not tax_type or tax_type not in self.VALID_TAX_TYPES:
-            errors.append(f"Invalid tax_type '{tax_type}'. Must be one of {sorted(self.VALID_TAX_TYPES)}")
+            errors.append(
+                f"Invalid tax_type '{tax_type}'. Must be one of {sorted(self.VALID_TAX_TYPES)}"
+            )
 
         # 4. Calculation Method Validation
         calc_method = item.get("calculation_method", "PERCENTAGE")
         if not calc_method or calc_method not in self.VALID_CALCULATION_METHODS:
-            errors.append(f"Invalid calculation_method '{calc_method}'. Must be one of {sorted(self.VALID_CALCULATION_METHODS)}")
+            errors.append(
+                f"Invalid calculation_method '{calc_method}'. Must be one of {sorted(self.VALID_CALCULATION_METHODS)}"
+            )
 
         # 5. Rate & Fixed Amount Validation
         rate_val = item.get("rate")
@@ -89,7 +95,9 @@ class TaxRuleDataValidator(DataValidator):
                 if dec_rate < Decimal("0.0"):
                     errors.append(f"Tax rate ({dec_rate}%) cannot be negative")
                 elif dec_rate > Decimal("50.0"):
-                    errors.append(f"Tax rate ({dec_rate}%) exceeds maximum plausible threshold (50.0%)")
+                    errors.append(
+                        f"Tax rate ({dec_rate}%) exceeds maximum plausible threshold (50.0%)"
+                    )
             except Exception:
                 errors.append(f"Invalid decimal format for rate: {rate_val}")
 
@@ -121,9 +129,13 @@ class TaxRuleDataValidator(DataValidator):
                     try:
                         min_v = Decimal(str(min_v_raw))
                         if min_v < Decimal("0.00"):
-                            errors.append(f"Bracket minimum_value (₹{min_v}) cannot be negative at index {i}")
+                            errors.append(
+                                f"Bracket minimum_value (₹{min_v}) cannot be negative at index {i}"
+                            )
                     except Exception:
-                        errors.append(f"Invalid decimal for minimum_value at index {i}: {min_v_raw}")
+                        errors.append(
+                            f"Invalid decimal for minimum_value at index {i}: {min_v_raw}"
+                        )
                         continue
 
                     max_v = None
@@ -132,9 +144,13 @@ class TaxRuleDataValidator(DataValidator):
                         try:
                             max_v = Decimal(str(max_v_raw))
                             if max_v <= min_v:
-                                errors.append(f"Bracket maximum_value (₹{max_v}) must be greater than minimum_value (₹{min_v}) at index {i}")
+                                errors.append(
+                                    f"Bracket maximum_value (₹{max_v}) must be greater than minimum_value (₹{min_v}) at index {i}"
+                                )
                         except Exception:
-                            errors.append(f"Invalid decimal for maximum_value at index {i}: {max_v_raw}")
+                            errors.append(
+                                f"Invalid decimal for maximum_value at index {i}: {max_v_raw}"
+                            )
                             continue
 
                     # Rate / Fixed amount in bracket
@@ -143,7 +159,9 @@ class TaxRuleDataValidator(DataValidator):
                         try:
                             dec_b_rate = Decimal(str(b_rate))
                             if dec_b_rate < Decimal("0.0") or dec_b_rate > Decimal("50.0"):
-                                errors.append(f"Bracket rate ({dec_b_rate}%) out of bounds (0% - 50%) at index {i}")
+                                errors.append(
+                                    f"Bracket rate ({dec_b_rate}%) out of bounds (0% - 50%) at index {i}"
+                                )
                         except Exception:
                             errors.append(f"Invalid decimal rate in bracket at index {i}")
 
@@ -152,32 +170,42 @@ class TaxRuleDataValidator(DataValidator):
                         try:
                             dec_b_fixed = Decimal(str(b_fixed))
                             if dec_b_fixed < Decimal("0.0"):
-                                errors.append(f"Bracket fixed_amount cannot be negative at index {i}")
+                                errors.append(
+                                    f"Bracket fixed_amount cannot be negative at index {i}"
+                                )
                         except Exception:
                             errors.append(f"Invalid decimal fixed_amount in bracket at index {i}")
 
                     # Overlapping / Gap validation
                     if i > 0:
                         if prev_max != Decimal("-1.00") and min_v < prev_max:
-                            errors.append(f"Overlapping bracket detected: bracket {i} min ({min_v}) < previous max ({prev_max})")
+                            errors.append(
+                                f"Overlapping bracket detected: bracket {i} min ({min_v}) < previous max ({prev_max})"
+                            )
 
                     if max_v is not None:
                         prev_max = max_v
                     else:
                         # Open ended bracket must be the last bracket
                         if i != len(brackets) - 1:
-                            errors.append(f"Unbounded bracket (maximum_value=None) must be the final bracket, found at index {i}")
+                            errors.append(
+                                f"Unbounded bracket (maximum_value=None) must be the final bracket, found at index {i}"
+                            )
                         prev_max = Decimal("999999999999.00")
 
         # 7. Safe Formula AST Validation (for FORMULA calculation method)
         if calc_method == "FORMULA":
             formula = item.get("formula_definition")
             if not formula or not isinstance(formula, dict):
-                errors.append("FORMULA calculation_method requires a safe structured JSON 'formula_definition' dictionary")
+                errors.append(
+                    "FORMULA calculation_method requires a safe structured JSON 'formula_definition' dictionary"
+                )
             else:
                 f_type = formula.get("type")
                 if not f_type or f_type not in self.VALID_FORMULA_TYPES:
-                    errors.append(f"Formula type '{f_type}' is not supported. Must be one of {sorted(self.VALID_FORMULA_TYPES)}")
+                    errors.append(
+                        f"Formula type '{f_type}' is not supported. Must be one of {sorted(self.VALID_FORMULA_TYPES)}"
+                    )
 
                 # Validate parameters for BH_SERIES
                 if f_type == "BH_SERIES":
@@ -185,13 +213,17 @@ class TaxRuleDataValidator(DataValidator):
                     try:
                         dec_f = Decimal(str(factor))
                         if dec_f <= Decimal("0.0") or dec_f > Decimal("5.0"):
-                            errors.append(f"BH_SERIES factor ({dec_f}) outside valid range (0 to 5.0)")
+                            errors.append(
+                                f"BH_SERIES factor ({dec_f}) outside valid range (0 to 5.0)"
+                            )
                     except Exception:
                         errors.append(f"Invalid decimal for BH_SERIES factor: {factor}")
 
                     tenure = formula.get("payment_tenure_years", 2)
                     if not isinstance(tenure, int) or tenure < 1 or tenure > 15:
-                        errors.append(f"BH_SERIES payment_tenure_years ({tenure}) must be integer between 1 and 15")
+                        errors.append(
+                            f"BH_SERIES payment_tenure_years ({tenure}) must be integer between 1 and 15"
+                        )
 
         # 8. Effective Date Range Consistency
         eff_from = item.get("effective_from")
@@ -219,15 +251,21 @@ class TaxRuleDataValidator(DataValidator):
                     eff_to_dt = eff_to
 
                 if eff_from_dt and eff_to_dt and eff_to_dt < eff_from_dt:
-                    errors.append(f"effective_to ({eff_to_dt}) cannot be earlier than effective_from ({eff_from_dt})")
+                    errors.append(
+                        f"effective_to ({eff_to_dt}) cannot be earlier than effective_from ({eff_from_dt})"
+                    )
 
         # 9. Vehicle Category & Usage Applicability
         veh_type = item.get("vehicle_type", "CAR")
         if veh_type not in self.VALID_VEHICLE_TYPES:
-            errors.append(f"Invalid vehicle_type '{veh_type}'. Must be one of {sorted(self.VALID_VEHICLE_TYPES)}")
+            errors.append(
+                f"Invalid vehicle_type '{veh_type}'. Must be one of {sorted(self.VALID_VEHICLE_TYPES)}"
+            )
 
         usage_type = item.get("usage_type", "PRIVATE")
         if usage_type not in self.VALID_USAGE_TYPES:
-            errors.append(f"Invalid usage_type '{usage_type}'. Must be one of {sorted(self.VALID_USAGE_TYPES)}")
+            errors.append(
+                f"Invalid usage_type '{usage_type}'. Must be one of {sorted(self.VALID_USAGE_TYPES)}"
+            )
 
         return len(errors) == 0, errors

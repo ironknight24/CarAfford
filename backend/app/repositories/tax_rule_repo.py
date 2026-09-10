@@ -133,7 +133,11 @@ class TaxRuleRepository:
                     errors.append(
                         f"RTO '{rto.code}' (state_id={rto.state_id}) does not belong to specified State '{state.name}' (id={state.id})."
                     )
-                elif rule_data.city_id is not None and rto.city_id is not None and rto.city_id != rule_data.city_id:
+                elif (
+                    rule_data.city_id is not None
+                    and rto.city_id is not None
+                    and rto.city_id != rule_data.city_id
+                ):
                     warnings.append(
                         f"RTO '{rto.code}' is associated with city_id={rto.city_id}, while rule specified city_id={rule_data.city_id}."
                     )
@@ -146,19 +150,29 @@ class TaxRuleRepository:
 
         # 5. Calculation method specific validations
         if rule_data.calculation_method == "PERCENTAGE" and rule_data.rate is None:
-            errors.append("Rule with calculation_method='PERCENTAGE' requires a valid 'rate' field.")
-        elif rule_data.calculation_method == "FIXED" and (rule_data.fixed_amount is None or rule_data.fixed_amount < 0):
-            errors.append("Rule with calculation_method='FIXED' requires a non-negative 'fixed_amount'.")
+            errors.append(
+                "Rule with calculation_method='PERCENTAGE' requires a valid 'rate' field."
+            )
+        elif rule_data.calculation_method == "FIXED" and (
+            rule_data.fixed_amount is None or rule_data.fixed_amount < 0
+        ):
+            errors.append(
+                "Rule with calculation_method='FIXED' requires a non-negative 'fixed_amount'."
+            )
         elif rule_data.calculation_method == "BRACKETED":
             brackets = rule_data.brackets or []
             if not brackets:
-                errors.append("Rule with calculation_method='BRACKETED' must contain at least one bracket slab.")
+                errors.append(
+                    "Rule with calculation_method='BRACKETED' must contain at least one bracket slab."
+                )
             else:
                 # Sort brackets by minimum_value
                 sorted_brackets = sorted(brackets, key=lambda b: b.minimum_value)
                 for i, brk in enumerate(sorted_brackets):
                     if brk.minimum_value < 0:
-                        errors.append(f"Bracket #{i+1}: minimum_value cannot be negative ({brk.minimum_value}).")
+                        errors.append(
+                            f"Bracket #{i+1}: minimum_value cannot be negative ({brk.minimum_value})."
+                        )
                     if brk.maximum_value is not None and brk.maximum_value <= brk.minimum_value:
                         errors.append(
                             f"Bracket #{i+1}: maximum_value ({brk.maximum_value}) must be > minimum_value ({brk.minimum_value})."
@@ -180,19 +194,16 @@ class TaxRuleRepository:
                             )
 
         # 6. Check for unintended overlapping active rules for identical exact scope
-        overlap_stmt = (
-            select(TaxRule)
-            .where(
-                TaxRule.state_id == rule_data.state_id,
-                TaxRule.city_id == rule_data.city_id,
-                TaxRule.rto_id == rule_data.rto_id,
-                TaxRule.tax_type == rule_data.tax_type,
-                TaxRule.vehicle_type == rule_data.vehicle_type,
-                TaxRule.fuel_type == rule_data.fuel_type,
-                TaxRule.is_ev == rule_data.is_ev,
-                TaxRule.usage_type == rule_data.usage_type,
-                TaxRule.active == True,
-            )
+        overlap_stmt = select(TaxRule).where(
+            TaxRule.state_id == rule_data.state_id,
+            TaxRule.city_id == rule_data.city_id,
+            TaxRule.rto_id == rule_data.rto_id,
+            TaxRule.tax_type == rule_data.tax_type,
+            TaxRule.vehicle_type == rule_data.vehicle_type,
+            TaxRule.fuel_type == rule_data.fuel_type,
+            TaxRule.is_ev == rule_data.is_ev,
+            TaxRule.usage_type == rule_data.usage_type,
+            TaxRule.active == True,
         )
         if rule_id is not None:
             overlap_stmt = overlap_stmt.where(TaxRule.id != rule_id)
@@ -240,9 +251,7 @@ class TaxRuleRepository:
         return db_rule
 
     @classmethod
-    async def update(
-        cls, db: AsyncSession, db_obj: TaxRule, obj_in: TaxRuleUpdate
-    ) -> TaxRule:
+    async def update(cls, db: AsyncSession, db_obj: TaxRule, obj_in: TaxRuleUpdate) -> TaxRule:
         update_data = obj_in.model_dump(exclude_unset=True)
 
         if "brackets" in update_data and update_data["brackets"] is not None:
@@ -283,12 +292,14 @@ class TaxRuleRepository:
         ]
         if city_id is not None:
             location_filters.append(
-                and_(TaxRule.state_id == state_id, TaxRule.city_id == city_id, TaxRule.rto_id.is_(None))
+                and_(
+                    TaxRule.state_id == state_id,
+                    TaxRule.city_id == city_id,
+                    TaxRule.rto_id.is_(None),
+                )
             )
         if rto_id is not None:
-            location_filters.append(
-                and_(TaxRule.state_id == state_id, TaxRule.rto_id == rto_id)
-            )
+            location_filters.append(and_(TaxRule.state_id == state_id, TaxRule.rto_id == rto_id))
 
         stmt = (
             select(TaxRule)

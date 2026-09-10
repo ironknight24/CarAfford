@@ -27,12 +27,20 @@ async def list_tax_rules(
     state_id: Optional[int] = Query(None, description="Filter by State ID"),
     city_id: Optional[int] = Query(None, description="Filter by City ID"),
     rto_id: Optional[int] = Query(None, description="Filter by RTO Office ID"),
-    tax_type: Optional[str] = Query(None, description="Filter by tax/fee type (ROAD_TAX, REGISTRATION_FEE, etc.)"),
-    rule_category: Optional[str] = Query(None, description="Filter by category (TAX, REGISTRATION, FEE, CESS)"),
-    calculation_method: Optional[str] = Query(None, description="Filter by method (FIXED, PERCENTAGE, BRACKETED, FORMULA)"),
+    tax_type: Optional[str] = Query(
+        None, description="Filter by tax/fee type (ROAD_TAX, REGISTRATION_FEE, etc.)"
+    ),
+    rule_category: Optional[str] = Query(
+        None, description="Filter by category (TAX, REGISTRATION, FEE, CESS)"
+    ),
+    calculation_method: Optional[str] = Query(
+        None, description="Filter by method (FIXED, PERCENTAGE, BRACKETED, FORMULA)"
+    ),
     fuel_type: Optional[str] = Query(None, description="Filter by applicable fuel type"),
     active: Optional[bool] = Query(None, description="Filter by active status"),
-    search: Optional[str] = Query(None, description="Search term across name, tax_type, description"),
+    search: Optional[str] = Query(
+        None, description="Search term across name, tax_type, description"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieves paginated list of statutory vehicle taxation and registration charge rules."""
@@ -66,16 +74,30 @@ async def resolve_tax_rules(
     state_id: int = Query(..., description="Target State ID (required)"),
     city_id: Optional[int] = Query(None, description="Optional target City ID"),
     rto_id: Optional[int] = Query(None, description="Optional target RTO Office ID"),
-    variant_id: Optional[int] = Query(None, description="Optional Vehicle Variant ID for automatic spec/price resolution"),
-    fuel_type: Optional[str] = Query(None, description="Vehicle fuel type (Petrol, Diesel, Electric, CNG, Hybrid)"),
+    variant_id: Optional[int] = Query(
+        None, description="Optional Vehicle Variant ID for automatic spec/price resolution"
+    ),
+    fuel_type: Optional[str] = Query(
+        None, description="Vehicle fuel type (Petrol, Diesel, Electric, CNG, Hybrid)"
+    ),
     engine_cc: Optional[int] = Query(None, ge=0, description="Vehicle engine capacity in CC"),
-    ex_showroom_price: Optional[Decimal] = Query(None, ge=0, description="Ex-showroom retail price in INR"),
+    ex_showroom_price: Optional[Decimal] = Query(
+        None, ge=0, description="Ex-showroom retail price in INR"
+    ),
     is_ev: Optional[bool] = Query(None, description="Whether the vehicle is an EV"),
-    vehicle_type: str = Query("CAR", description="Vehicle type (CAR, TWO_WHEELER, COMMERCIAL, ANY)"),
+    vehicle_type: str = Query(
+        "CAR", description="Vehicle type (CAR, TWO_WHEELER, COMMERCIAL, ANY)"
+    ),
     usage_type: str = Query("PRIVATE", description="Usage type (PRIVATE, COMMERCIAL, ANY)"),
-    calculation_date: Optional[datetime] = Query(None, description="Historical, current, or future calculation date (ISO-8601)"),
-    is_bh_series: bool = Query(False, description="Whether to resolve Bharat (BH) series registration rules"),
-    is_financed: bool = Query(True, description="Whether vehicle will be hypothecated under bank finance"),
+    calculation_date: Optional[datetime] = Query(
+        None, description="Historical, current, or future calculation date (ISO-8601)"
+    ),
+    is_bh_series: bool = Query(
+        False, description="Whether to resolve Bharat (BH) series registration rules"
+    ),
+    is_financed: bool = Query(
+        True, description="Whether vehicle will be hypothecated under bank finance"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Deterministically resolves the exact applicable set of tax and registration rules for a specific
@@ -114,9 +136,7 @@ async def validate_tax_rule(
     db: AsyncSession = Depends(get_db),
 ):
     """Validates tax rule data against location hierarchy, bracket integrity, and overlapping active periods."""
-    is_valid, errors, warnings = await TaxRuleRepository.validate_tax_rule_data(
-        db, rule_data
-    )
+    is_valid, errors, warnings = await TaxRuleRepository.validate_tax_rule_data(db, rule_data)
     return TaxRuleValidationResult(
         is_valid=is_valid,
         errors=errors,
@@ -145,9 +165,7 @@ async def create_tax_rule(
     db: AsyncSession = Depends(get_db),
 ):
     """Creates a new statutory tax or registration charge rule."""
-    is_valid, errors, warnings = await TaxRuleRepository.validate_tax_rule_data(
-        db, rule_in
-    )
+    is_valid, errors, warnings = await TaxRuleRepository.validate_tax_rule_data(db, rule_in)
     if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

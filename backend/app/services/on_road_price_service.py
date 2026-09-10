@@ -94,7 +94,7 @@ class OnRoadPriceCalculationService:
         # 3. AUTHORITATIVE HISTORICAL / ACTIVE PRICE RESOLUTION
         # =========================================================================
         active_price = await vehicle_repo.get_current_price(variant.id, as_of_date=calc_date)
-        
+
         ex_showroom_price: Optional[Decimal] = None
         price_source_name = "OEM Price Bulletin"
         price_source_url: Optional[str] = None
@@ -123,7 +123,10 @@ class OnRoadPriceCalculationService:
                 f"No active ex-showroom price found for variant '{variant.name}' on calculation date {calc_date.strftime('%Y-%m-%d')}."
             )
 
-        is_ev = variant.fuel_type.upper() in ["ELECTRIC", "EV"] or variant.battery_capacity_kwh is not None
+        is_ev = (
+            variant.fuel_type.upper() in ["ELECTRIC", "EV"]
+            or variant.battery_capacity_kwh is not None
+        )
         engine_cc = variant.engine_cc or (
             variant.specification.engine_displacement_cc
             if variant.specification
@@ -135,9 +138,11 @@ class OnRoadPriceCalculationService:
             variant_id=variant.id,
             variant_name=variant.name,
             model_name=variant.model.name if variant.model else None,
-            manufacturer_name=variant.model.manufacturer.name
-            if variant.model and variant.model.manufacturer
-            else None,
+            manufacturer_name=(
+                variant.model.manufacturer.name
+                if variant.model and variant.model.manufacturer
+                else None
+            ),
             fuel_type=variant.fuel_type,
             engine_cc=engine_cc,
             ex_showroom_price=ex_showroom_price,
@@ -238,7 +243,9 @@ class OnRoadPriceCalculationService:
                 matched_bracket = None
                 for brk in rule.brackets:
                     min_v = Decimal(str(brk.minimum_value))
-                    max_v = Decimal(str(brk.maximum_value)) if brk.maximum_value is not None else None
+                    max_v = (
+                        Decimal(str(brk.maximum_value)) if brk.maximum_value is not None else None
+                    )
 
                     if min_v <= base_amount:
                         if max_v is None or base_amount <= max_v:
@@ -246,17 +253,31 @@ class OnRoadPriceCalculationService:
                             break
 
                 if matched_bracket:
-                    b_rate = Decimal(str(matched_bracket.rate)) if matched_bracket.rate is not None else Decimal("0.00")
-                    b_fixed = Decimal(str(matched_bracket.fixed_amount)) if matched_bracket.fixed_amount is not None else Decimal("0.00")
+                    b_rate = (
+                        Decimal(str(matched_bracket.rate))
+                        if matched_bracket.rate is not None
+                        else Decimal("0.00")
+                    )
+                    b_fixed = (
+                        Decimal(str(matched_bracket.fixed_amount))
+                        if matched_bracket.fixed_amount is not None
+                        else Decimal("0.00")
+                    )
                     rate_applied = b_rate
                     fixed_applied = b_fixed
 
                     bracket_pct_amount = round_inr(base_amount * (b_rate / Decimal("100.0")))
                     calculated_amount = round_inr(bracket_pct_amount + b_fixed)
 
-                    max_str = f"₹{Decimal(str(matched_bracket.maximum_value)):,.0f}" if matched_bracket.maximum_value is not None else "Above"
+                    max_str = (
+                        f"₹{Decimal(str(matched_bracket.maximum_value)):,.0f}"
+                        if matched_bracket.maximum_value is not None
+                        else "Above"
+                    )
                     min_str = f"₹{Decimal(str(matched_bracket.minimum_value)):,.0f}"
-                    explanation = f"Tier bracket [{min_str} - {max_str}]: {b_rate}% on ₹{base_amount:,.2f}"
+                    explanation = (
+                        f"Tier bracket [{min_str} - {max_str}]: {b_rate}% on ₹{base_amount:,.2f}"
+                    )
                 else:
                     calculated_amount = Decimal("0.00")
                     explanation = f"No matching bracket found for value ₹{base_amount:,.2f}"
@@ -279,11 +300,18 @@ class OnRoadPriceCalculationService:
                     if "DIESEL" in fuel_upper:
                         b_rate += Decimal(str(formula.get("diesel_surcharge", 2.0)))
                     elif "ELECTRIC" in fuel_upper or "EV" in fuel_upper:
-                        b_rate = max(Decimal("0.0"), b_rate - Decimal(str(formula.get("ev_discount", 2.0))))
+                        b_rate = max(
+                            Decimal("0.0"), b_rate - Decimal(str(formula.get("ev_discount", 2.0)))
+                        )
 
                     rate_applied = b_rate
-                    total_15_yr = (ex_showroom_price * (b_rate / Decimal("100.0"))) * Decimal(str(formula.get("factor", 1.25)))
-                    calculated_amount = round_inr((total_15_yr / Decimal("15.0")) * Decimal(str(formula.get("payment_tenure_years", 2))))
+                    total_15_yr = (ex_showroom_price * (b_rate / Decimal("100.0"))) * Decimal(
+                        str(formula.get("factor", 1.25))
+                    )
+                    calculated_amount = round_inr(
+                        (total_15_yr / Decimal("15.0"))
+                        * Decimal(str(formula.get("payment_tenure_years", 2)))
+                    )
                     explanation = f"MoRTH BH-Series initial 2-year tax cycle: ({b_rate}% of ₹{ex_showroom_price:,.2f} × 1.25 × 2) / 15"
                 else:
                     calculated_amount = Decimal("0.00")
@@ -375,7 +403,11 @@ class OnRoadPriceCalculationService:
                 include_zero_dep=include_zero_dep,
             )
             ins_amount = round_inr(ins_res.total_insurance_premium)
-            ins_plan_title = "1-Yr Own Damage + 3-Yr Third Party + Zero Dep (18% GST)" if include_zero_dep else "1-Yr Own Damage + 3-Yr Third Party (18% GST)"
+            ins_plan_title = (
+                "1-Yr Own Damage + 3-Yr Third Party + Zero Dep (18% GST)"
+                if include_zero_dep
+                else "1-Yr Own Damage + 3-Yr Third Party (18% GST)"
+            )
             breakdown_items.append(
                 PriceBreakdownItem(
                     component="INSURANCE",

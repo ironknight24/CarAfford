@@ -121,10 +121,16 @@ class FinanceRepository:
 
         if vehicle_condition and vehicle_condition != "ANY":
             stmt = stmt.where(
-                or_(LoanProduct.vehicle_condition == vehicle_condition, LoanProduct.vehicle_condition == "ANY")
+                or_(
+                    LoanProduct.vehicle_condition == vehicle_condition,
+                    LoanProduct.vehicle_condition == "ANY",
+                )
             )
             count_stmt = count_stmt.where(
-                or_(LoanProduct.vehicle_condition == vehicle_condition, LoanProduct.vehicle_condition == "ANY")
+                or_(
+                    LoanProduct.vehicle_condition == vehicle_condition,
+                    LoanProduct.vehicle_condition == "ANY",
+                )
             )
 
         if product_category:
@@ -158,7 +164,9 @@ class FinanceRepository:
                 selectinload(LoanProduct.bank),
                 selectinload(LoanProduct.interest_rates).selectinload(InterestRate.source),
                 selectinload(LoanProduct.fees).selectinload(LoanFee.source),
-                selectinload(LoanProduct.eligibility_rules).selectinload(LoanEligibilityRule.source),
+                selectinload(LoanProduct.eligibility_rules).selectinload(
+                    LoanEligibilityRule.source
+                ),
                 selectinload(LoanProduct.interest_rate_slabs),
             )
             .where(LoanProduct.id == product_id)
@@ -180,14 +188,19 @@ class FinanceRepository:
                 selectinload(LoanProduct.bank),
                 selectinload(LoanProduct.interest_rates).selectinload(InterestRate.source),
                 selectinload(LoanProduct.fees).selectinload(LoanFee.source),
-                selectinload(LoanProduct.eligibility_rules).selectinload(LoanEligibilityRule.source),
+                selectinload(LoanProduct.eligibility_rules).selectinload(
+                    LoanEligibilityRule.source
+                ),
                 selectinload(LoanProduct.interest_rate_slabs),
             )
             .where(
                 Bank.active == True,
                 LoanProduct.active == True,
                 or_(LoanProduct.vehicle_type == vehicle_type, LoanProduct.vehicle_type == "ANY"),
-                or_(LoanProduct.vehicle_condition == vehicle_condition, LoanProduct.vehicle_condition == "ANY"),
+                or_(
+                    LoanProduct.vehicle_condition == vehicle_condition,
+                    LoanProduct.vehicle_condition == "ANY",
+                ),
             )
             .order_by(Bank.name, LoanProduct.name)
         )
@@ -222,7 +235,11 @@ class FinanceRepository:
         total_res = await self.session.execute(count_stmt)
         total = total_res.scalar_one()
 
-        stmt = stmt.order_by(InterestRate.priority.desc(), InterestRate.annual_interest_rate.asc()).offset((page - 1) * page_size).limit(page_size)
+        stmt = (
+            stmt.order_by(InterestRate.priority.desc(), InterestRate.annual_interest_rate.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         result = await self.session.execute(stmt)
         return list(result.scalars().all()), total
 

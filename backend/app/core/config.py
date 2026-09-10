@@ -95,12 +95,19 @@ class Settings(BaseSettings):
     def validate_production_configuration(self) -> None:
         """Fail-fast check for production security requirements."""
         if self.ENVIRONMENT.lower() == "production":
-            if self.SECRET_KEY == "carafford_development_super_secret_jwt_key_change_in_production_2026":
-                raise ValueError("SECURITY ALERT: SECRET_KEY must be set to a secure unique random string in production!")
+            if (
+                self.SECRET_KEY
+                == "carafford_development_super_secret_jwt_key_change_in_production_2026"
+            ):
+                raise ValueError(
+                    "SECURITY ALERT: SECRET_KEY must be set to a secure unique random string in production!"
+                )
             if self.DEBUG:
                 raise ValueError("SECURITY ALERT: DEBUG must be set to False in production!")
             if "*" in self.CORS_ORIGINS:
-                raise ValueError("SECURITY ALERT: Wildcard CORS origin ('*') is forbidden in production!")
+                raise ValueError(
+                    "SECURITY ALERT: Wildcard CORS origin ('*') is forbidden in production!"
+                )
 
 
 @lru_cache
@@ -109,4 +116,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-

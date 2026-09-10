@@ -28,18 +28,14 @@ async def test_bank_finance_ingestion_api_flow(
     assert run_data["records_created"] >= 1
 
     # 2. Verify Canonical Bank & Product in DB
-    bank_res = await db_session.execute(
-        select(Bank).where(Bank.slug == "state-bank-of-india")
-    )
+    bank_res = await db_session.execute(select(Bank).where(Bank.slug == "state-bank-of-india"))
     bank = bank_res.scalars().first()
     assert bank is not None
     assert bank.verification_status == VerificationStatus.VERIFIED.value
     assert bank.website_url == "https://sbi.co.in"
 
     # Verify Standard & Green Car Loan Products
-    prod_res = await db_session.execute(
-        select(LoanProduct).where(LoanProduct.bank_id == bank.id)
-    )
+    prod_res = await db_session.execute(select(LoanProduct).where(LoanProduct.bank_id == bank.id))
     products = prod_res.scalars().all()
     assert len(products) >= 2
     std_product = [p for p in products if p.product_category == "STANDARD"][0]
@@ -90,14 +86,18 @@ async def test_rate_history_preservation_and_effective_dating(
     assert product is not None
 
     initial_top_tier_rate = (
-        await db_session.execute(
-            select(InterestRate).where(
-                InterestRate.loan_product_id == product.id,
-                InterestRate.min_credit_score == 750,
-                InterestRate.active.is_(True),
+        (
+            await db_session.execute(
+                select(InterestRate).where(
+                    InterestRate.loan_product_id == product.id,
+                    InterestRate.min_credit_score == 750,
+                    InterestRate.active.is_(True),
+                )
             )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     assert initial_top_tier_rate is not None
     assert initial_top_tier_rate.annual_interest_rate == Decimal("8.75")
     initial_id = initial_top_tier_rate.id
@@ -133,10 +133,12 @@ async def test_rate_history_preservation_and_effective_dating(
 
     # 3. Verify history preservation in Database
     all_rates_res = await db_session.execute(
-        select(InterestRate).where(
+        select(InterestRate)
+        .where(
             InterestRate.loan_product_id == product.id,
             InterestRate.min_credit_score == 750,
-        ).order_by(InterestRate.effective_from.asc())
+        )
+        .order_by(InterestRate.effective_from.asc())
     )
     all_rates = all_rates_res.scalars().all()
     assert len(all_rates) >= 2
@@ -167,7 +169,9 @@ async def test_finance_ingestion_idempotency(
     assert run1["status"] == IngestionRunStatus.COMPLETED.value
 
     # Second run with same data
-    res2 = await async_client.post("/api/v1/ingestion/runs", json={"dataset_name": "icici_car_loans", "notes": "ICICI run 2"})
+    res2 = await async_client.post(
+        "/api/v1/ingestion/runs", json={"dataset_name": "icici_car_loans", "notes": "ICICI run 2"}
+    )
     assert res2.status_code == 201
     run2 = res2.json()["data"]
     assert run2["records_created"] == 0
@@ -278,14 +282,16 @@ async def test_all_six_major_banks_ingestion_and_promotion(
     # Verify all 6 banks exist and are verified
     banks_res = await db_session.execute(
         select(Bank).where(
-            Bank.slug.in_([
-                "state-bank-of-india",
-                "hdfc-bank",
-                "icici-bank",
-                "axis-bank",
-                "bank-of-baroda",
-                "kotak-mahindra-bank",
-            ])
+            Bank.slug.in_(
+                [
+                    "state-bank-of-india",
+                    "hdfc-bank",
+                    "icici-bank",
+                    "axis-bank",
+                    "bank-of-baroda",
+                    "kotak-mahindra-bank",
+                ]
+            )
         )
     )
     banks = banks_res.scalars().all()
@@ -334,7 +340,9 @@ async def test_cross_source_rate_conflict_detection(
             )
 
     comm_adapter = CommercialBankRateAdapter()
-    await IngestionService.run_adapter(db_session, comm_adapter, notes="Secondary commercial feed run")
+    await IngestionService.run_adapter(
+        db_session, comm_adapter, notes="Secondary commercial feed run"
+    )
 
     # 3. Verify conflict recorded
     conflicts_res = await async_client.get("/api/v1/ingestion/data-quality/conflicts")
@@ -363,4 +371,3 @@ async def test_freshness_report_includes_finance_dataset(
     assert "bank_rates" in dataset_names
     assert "loan_fees" in dataset_names
     assert "eligibility_rules" in dataset_names
-

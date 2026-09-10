@@ -51,23 +51,33 @@ async def test_trigger_karnataka_tax_ingestion_api(
     # Verify raw records stored with SHA-256 hash
     run_id = run_data["id"]
     raw_recs = (
-        await db_session.execute(
-            select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run_id)
+        (
+            await db_session.execute(
+                select(RawIngestionRecord).where(RawIngestionRecord.ingestion_run_id == run_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(raw_recs) >= 3
     for r in raw_recs:
         assert len(r.payload_hash) == 64
 
     # Verify canonical TaxRule records
     ka_rules = (
-        await db_session.execute(
-            select(TaxRule).join(State).where(
-                State.code == "KA",
-                TaxRule.verification_status == VerificationStatus.VERIFIED.value,
+        (
+            await db_session.execute(
+                select(TaxRule)
+                .join(State)
+                .where(
+                    State.code == "KA",
+                    TaxRule.verification_status == VerificationStatus.VERIFIED.value,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(ka_rules) >= 3
 
     # Verify bracketed Road Tax rule
@@ -76,10 +86,14 @@ async def test_trigger_karnataka_tax_ingestion_api(
     assert road_tax.calculation_method == "BRACKETED"
 
     brackets = (
-        await db_session.execute(
-            select(TaxRuleBracket).where(TaxRuleBracket.tax_rule_id == road_tax.id)
+        (
+            await db_session.execute(
+                select(TaxRuleBracket).where(TaxRuleBracket.tax_rule_id == road_tax.id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(brackets) == 4
 
 
@@ -154,14 +168,20 @@ async def test_tax_temporal_effective_dating_preservation(db_session: AsyncSessi
 
     # Verify both historical closed rule and new active rule exist in DB
     all_reg_rules = (
-        await db_session.execute(
-            select(TaxRule).join(State).where(
-                State.code == "DL",
-                TaxRule.tax_type == "REGISTRATION_FEE",
-                TaxRule.name == "Delhi Registration Fee",
+        (
+            await db_session.execute(
+                select(TaxRule)
+                .join(State)
+                .where(
+                    State.code == "DL",
+                    TaxRule.tax_type == "REGISTRATION_FEE",
+                    TaxRule.name == "Delhi Registration Fee",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     assert len(all_reg_rules) == 2
     closed_rule = next(r for r in all_reg_rules if not r.active)
@@ -205,12 +225,16 @@ async def test_tax_cross_source_conflict_detection(db_session: AsyncSession):
 
     # Check for detected conflict
     conflicts = (
-        await db_session.execute(
-            select(DataConflictRecord).where(
-                DataConflictRecord.dataset_name == "tax_rules",
+        (
+            await db_session.execute(
+                select(DataConflictRecord).where(
+                    DataConflictRecord.dataset_name == "tax_rules",
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(conflicts) >= 1
 
 
@@ -240,7 +264,9 @@ async def test_on_road_pricing_integration_with_authoritative_tax_rules(
     )
     assert res.status_code == 200
     p_data = res.json()["data"]
-    assert Decimal(str(p_data["totals"]["on_road_price"])) > Decimal(str(p_data["totals"]["ex_showroom_price"]))
+    assert Decimal(str(p_data["totals"]["on_road_price"])) > Decimal(
+        str(p_data["totals"]["ex_showroom_price"])
+    )
     assert Decimal(str(p_data["totals"]["total_statutory_taxes"])) > Decimal("0.00")
 
     # Verify breakdown contains road tax and registration fee

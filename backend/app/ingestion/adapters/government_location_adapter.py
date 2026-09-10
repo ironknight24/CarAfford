@@ -20,7 +20,6 @@ from app.ingestion.base import (
 )
 from app.ingestion.validators.location_validator import LocationDataValidator
 
-
 # Known City Aliases & Standardizations across India
 CITY_NAME_CANONICAL_MAP = {
     "bangalore": "Bengaluru",
@@ -56,6 +55,7 @@ CITY_NAME_CANONICAL_MAP = {
 # 1. DATA FETCHER
 # =============================================================================
 
+
 class GovernmentLocationFetcher(DataFetcher):
     """Fetches official RTO, City, and State directory records from MoRTH / data.gov.in.
 
@@ -78,7 +78,9 @@ class GovernmentLocationFetcher(DataFetcher):
                         elif isinstance(data, dict) and "records" in data:
                             return data["records"]
             except Exception as ex:
-                print(f"⚠️ Live MoRTH API fetch failed ({ex}), falling back to verified MoRTH GODL dataset.")
+                print(
+                    f"⚠️ Live MoRTH API fetch failed ({ex}), falling back to verified MoRTH GODL dataset."
+                )
 
         # Verified MoRTH / Parivahan National Register Reference Dataset (GODL License)
         return [
@@ -313,6 +315,7 @@ class GovernmentLocationFetcher(DataFetcher):
 # 2. DATA PARSER
 # =============================================================================
 
+
 class GovernmentLocationParser(DataParser):
     def parse(self, raw_payload: Any) -> Dict[str, Any]:
         if not isinstance(raw_payload, dict):
@@ -335,6 +338,7 @@ class GovernmentLocationParser(DataParser):
 # =============================================================================
 # 3. DATA NORMALIZER
 # =============================================================================
+
 
 class GovernmentLocationNormalizer(DataNormalizer):
     def normalize(self, parsed_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -394,6 +398,7 @@ class GovernmentLocationNormalizer(DataNormalizer):
 # 4. CANONICAL MAPPER
 # =============================================================================
 
+
 class GovernmentLocationMapper(CanonicalMapper):
     def map_to_canonical(self, normalized_data: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -425,6 +430,7 @@ class GovernmentLocationMapper(CanonicalMapper):
 # =============================================================================
 # 5. DATA SOURCE ADAPTER
 # =============================================================================
+
 
 class GovernmentLocationDataSourceAdapter(DataSourceAdapter):
     """Authoritative Government Location Adapter for Ministry of Road Transport and Highways (MoRTH)."""

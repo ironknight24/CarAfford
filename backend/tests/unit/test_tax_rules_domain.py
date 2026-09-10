@@ -92,10 +92,30 @@ async def test_bracketed_tax_rule_and_ordering(db_session: AsyncSession):
         calculation_method="BRACKETED",
         effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
         brackets=[
-            TaxRuleBracketCreate(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("500000"), rate=Decimal("13.00")),
-            TaxRuleBracketCreate(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("14.00")),
-            TaxRuleBracketCreate(bracket_order=3, minimum_value=Decimal("1000000"), maximum_value=Decimal("2000000"), rate=Decimal("17.00")),
-            TaxRuleBracketCreate(bracket_order=4, minimum_value=Decimal("2000000"), maximum_value=None, rate=Decimal("18.00")),
+            TaxRuleBracketCreate(
+                bracket_order=1,
+                minimum_value=Decimal("0"),
+                maximum_value=Decimal("500000"),
+                rate=Decimal("13.00"),
+            ),
+            TaxRuleBracketCreate(
+                bracket_order=2,
+                minimum_value=Decimal("500000"),
+                maximum_value=Decimal("1000000"),
+                rate=Decimal("14.00"),
+            ),
+            TaxRuleBracketCreate(
+                bracket_order=3,
+                minimum_value=Decimal("1000000"),
+                maximum_value=Decimal("2000000"),
+                rate=Decimal("17.00"),
+            ),
+            TaxRuleBracketCreate(
+                bracket_order=4,
+                minimum_value=Decimal("2000000"),
+                maximum_value=None,
+                rate=Decimal("18.00"),
+            ),
         ],
     )
     rule = await TaxRuleRepository.create(db_session, bracketed_rule_in)
@@ -190,8 +210,12 @@ async def test_location_precedence_hierarchy(db_session: AsyncSession):
     db_session.add(city)
     await db_session.flush()
 
-    rto_ecity = RtoOffice(state_id=state.id, city_id=city.id, code="KA-51", name="Electronic City RTO")
-    rto_jayanagar = RtoOffice(state_id=state.id, city_id=city.id, code="KA-05", name="Jayanagar RTO")
+    rto_ecity = RtoOffice(
+        state_id=state.id, city_id=city.id, code="KA-51", name="Electronic City RTO"
+    )
+    rto_jayanagar = RtoOffice(
+        state_id=state.id, city_id=city.id, code="KA-05", name="Jayanagar RTO"
+    )
     db_session.add_all([rto_ecity, rto_jayanagar])
     await db_session.flush()
 
@@ -399,8 +423,18 @@ async def test_invalid_bracket_and_hierarchy_validations(db_session: AsyncSessio
         calculation_method="BRACKETED",
         effective_from=datetime(2024, 1, 1, tzinfo=timezone.utc),
         brackets=[
-            TaxRuleBracketCreate(bracket_order=1, minimum_value=Decimal("0"), maximum_value=Decimal("600000"), rate=Decimal("5.00")),
-            TaxRuleBracketCreate(bracket_order=2, minimum_value=Decimal("500000"), maximum_value=Decimal("1000000"), rate=Decimal("8.00")),
+            TaxRuleBracketCreate(
+                bracket_order=1,
+                minimum_value=Decimal("0"),
+                maximum_value=Decimal("600000"),
+                rate=Decimal("5.00"),
+            ),
+            TaxRuleBracketCreate(
+                bracket_order=2,
+                minimum_value=Decimal("500000"),
+                maximum_value=Decimal("1000000"),
+                rate=Decimal("8.00"),
+            ),
         ],
     )
     is_valid_brk, errors_brk, _ = await TaxRuleRepository.validate_tax_rule_data(

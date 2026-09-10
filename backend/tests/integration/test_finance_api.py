@@ -20,9 +20,7 @@ from app.db.seed import seed_database
 
 
 @pytest.mark.asyncio
-async def test_finance_api_flows(
-    db_session: AsyncSession, async_client: AsyncClient
-):
+async def test_finance_api_flows(db_session: AsyncSession, async_client: AsyncClient):
     # 1. Seed database with vehicles, locations, taxes, and banks
     await seed_database(db_session)
 
@@ -35,9 +33,7 @@ async def test_finance_api_flows(
     assert sbi["name"] == "State Bank of India (SBI)"
 
     # Test GET /api/v1/finance/banks/{id}
-    bank_detail_resp = await async_client.get(
-        f"/api/v1/finance/banks/{sbi['id']}"
-    )
+    bank_detail_resp = await async_client.get(f"/api/v1/finance/banks/{sbi['id']}")
     assert bank_detail_resp.status_code == 200
     assert bank_detail_resp.json()["data"]["slug"] == "sbi"
 
@@ -46,17 +42,13 @@ async def test_finance_api_flows(
     assert products_resp.status_code == 200
     products = products_resp.json()["items"]
     assert len(products) >= 6
-    sbi_product = next(
-        p for p in products if p["slug"] == "sbi-regular-auto-loan"
-    )
+    sbi_product = next(p for p in products if p["slug"] == "sbi-regular-auto-loan")
 
     product_detail_resp = await async_client.get(
         f"/api/v1/finance/loan-products/{sbi_product['id']}"
     )
     assert product_detail_resp.status_code == 200
-    assert (
-        product_detail_resp.json()["data"]["slug"] == "sbi-regular-auto-loan"
-    )
+    assert product_detail_resp.json()["data"]["slug"] == "sbi-regular-auto-loan"
 
     # 4. Test GET /api/v1/finance/rates
     rates_resp = await async_client.get(
@@ -118,24 +110,20 @@ async def test_finance_api_flows(
         "applicant_age": 32,
         "include_amortization": True,
     }
-    calc_resp = await async_client.post(
-        "/api/v1/finance/calculate", json=calc_payload
-    )
+    calc_resp = await async_client.post("/api/v1/finance/calculate", json=calc_payload)
     assert calc_resp.status_code == 200
     calc_data = calc_resp.json()["data"]
     assert "State Bank of India" in calc_data["bank_name"]
-    assert calc_data["applied_interest_rate"] == "8.75" or calc_data["applied_interest_rate"] == "8.65"
     assert (
-        calc_data["eligibility"]["status"] == "ESTIMATED_ELIGIBLE"
+        calc_data["applied_interest_rate"] == "8.75" or calc_data["applied_interest_rate"] == "8.65"
     )
+    assert calc_data["eligibility"]["status"] == "ESTIMATED_ELIGIBLE"
     assert len(calc_data["amortization_schedule"]) == 60
 
     # 7. Test Multi-Bank Comparison POST /api/v1/finance/compare with Vehicle Variant & Location
     # Fetch a variant and a state
     states_resp = await async_client.get("/api/v1/states")
-    ka_state = next(
-        s for s in states_resp.json()["items"] if s["code"] == "KA"
-    )
+    ka_state = next(s for s in states_resp.json()["items"] if s["code"] == "KA")
 
     variants_resp = await async_client.get("/api/v1/variants?limit=5")
     test_variant = variants_resp.json()["items"][0]
@@ -149,9 +137,7 @@ async def test_finance_api_flows(
         "monthly_income": "80000.00",
         "applicant_age": 30,
     }
-    compare_resp = await async_client.post(
-        "/api/v1/finance/compare", json=compare_payload
-    )
+    compare_resp = await async_client.post("/api/v1/finance/compare", json=compare_payload)
     assert compare_resp.status_code == 200, compare_resp.text
     compare_data = compare_resp.json()["data"]
     assert compare_data["variant_id"] == test_variant["id"]
@@ -161,7 +147,5 @@ async def test_finance_api_flows(
     # Check that offers are ranked by monthly_emi ascending
     offers = compare_data["offers"]
     for i in range(len(offers) - 1):
-        assert float(offers[i]["monthly_emi"]) <= float(
-            offers[i + 1]["monthly_emi"]
-        )
+        assert float(offers[i]["monthly_emi"]) <= float(offers[i + 1]["monthly_emi"])
     assert compare_data["offers"][0]["is_recommended"] is True

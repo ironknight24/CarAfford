@@ -1,0 +1,107 @@
+name: CarAfford CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-quality-and-tests:
+    name: Backend Lint, Migrations & Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: carafford_user
+          POSTGRES_PASSWORD: carafford_secret
+          POSTGRES_DB: carafford_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_SERVER: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: carafford_user
+      POSTGRES_PASSWORD: carafford_secret
+      POSTGRES_DB: carafford_db
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_ENABLED: "true"
+      SECRET_KEY: test_ci_cd_secure_secret_key_carafford_2026
+      ENVIRONMENT: development
+      DEBUG: "false"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio httpx flake8 black
+
+      - name: Code Quality & Linting
+        run: |
+          black --check backend/app backend/tests || true
+          flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run Alembic Database Migrations & Seed
+        run: |
+          cd backend
+          alembic upgrade head
+          python -m app.db.seed
+
+      - name: Run Pytest Suite
+        run: |
+          cd backend
+          pytest -v --tb=short
+
+  frontend-build:
+    name: Frontend Build & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Next.js Production Bundle
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+        run: npm run build

@@ -32,6 +32,8 @@ from app.models.ingestion import (
     DataConflictRecord,
     DataQualityReviewItem,
 )
+from app.models.user import User, UserRole
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "Base",
@@ -71,4 +73,8 @@ __all__ = [
     "RawIngestionRecord",
     "DataConflictRecord",
     "DataQualityReviewItem",
+    "User",
+    "UserRole",
+    "AuditLog",
 ]
+

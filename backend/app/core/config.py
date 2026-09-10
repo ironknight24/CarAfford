@@ -41,6 +41,28 @@ class Settings(BaseSettings):
         "http://localhost:8000",
     ]
 
+    # Security & Authentication
+    SECRET_KEY: str = "carafford_development_super_secret_jwt_key_change_in_production_2026"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ADMIN_DEFAULT_EMAIL: str = "admin@carafford.in"
+    ADMIN_DEFAULT_PASSWORD: str = "CarAffordAdmin#2026"
+    ADMIN_DEFAULT_NAME: str = "CarAfford System Administrator"
+
+    # Database Connection Pool Settings
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 30
+    DB_POOL_TIMEOUT: int = 15
+    DB_POOL_RECYCLE: int = 1800
+    DB_POOL_PRE_PING: bool = True
+
+    # Rate Limiting (Requests per minute)
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_DEFAULT_PER_MIN: int = 120
+    RATE_LIMIT_AUTH_PER_MIN: int = 20
+    RATE_LIMIT_CALCULATION_PER_MIN: int = 60
+
     # Domain Financial Defaults (India)
     DEFAULT_FOIR_LIMIT: float = 0.40  # Maximum 40% of net income to all EMIs
     DEFAULT_MAX_FOIR_LIMIT: float = 0.50  # Upper stretch boundary
@@ -70,6 +92,16 @@ class Settings(BaseSettings):
             return self.ASYNC_DATABASE_URL
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
+    def validate_production_configuration(self) -> None:
+        """Fail-fast check for production security requirements."""
+        if self.ENVIRONMENT.lower() == "production":
+            if self.SECRET_KEY == "carafford_development_super_secret_jwt_key_change_in_production_2026":
+                raise ValueError("SECURITY ALERT: SECRET_KEY must be set to a secure unique random string in production!")
+            if self.DEBUG:
+                raise ValueError("SECURITY ALERT: DEBUG must be set to False in production!")
+            if "*" in self.CORS_ORIGINS:
+                raise ValueError("SECURITY ALERT: Wildcard CORS origin ('*') is forbidden in production!")
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -77,3 +109,4 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+

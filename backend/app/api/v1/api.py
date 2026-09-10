@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from app.api.v1.endpoints import (
+    admin,
     affordability,
+    auth,
     data_sources,
     finance,
     health,
@@ -15,8 +17,10 @@ from app.api.v1.endpoints import (
 
 api_router = APIRouter()
 
-# Core Health
+# Core Health & Auth
 api_router.include_router(health.router, prefix="/health", tags=["Health"])
+api_router.include_router(auth.router, prefix="/auth", tags=["Authentication & Users"])
+
 
 # Locations Hierarchy & Search
 api_router.include_router(locations.countries_router)
@@ -44,4 +48,8 @@ api_router.include_router(recommendations.router, prefix="/recommendations", tag
 # Data Ingestion, Provenance & Quality Governance
 api_router.include_router(data_sources.router, prefix="/data-sources", tags=["Data Sources"])
 api_router.include_router(ingestion.router, prefix="/ingestion", tags=["Data Ingestion & Quality"])
+
+# Operational Admin & Governance Layer (Domain 16)
+api_router.include_router(admin.router, prefix="/admin", tags=["Admin Operations"])
+
 

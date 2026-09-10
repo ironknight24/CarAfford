@@ -16,20 +16,54 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
 
+// Token storage helpers
+let memoryToken: string | null = null;
+
+export const authStorage = {
+  getToken: (): string | null => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('carafford_auth_token') || memoryToken;
+    }
+    return memoryToken;
+  },
+  setToken: (token: string | null) => {
+    memoryToken = token;
+    if (typeof window !== 'undefined') {
+      if (token) localStorage.setItem('carafford_auth_token', token);
+      else localStorage.removeItem('carafford_auth_token');
+    }
+  },
+  clearToken: () => {
+    memoryToken = null;
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('carafford_auth_token');
+    }
+  },
+};
+
 async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const token = authStorage.getToken();
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+  
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!res.ok) {
       const errorBody = await res.json().catch(() => ({}));
-      throw new Error(errorBody.message || errorBody.detail || `HTTP Error ${res.status}`);
+      const msg = errorBody.error?.message || errorBody.message || errorBody.detail || `HTTP Error ${res.status}`;
+      throw new Error(msg);
     }
 
     const json = await res.json();
@@ -41,6 +75,33 @@ async function fetchJson<T>(endpoint: string, options?: RequestInit): Promise<T>
 }
 
 export const api = {
+  // ==========================================
+  // Domain 17: Authentication APIs
+  // ==========================================
+  login: async (credentials: import('@/types').UserLoginRequest) => {
+    const res = await fetchJson<import('@/types').TokenResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    if (res?.access_token) {
+      authStorage.setToken(res.access_token);
+    }
+    return res;
+  },
+
+  register: (data: import('@/types').UserRegisterRequest) =>
+    fetchJson<import('@/types').UserRead>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMe: () =>
+    fetchJson<import('@/types').UserRead>('/auth/me'),
+
+  logout: () => {
+    authStorage.clearToken();
+  },
+
   // ==========================================
   // Location Hierarchy & Search
   // ==========================================
@@ -527,6 +588,73 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(request),
     }),
+
+  // ==========================================
+  // Domain 16: Admin, Governance & Quality APIs
+  // ==========================================
+  getAdminOverview: () =>
+    fetchJson<import('@/types').AdminOverviewResponse>('/admin/overview'),
+
+  getAdminDataSources: (params?: { is_active?: boolean; source_type?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.is_active !== undefined) searchParams.append('is_active', String(params.is_active));
+      if (params.source_type) searchParams.append('source_type', params.source_type);
+    }
+    const query = searchParams.toString();
+    return fetchJson<import('@/types').AdminDataSourceItem[]>(`/admin/sources${query ? `?${query}` : ''}`);
+  },
+
+  toggleDataSource: (id: number) =>
+    fetchJson<import('@/types').AdminDataSourceItem>(`/admin/sources/${id}/toggle`, {
+      method: 'PATCH',
+    }),
+
+  getAdminIngestionRuns: (params?: { limit?: number; status?: string; dataset_name?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.limit) searchParams.append('limit', String(params.limit));
+      if (params.status) searchParams.append('status', params.status);
+      if (params.dataset_name) searchParams.append('dataset_name', params.dataset_name);
+    }
+    const query = searchParams.toString();
+    return fetchJson<import('@/types').IngestionRunRead[]>(`/admin/ingestion-runs${query ? `?${query}` : ''}`);
+  },
+
+  getAdminIngestionRunDetail: (id: number) =>
+    fetchJson<import('@/types').AdminIngestionRunDetail>(`/admin/ingestion-runs/${id}`),
+
+  getAdminReviewQueue: (status?: string) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchJson<import('@/types').DataQualityReviewItemRead[]>(`/admin/reviews${query}`);
+  },
+
+  actionReviewItem: (id: number, action: 'APPROVE' | 'REJECT', notes?: string) =>
+    fetchJson<import('@/types').DataQualityReviewItemRead>(`/admin/reviews/${id}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, reviewer_notes: notes, reviewer_name: 'Admin User' }),
+    }),
+
+  getAdminConflicts: (status?: string) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return fetchJson<import('@/types').DataConflictRead[]>(`/admin/conflicts${query}`);
+  },
+
+  resolveAdminConflict: (id: number, acceptedSourceId: number, notes: string) =>
+    fetchJson<import('@/types').DataConflictRead>(`/admin/conflicts/${id}/resolve`, {
+      method: 'POST',
+      body: JSON.stringify({ accepted_source_id: acceptedSourceId, resolution_notes: notes }),
+    }),
+
+  getAdminFreshness: () =>
+    fetchJson<import('@/types').AdminFreshnessResponse>('/admin/freshness'),
+
+  getAdminQuality: () =>
+    fetchJson<import('@/types').AdminQualityResponse>('/admin/quality'),
+
+  getProvenanceLegend: () =>
+    fetchJson<Record<string, any>>('/admin/provenance-legend'),
 };
+
 
 

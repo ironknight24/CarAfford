@@ -84,15 +84,17 @@ class DataQualityService:
     async def get_unresolved_conflicts(
         cls,
         db: AsyncSession,
+        status: Optional[str] = None,
         limit: int = 50,
     ) -> List[DataConflictRecord]:
         """Fetches active cross-source data discrepancies."""
-        res = await db.execute(
-            select(DataConflictRecord)
-            .where(DataConflictRecord.status == ConflictStatus.UNRESOLVED.value)
-            .order_by(DataConflictRecord.detected_at.desc())
-            .limit(limit)
-        )
+        query = select(DataConflictRecord)
+        if status:
+            query = query.where(DataConflictRecord.status == status)
+        else:
+            query = query.where(DataConflictRecord.status == ConflictStatus.UNRESOLVED.value)
+        query = query.order_by(DataConflictRecord.detected_at.desc()).limit(limit)
+        res = await db.execute(query)
         return list(res.scalars().all())
 
     @classmethod

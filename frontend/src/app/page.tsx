@@ -100,6 +100,25 @@ export default function HomePage() {
 
           {/* Budget & Insights Column */}
           <div className="lg:col-span-6 space-y-6">
+            {/* Data Provenance & Transparency Banner */}
+            <div className="bg-slate-900/60 border border-slate-800/90 rounded-2xl p-4 text-xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="font-bold text-slate-200">Data Provenance & Reliability</span>
+                </div>
+                <a
+                  href="/admin"
+                  className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                >
+                  View Quality Scorecard →
+                </a>
+              </div>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Calculations use <strong>official state motor vehicle tax schedules</strong> (MH, DL, KA, TN, TS, etc.), <strong>benchmark SBI/HDFC retail auto loan slabs</strong>, and empirical 5-year TCO wear-and-tear models. City-level fuel & dealer logistics are calibrated estimates.
+              </p>
+            </div>
+
             {affordabilityData || recommendationData ? (
               <BudgetSummaryCard summary={affordabilityData || recommendationData!.user_budget_summary} />
             ) : (
@@ -140,6 +159,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+
 
         {/* Error Alert if any */}
         {errorMsg && (

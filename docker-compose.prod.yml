@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: carafford_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-carafford_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carafford_prod_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-carafford_db}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - carafford_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carafford_user} -d ${POSTGRES_DB:-carafford_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: carafford_redis_prod
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - carafford_internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: carafford_backend_prod
+    restart: always
+    environment:
+      ENVIRONMENT: production
+      DEBUG: "false"
+      SECRET_KEY: ${SECRET_KEY}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-carafford_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-carafford_prod_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-carafford_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_ENABLED: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:-'["https://carafford.in"]'}
+      ADMIN_DEFAULT_EMAIL: ${ADMIN_DEFAULT_EMAIL:-admin@carafford.in}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-CarAffordAdmin#2026}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - carafford_internal
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: carafford_frontend_prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.carafford.in/api/v1}
+    networks:
+      - carafford_internal
+    expose:
+      - "3000"
+
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: carafford_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - carafford_internal
+
+networks:
+  carafford_internal:
+    driver: bridge
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:

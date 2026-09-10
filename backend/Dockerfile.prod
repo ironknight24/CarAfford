@@ -1,0 +1,48 @@
+# =============================================================================
+# CarAfford Backend Production Dockerfile (Hardened Multi-Stage / Non-Root)
+# =============================================================================
+
+FROM python:3.13-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# Final minimal runtime image
+FROM python:3.13-slim AS runner
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root system user and group
+RUN groupadd -g 1001 carafford && \
+    useradd -u 1001 -g carafford -m -s /bin/bash carafford
+
+# Copy installed dependencies from builder
+COPY --from=builder /install /usr/local
+
+# Copy application source code
+COPY . /app
+RUN chown -R carafford:carafford /app && \
+    chmod +x /app/entrypoint.sh
+
+# Switch to unprivileged non-root user
+USER carafford
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health/live || exit 1
+
+ENTRYPOINT ["./entrypoint.sh"]

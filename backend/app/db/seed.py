@@ -26,6 +26,30 @@ from app.models.vehicle import (
     VariantSpecification,
     VehicleMedia,
 )
+from app.models.user import User, UserRole
+from app.core.security import get_password_hash
+from app.core.config import settings
+
+
+
+async def ensure_default_admin(session: AsyncSession):
+    """Ensures at least one administrator account exists in the system."""
+    res = await session.execute(select(User).where(User.role == UserRole.ADMIN.value))
+    admin = res.scalar_one_or_none()
+    if not admin:
+        admin = User(
+            email=settings.ADMIN_DEFAULT_EMAIL.lower(),
+            hashed_password=get_password_hash(settings.ADMIN_DEFAULT_PASSWORD),
+            full_name=settings.ADMIN_DEFAULT_NAME,
+            role=UserRole.ADMIN.value,
+            is_active=True,
+            is_superuser=True,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(admin)
+        await session.commit()
+        print(f"✅ Created default administrator account: {settings.ADMIN_DEFAULT_EMAIL}")
 
 
 async def _run_seed(session: AsyncSession):
@@ -35,11 +59,14 @@ async def _run_seed(session: AsyncSession):
     NOTE: All data populated here is strictly DEMO / SEED data intended for development,
     testing, and architectural demonstration purposes.
     """
+    await ensure_default_admin(session)
+
     # Check if already seeded
     res = await session.execute(select(Manufacturer))
     if res.scalars().first():
-        print("Database already contains data, skipping seed.")
+        print("Database already contains catalogue data, skipping catalogue seed.")
         return
+
 
     now = datetime.now(timezone.utc)
     base_past_date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)

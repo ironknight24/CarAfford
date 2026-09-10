@@ -46,8 +46,9 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_ENABLED=true
-      - ENVIRONMENT=production
-      - DEBUG=false
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:-carafford_development_super_secret_jwt_key_change_in_production_2026}
     ports:
       - "8000:8000"
     volumes:

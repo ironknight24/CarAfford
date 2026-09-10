@@ -36,8 +36,16 @@ export default function Navbar() {
             <Car className="w-4 h-4" />
             Explore Cars & On-Road
           </Link>
+          <Link
+            href="/admin"
+            className="text-slate-300 hover:text-indigo-400 transition-colors flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-indigo-500/50"
+          >
+            <ShieldCheck className="w-4 h-4 text-indigo-400" />
+            Data Quality & Admin
+          </Link>
         </nav>
       </div>
     </header>
   );
 }
+

@@ -230,6 +230,38 @@ export default function TCOBreakdownCard({ tco }: TCOBreakdownCardProps) {
           </div>
         </div>
 
+        {/* Expandable "How was this TCO calculated?" Math Explainer */}
+        <details className="group bg-slate-800/40 border border-slate-700/50 rounded-xl overflow-hidden transition-all">
+          <summary className="px-4 py-3 text-xs font-semibold text-slate-300 flex items-center justify-between cursor-pointer hover:text-white select-none">
+            <span className="flex items-center gap-2">
+              <span className="text-blue-400">📐</span>
+              <span>How was this TCO calculated? (Math Explainer)</span>
+            </span>
+            <span className="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div className="px-4 pb-4 pt-2 border-t border-slate-700/40 text-xs text-slate-300 space-y-3 font-sans">
+            <div>
+              <strong className="text-blue-300 block mb-0.5">1. Total Cash Outflow (Wallet Impact):</strong>
+              <div className="bg-slate-900/80 p-2.5 rounded-lg font-mono text-[11px] text-blue-200 border border-slate-800">
+                Cash Outflow = Down Payment + Loan Principal Paid + Interest & Fees + Fuel + Insurance + Maintenance + Parking/Tolls
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Reflects every single rupee leaving your bank account over the {period.label} ownership horizon.
+              </p>
+            </div>
+
+            <div>
+              <strong className="text-purple-300 block mb-0.5">2. True Economic Cost of Ownership:</strong>
+              <div className="bg-slate-900/80 p-2.5 rounded-lg font-mono text-[11px] text-purple-200 border border-slate-800">
+                Economic Cost = Total Cash Outflow - Estimated Vehicle Resale Value
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Accounts for vehicle equity recovery when selling the car at end of {period.label} based on Indian depreciation curves.
+              </p>
+            </div>
+          </div>
+        </details>
+
         {/* Disclaimer / Provenance Note */}
         <div className="flex items-start gap-2 text-xs text-slate-400 bg-slate-800/40 p-3 rounded-xl border border-slate-700/40">
           <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
@@ -242,3 +274,4 @@ export default function TCOBreakdownCard({ tco }: TCOBreakdownCardProps) {
     </div>
   );
 }
+

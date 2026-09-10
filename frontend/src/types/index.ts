@@ -1137,4 +1137,202 @@ export interface TCOComparisonResponse {
   disclaimer: string;
 }
 
+// =============================================================================
+// DOMAIN 16: DATA QUALITY, PROVENANCE & ADMIN TYPES
+// =============================================================================
+
+export interface DataSourceRead {
+  id: number;
+  name: string;
+  slug: string;
+  source_type: string;
+  provider_type: string;
+  organization?: string;
+  base_url?: string;
+  description?: string;
+  licensing_notes?: string;
+  terms_url?: string;
+  trust_level: number;
+  is_active: boolean;
+  last_synced_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface IngestionRunRead {
+  id: number;
+  data_source_id: number;
+  dataset_name: string;
+  started_at: string;
+  completed_at?: string;
+  status: string;
+  records_seen: number;
+  records_created: number;
+  records_updated: number;
+  records_rejected: number;
+  records_unchanged: number;
+  error_count: number;
+  validation_error_count: number;
+  checksum?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DataConflictRead {
+  id: number;
+  dataset_name: string;
+  entity_type: string;
+  entity_id?: number;
+  entity_identifier: string;
+  field_name: string;
+  source_a_id: number;
+  source_a_value: any;
+  source_b_id: number;
+  source_b_value: any;
+  detected_at: string;
+  status: string;
+  resolution_notes?: string;
+  resolved_at?: string;
+  created_at?: string;
+}
+
+export interface DataQualityReviewItemRead {
+  id: number;
+  raw_record_id?: number;
+  entity_type: string;
+  entity_identifier: string;
+  field_name: string;
+  current_value?: any;
+  proposed_value: any;
+  status: string;
+  reviewer_notes?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  created_at?: string;
+}
+
+export interface FreshnessReportItem {
+  dataset_name: string;
+  sla_days: number;
+  last_synced_at?: string;
+  age_days?: number;
+  status: string;
+}
+
+export interface AdminOverviewResponse {
+  total_data_sources: number;
+  active_sources: number;
+  live_sources: number;
+  fixture_only_sources: number;
+  manual_review_sources: number;
+  total_ingestion_runs: number;
+  active_ingestion_runs: number;
+  failed_ingestion_runs: number;
+  stale_datasets: number;
+  expired_datasets: number;
+  unresolved_conflicts: number;
+  pending_review_items: number;
+  overall_quality_score: number | string;
+  quality_rating: string;
+  datasets_freshness_summary: FreshnessReportItem[];
+  admin_auth_notice: string;
+}
+
+export interface AdminDataSourceItem {
+  id: number;
+  name: string;
+  slug: string;
+  organization?: string;
+  source_type: string;
+  provider_type: string;
+  access_mode: string;
+  base_url?: string;
+  terms_url?: string;
+  trust_level: number;
+  freshness_sla_days: number;
+  last_retrieved_at?: string;
+  freshness_status: string;
+  age_days?: number;
+  is_active: boolean;
+  quality_score: number | string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminIngestionRunDetail {
+  run: IngestionRunRead;
+  raw_records_count: number;
+  raw_samples: Record<string, any>[];
+  validation_summary: Record<string, any>;
+  conflicts_detected: DataConflictRead[];
+  quality_reviews: DataQualityReviewItemRead[];
+}
+
+export interface FreshnessDomainGroup {
+  domain_name: string;
+  domain_key: string;
+  total_datasets: number;
+  current_count: number;
+  stale_count: number;
+  expired_count: number;
+  datasets: FreshnessReportItem[];
+}
+
+export interface AdminFreshnessResponse {
+  domains: FreshnessDomainGroup[];
+  overall_freshness_pct: number | string;
+  stale_datasets_count: number;
+  expired_datasets_count: number;
+}
+
+export interface QualityScorePillar {
+  pillar_name: string;
+  pillar_key: string;
+  weight_pct: number | string;
+  score: number | string;
+  description: string;
+  status: string;
+}
+
+export interface AdminQualityResponse {
+  overall_score: number | string;
+  rating: string;
+  pillars: QualityScorePillar[];
+  score_change_explanation: string;
+  recommendations: string[];
+}
+
+// =============================================================================
+// DOMAIN 17: AUTHENTICATION & USER TYPES
+// =============================================================================
+
+export interface UserRead {
+  id: number;
+  email: string;
+  full_name?: string;
+  role: 'USER' | 'ADMIN' | string;
+  is_active: boolean;
+  is_superuser?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: UserRead;
+}
+
+export interface UserLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface UserRegisterRequest {
+  email: string;
+  password: string;
+  full_name?: string;
+}
 
